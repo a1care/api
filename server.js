@@ -20,7 +20,13 @@ app.use(express.urlencoded({ extended: true }));
 // --- API Routes ---
 app.use('/api', mainRoutes);
 
-// Root route (existing logic remains)
+app.use((req, res, next) => {
+    // We send a JSON 404 response instead of the default HTML
+    res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.method} ${req.originalUrl}`
+    });
+});
 
 app.get('/', (req, res) => {    
     res.send(`

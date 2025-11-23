@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router();
+const AuthRouter = express.Router();
 const authController = require('../controllers/auth.controller');
 const { protect } = require('../middleware/authenticate'); // Import the protect middleware
 
@@ -10,7 +10,7 @@ const { protect } = require('../middleware/authenticate'); // Import the protect
  * @description Login/Signup after Firebase OTP verification.
  * @access Public
  */
-router.post('/login', authController.login);
+AuthRouter.post('/login', authController.login);
 
 
 // --- Private Routes (Requires Token) ---
@@ -21,6 +21,6 @@ router.post('/login', authController.login);
  * @access Private
  * @middleware protect - Uses the token to identify the user (req.userId)
  */
-router.post('/coordinates', protect, authController.updateCoordinates);
+AuthRouter.post('/coordinates', protect, authController.updateCoordinates);
 
-module.exports = router;
+module.exports = AuthRouter;
