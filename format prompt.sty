@@ -1,0 +1,52 @@
+imagine the flow :
+we are creating the apis forr the app and the admin pannel 
+login :
+here we have 2 roles  :
+its dynamic  create an user roles table *
+present roles thinking is (user,doctor)
+while login they specify the role 
+
+we are thinking initially they from the frontend side they clear the otp verification through the 
+firebase latter on hit these login api with mobile number 
+we return success message,token,role
+
+
+in the home screen :
+
+when the user login fetch the present co-ordinates *
+
+2> our services :
+   like (opd booking,video cunsultation,home checkup,Medical Equipment Rental,
+    ambulence emergency service ,   labtestes......)
+
+    thinking model like thi you can give better uproach if avaolable :
+
+    :: image,name,title
+
+ >>>OPD BOOKINGS :
+      get all available doctors based on the nearest location and doctor rating 
+
+      >>in small screen get all doctors on by one...fetch (image,name,doctor service,consultation fees)
+               status (available)   
+
+
+    >> next screen full doctor details :
+        name,doctor service(name),rating ,experience,patients treated,sa    tisfaction(rating),consultation fees,
+        about,specilisations (heart disease,Hypertension,cardiccare,ECG,prevention care)
+        working hours (monday 9am-1pm)
+    
+    >> select time slots :
+       date  (here first fetch all available time slots for that data) then user will select one of tthem
+    
+    >> in the next screen full booking view with the all details including the consultation fees,
+    platform fees,total amount + paymentgateway process
+
+    in user bookings sreen fetch all bookings only change is change the statuss and fetch the data 
+    (upcomming,completed,cancelled)
+
+       
+
+
+
+
+
