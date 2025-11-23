@@ -1,0 +1,331 @@
+const mongoose = require('mongoose');
+const User = require('../models/user.model');
+const Doctor = require('../models/doctor.model');
+const Service = require('../models/service.model');
+const Booking = require('../models/booking.model');
+
+// Register 2dsphere index for geospatial queries (run this once on app startup or in a migration)
+// User.collection.createIndex({ location: "2dsphere" }); 
+// NOTE: Since our User schema uses 'latitude' and 'longitude' (Numbers), 
+// we will simulate the distance calculation using aggregation for simplicity. 
+// For production, consider storing location as a GeoJSON Point array: [longitude, latitude].
+
+/**
+ * @route GET /api/booking/services
+ * @description Fetch all available services for the home screen (image, name, title)
+ * @access Public
+ */
+exports.getServices = async (req, res) => {
+    try {
+        const services = await Service.find({ is_active: true }).select('id name title image_url');
+        res.status(200).json({ success: true, services });
+    } catch (error) {
+        console.error('Fetch services error:', error);
+        res.status(500).json({ message: 'Server error fetching services.' });
+    }
+};
+
+/**
+ * @route GET /api/booking/doctors/opd
+ * @description Find available doctors near the user, ordered by distance and rating.
+ * @access Private (Requires JWT to get user location)
+ * @notes This utilizes a MongoDB aggregation pipeline for distance calculation.
+ */
+exports.getAvailableDoctors = async (req, res) => {
+    // Coordinates pulled from the authenticated user's token/DB entry (req.userId)
+    const { latitude, longitude } = req.userId;
+    const serviceName = 'OPD Booking'; // Hardcoded for your flow
+
+    if (!latitude || !longitude) {
+        return res.status(400).json({ message: 'User location required to find nearby doctors. Please update coordinates.' });
+    }
+
+    try {
+        // 1. Find the Service ID for OPD Booking
+        const opdService = await Service.findOne({ name: serviceName });
+        if (!opdService) {
+            return res.status(404).json({ message: `${serviceName} service not found.` });
+        }
+
+        // 2. Aggregation Pipeline to find and sort doctors
+        const pipeline = [
+            // Stage 1: Filter users who are Doctors
+            { $match: { role: 'Doctor' } },
+            
+            // Stage 2: Join with the Doctor profile to get details (fee, rating)
+            { $lookup: {
+                from: 'doctors',
+                localField: '_id',
+                foreignField: 'userId',
+                as: 'doctorProfile'
+            }},
+            { $unwind: '$doctorProfile' }, // Flatten the doctorProfile array
+
+            // Stage 3: Filter for Doctors who offer the OPD service and are available
+            // NOTE: In a complex app, you'd check doctor_services collection. 
+            // Here, we assume a doctor profile implies service availability for simplicity.
+            { $match: { 
+                'doctorProfile.is_available': true,
+                // Add filter for service type if you had a separate doctor_services model
+            }},
+
+            // Stage 4: Calculate distance using Haversine formula (approximation)
+            // For production, use $geoNear with a 2dsphere index.
+            { $addFields: {
+                distance_km: {
+                    $multiply: [
+                        6371, // Earth radius in km
+                        {
+                            $acos: {
+                                $add: [
+                                    { $multiply: [ { $sin: { $degreesToRadians: '$latitude' } }, { $sin: { $degreesToRadians: latitude } } ] },
+                                    { $multiply: [ { $cos: { $degreesToRadians: '$latitude' } }, { $cos: { $degreesToRadians: latitude } }, { $cos: { $degreesToRadians: { $subtract: ['$longitude', longitude] } } } ] }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }},
+
+            // Stage 5: Sort by distance (nearest first) and then by rating
+            { $sort: { distance_km: 1, 'doctorProfile.satisfaction_rating': -1 } },
+            
+            // Stage 6: Limit the results and project the required fields
+            { $limit: 20 },
+            { $project: {
+                _id: '$_id',
+                name: '$name',
+                consultation_fees: '$doctorProfile.consultation_fee',
+                doctor_service: opdService.title,
+                rating: '$doctorProfile.satisfaction_rating',
+                distance: { $round: ['$distance_km', 1] } // Round to 1 decimal place
+            }}
+        ];
+
+        const doctors = await User.aggregate(pipeline);
+
+        res.status(200).json({ 
+            success: true, 
+            doctors: doctors.map(doc => ({
+                id: doc._id,
+                image: '',
+                name: doc.name,
+                doctor_service: doc.doctor_service,
+                consultation_fees: doc.consultation_fees,
+                status: 'available', // Already filtered
+                distance: `${doc.distance} km`,
+                rating: doc.rating
+            }))
+        });
+
+    } catch (error) {
+        console.error('Fetch doctors error:', error);
+        res.status(500).json({ message: 'Server error during doctor search.' });
+    }
+};
+
+/**
+ * @route GET /api/booking/doctors/:doctorId
+ * @description Fetch full doctor details
+ * @access Public
+ */
+exports.getDoctorDetails = async (req, res) => {
+    const { doctorId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+        return res.status(400).json({ message: 'Invalid Doctor ID.' });
+    }
+
+    try {
+        const doctorDetails = await User.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(doctorId), role: 'Doctor' } },
+            { $lookup: {
+                from: 'doctors',
+                localField: '_id',
+                foreignField: 'userId',
+                as: 'profile'
+            }},
+            { $unwind: '$profile' },
+            { $project: {
+                name: '$name',
+                rating: '$profile.satisfaction_rating',
+                experience: '$profile.experience',
+                patients_treated: '$profile.patients_treated',
+                consultation_fees: '$profile.consultation_fee',
+                about: '$profile.about',
+                specializations: '$profile.specializations',
+                working_hours: '$profile.working_hours',
+                // Assuming "doctor service" is just 'OPD Booking' for now
+                doctor_service: 'General Consultation (OPD)' 
+            }}
+        ]);
+
+        if (doctorDetails.length === 0) {
+            return res.status(404).json({ message: 'Doctor not found.' });
+        }
+
+        res.status(200).json({ success: true, details: doctorDetails[0] });
+
+    } catch (error) {
+        console.error('Fetch doctor details error:', error);
+        res.status(500).json({ message: 'Server error fetching doctor details.' });
+    }
+};
+
+/**
+ * @route GET /api/booking/doctors/:doctorId/slots
+ * @description Fetch available time slots for a specific doctor/date
+ * @access Public
+ * @query date YYYY-MM-DD
+ */
+exports.getAvailableSlots = async (req, res) => {
+    // NOTE: In a real app, slots would be generated based on the working_hours and existing bookings.
+    // For this flow, we will simulate a slot generation process.
+    const { doctorId } = req.params;
+    const { date } = req.query; 
+
+    if (!mongoose.Types.ObjectId.isValid(doctorId) || !date) {
+        return res.status(400).json({ message: 'Invalid Doctor ID or Date parameter missing.' });
+    }
+
+    // This is a simple mock generation. 
+    // In production, this would be complex service logic comparing schedule vs existing bookings.
+    try {
+        const mockSlots = [
+            { id: 'SLOT_001', time: '09:00 AM - 09:30 AM', is_booked: false },
+            { id: 'SLOT_002', time: '09:30 AM - 10:00 AM', is_booked: false },
+            { id: 'SLOT_003', time: '10:00 AM - 10:30 AM', is_booked: true },
+            { id: 'SLOT_004', time: '02:00 PM - 02:30 PM', is_booked: false },
+        ];
+        
+        const availableSlots = mockSlots.filter(slot => !slot.is_booked);
+
+        res.status(200).json({ 
+            success: true, 
+            date: date,
+            slots: availableSlots 
+        });
+
+    } catch (error) {
+        console.error('Fetch slots error:', error);
+        res.status(500).json({ message: 'Server error fetching slots.' });
+    }
+};
+
+/**
+ * @route POST /api/booking/create
+ * @description Create a new booking (initial status: PENDING_PAYMENT)
+ * @access Private
+ * @payload { doctorId, serviceId, slotId, slotStartTime, slotEndTime, booking_date }
+ */
+exports.createBooking = async (req, res) => {
+    const userId = req.userId.id;
+    const { doctorId, serviceId, slotId, slotStartTime, slotEndTime, booking_date } = req.body;
+    
+    // --- Mock Fee Calculation ---
+    const CONSULTATION_FEE = 600.00; 
+    const PLATFORM_FEE_RATE = 0.10;
+    const PLATFORM_FEE = parseFloat((CONSULTATION_FEE * PLATFORM_FEE_RATE).toFixed(2));
+    const TOTAL_AMOUNT = CONSULTATION_FEE + PLATFORM_FEE;
+    // ----------------------------
+
+    try {
+        // 1. Basic Validation and Slot Availability Check (Simplified)
+        if (!doctorId || !serviceId || !slotId) {
+            return res.status(400).json({ message: 'Missing booking details.' });
+        }
+        
+        // 2. Create the new booking document
+        const newBooking = new Booking({
+            userId,
+            doctorId,
+            serviceId,
+            slot: {
+                start_time: slotStartTime,
+                end_time: slotEndTime,
+                slot_id: slotId // The unique slot identifier
+            },
+            booking_date,
+            consultation_fee: CONSULTATION_FEE,
+            platform_fee: PLATFORM_FEE,
+            total_amount: TOTAL_AMOUNT,
+            status: 'Pending Payment',
+            payment_status: 'INITIATED'
+        });
+        
+        await newBooking.save();
+        
+        // NOTE: In production, you would update the actual slot availability here 
+        // in a separate AppointmentSlots collection to prevent double booking.
+
+        // 3. Return the full booking view for the payment screen
+        res.status(201).json({
+            success: true,
+            message: 'Booking initiated. Proceed to payment.',
+            booking_details: {
+                booking_id: newBooking._id,
+                consultation_fees: newBooking.consultation_fee,
+                platform_fees: newBooking.platform_fee,
+                total_amount: newBooking.total_amount,
+                // In a real scenario, this would trigger a payment gateway request
+                payment_gateway_process: 'Requires Payment Gateway Integration...' 
+            }
+        });
+
+    } catch (error) {
+        console.error('Create booking error:', error);
+        // Handle unique constraint violation on slotId
+        if (error.code === 11000) {
+             return res.status(409).json({ message: 'This time slot is already taken.' });
+        }
+        res.status(500).json({ message: 'Server error during booking creation.' });
+    }
+};
+
+
+/**
+ * @route GET /api/booking/user
+ * @description Fetch all bookings for the logged-in user, grouped by status.
+ * @access Private
+ */
+exports.getUserBookings = async (req, res) => {
+    const userId = req.userId.id;
+
+    try {
+        const bookings = await Booking.find({ userId })
+            .populate('doctorId', 'name mobile_number') // Fetch doctor name
+            .populate('serviceId', 'title')             // Fetch service title
+            .sort({ booking_date: -1, 'slot.start_time': -1 });
+
+        // Grouping the results as requested (Upcoming, Completed, Cancelled)
+        const groupedBookings = bookings.reduce((acc, booking) => {
+            // Use the status field, cleaning it up for the key
+            const statusKey = booking.status.toLowerCase().replace(/\s/g, ''); 
+            
+            // Map the booking details for clean API response
+            const bookingDetail = {
+                id: booking._id,
+                status: booking.status,
+                total_amount: booking.total_amount,
+                date: booking.booking_date,
+                time: `${new Date(booking.slot.start_time).toLocaleTimeString()} - ${new Date(booking.slot.end_time).toLocaleTimeString()}`,
+                doctor_name: booking.doctorId ? booking.doctorId.name : 'N/A',
+                service_title: booking.serviceId ? booking.serviceId.title : 'N/A',
+            };
+
+            if (acc[statusKey]) {
+                acc[statusKey].push(bookingDetail);
+            } else {
+                // Initialize if the status is new (e.g., 'pendingpayment')
+                acc[statusKey] = [bookingDetail];
+            }
+            return acc;
+        }, { upcoming: [], completed: [], cancelled: [], pendingpayment: [] });
+
+
+        res.status(200).json({ success: true, bookings: groupedBookings });
+    } catch (error) {
+        console.error('Fetch user bookings error:', error);
+        res.status(500).json({ message: 'Server error fetching user bookings.' });
+    }
+};

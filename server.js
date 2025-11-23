@@ -1,8 +1,28 @@
 const express = require('express');
-const app = express();
-const PORT = 3000;
+const dotenv = require('dotenv');
+const connectDB = require('./src/config/db'); 
+const mainRoutes = require('./src/routes/mainroutes');
 
-app.get('/', (req, res) => {
+// Load environment variables
+dotenv.config({ silent: true });
+
+
+connectDB();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+
+// --- Middleware ---
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// --- API Routes ---
+app.use('/api', mainRoutes);
+
+// Root route (existing logic remains)
+
+app.get('/', (req, res) => {    
     res.send(`
         <html>
         <head>
@@ -32,6 +52,7 @@ app.get('/', (req, res) => {
 });
 
 
+// Start Server
 app.listen(PORT, () => {
     console.log(`Server is listening at http://localhost:${PORT}`);
 });
