@@ -31,3 +31,28 @@ exports.createService = async (req, res) => {
         res.status(500).json({ message: 'Server error creating service.' });
     }
 };
+
+
+/**
+ * @route GET /api/booking/services
+ * @description Fetches all available services (image, name, title) for the home screen.
+ * @access Public (No JWT required)
+ */
+exports.getAllServices = async (req, res) => {
+    try {
+        // Find all documents in the Service collection where is_active is true.
+        // We select only the fields needed for the home screen display (image, name, title, id).
+        const services = await Service.find({ is_active: true })
+            .select('_id name title image_url'); 
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Active services retrieved successfully.',
+            services: services 
+        });
+
+    } catch (error) {
+        console.error('Get all services error:', error);
+        res.status(500).json({ message: 'Server error retrieving services.' });
+    }
+};

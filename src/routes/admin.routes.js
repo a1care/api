@@ -13,4 +13,6 @@ router.post(
     serviceController.createService
 );
 
+router.get('/services',    protect,
+ serviceController.getAllServices); 
 module.exports = router;
