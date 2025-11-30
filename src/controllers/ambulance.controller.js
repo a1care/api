@@ -4,14 +4,18 @@ const Ambulance = require('../models/ambulance.model');
 
 exports.getAllAmbulances = async (req, res) => {
     try {
-        const { sort } = req.query;
-        let query = { is_available: true };
+        const { sort, filter } = req.query;
+        let query = { is_active: true };
         let sortOption = {};
 
+        if (filter === 'popular') {
+            // Logic for popular
+        }
+
         if (sort === 'price_low_high') {
-            sortOption.price_per_km = 1;
+            sortOption.base_fare = 1;
         } else if (sort === 'price_high_low') {
-            sortOption.price_per_km = -1;
+            sortOption.base_fare = -1;
         }
 
         const ambulances = await Ambulance.find(query).sort(sortOption);

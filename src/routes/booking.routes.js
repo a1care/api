@@ -13,6 +13,13 @@ const { protect } = require('../middleware/authenticate'); // Import the protect
 router.get('/services', bookingController.getServices);
 
 /**
+ * @route GET /api/booking/services/:serviceId/items
+ * @description Fetch sub-items for a specific service (e.g., Lab Tests for "Lab Test" service).
+ * @access Public
+ */
+router.get('/services/:serviceId/items', bookingController.getServiceItems);
+
+/**
  * @route GET /api/booking/doctors/:doctorId
  * @description Fetch full details for a specific doctor.
  * @access Public

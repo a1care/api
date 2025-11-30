@@ -26,6 +26,76 @@ exports.getServices = async (req, res) => {
 };
 
 /**
+ * @route GET /api/booking/services/:serviceId/items
+ * @description Fetch items (Lab Tests, Equipment, etc.) for a specific service.
+ * @access Public
+ */
+exports.getServiceItems = async (req, res) => {
+    const { serviceId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+        return res.status(400).json({ message: 'Invalid Service ID.' });
+    }
+
+    try {
+        // 1. Find the Service to determine its type
+        const service = await Service.findById(serviceId);
+        if (!service) {
+            return res.status(404).json({ message: 'Service not found.' });
+        }
+
+        let items = [];
+        let itemType = '';
+
+        // 2. Fetch items based on Service Type
+        switch (service.type) {
+            case 'LabTest':
+                const LabTest = require('../models/labTest.model');
+                items = await LabTest.find({ is_available: true });
+                itemType = 'LabTest';
+                break;
+
+            case 'MedicalEquipment':
+                const MedicalEquipment = require('../models/medicalEquipment.model');
+                items = await MedicalEquipment.find({ is_available: true });
+                itemType = 'MedicalEquipment';
+                break;
+
+            case 'Ambulance':
+                const Ambulance = require('../models/ambulance.model');
+                items = await Ambulance.find({ is_available: true });
+                itemType = 'Ambulance';
+                break;
+
+            case 'OPD':
+                // For OPD, items are Doctors. 
+                itemType = 'User'; // Doctor
+                items = []; // Frontend usually calls /doctors/opd for this
+                break;
+
+            default:
+                items = [];
+                break;
+        }
+
+        res.status(200).json({
+            success: true,
+            service: {
+                id: service._id,
+                name: service.name,
+                type: service.type
+            },
+            items: items,
+            itemType: itemType
+        });
+
+    } catch (error) {
+        console.error('Fetch service items error:', error);
+        res.status(500).json({ message: 'Server error fetching service items.' });
+    }
+};
+
+/**
  * @route GET /api/booking/doctors/opd
  * @description Find available doctors near the user, ordered by distance and rating.
  * @access Private (Requires JWT to get user location)
@@ -64,17 +134,13 @@ exports.getAvailableDoctors = async (req, res) => {
             { $unwind: '$doctorProfile' }, // Flatten the doctorProfile array
 
             // Stage 3: Filter for Doctors who offer the OPD service and are available
-            // NOTE: In a complex app, you'd check doctor_services collection. 
-            // Here, we assume a doctor profile implies service availability for simplicity.
             {
                 $match: {
                     'doctorProfile.is_available': true,
-                    // Add filter for service type if you had a separate doctor_services model
                 }
             },
 
             // Stage 4: Calculate distance using Haversine formula (approximation)
-            // For production, use $geoNear with a 2dsphere index.
             {
                 $addFields: {
                     distance_km: {

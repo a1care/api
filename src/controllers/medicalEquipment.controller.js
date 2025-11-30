@@ -4,9 +4,13 @@ const MedicalEquipment = require('../models/medicalEquipment.model');
 
 exports.getAllEquipment = async (req, res) => {
     try {
-        const { sort } = req.query;
+        const { sort, filter } = req.query;
         let query = { is_active: true };
         let sortOption = {};
+
+        if (filter === 'popular') {
+            // Logic for popular (e.g., based on booking count - placeholder for now)
+        }
 
         if (sort === 'price_low_high') {
             sortOption.rental_price = 1;

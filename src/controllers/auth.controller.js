@@ -31,13 +31,10 @@ exports.login = async (req, res) => {
     }
 
     // Dynamic Role Validation
-    const validRoles = ['User', 'Doctor', 'Admin'];
-    if (!validRoles.includes(role)) {
-        // Check DB
-        const dbRole = await Role.findOne({ name: role });
-        if (!dbRole) {
-            return res.status(400).json({ message: 'Invalid role specified.' });
-        }
+    // Check if the role exists in the database
+    const dbRole = await Role.findOne({ name: role });
+    if (!dbRole) {
+        return res.status(400).json({ message: 'Invalid role specified.' });
     }
 
     try {
