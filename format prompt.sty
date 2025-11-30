@@ -24,13 +24,13 @@ when the user login fetch the present co-ordinates *
     :: image,name,title
 
  >>>OPD BOOKINGS :
-      get all available doctors based on the nearest location and doctor rating 
+     >> api: get all available doctors based on the nearest location and doctor rating 
 
-      >>in small screen get all doctors on by one...fetch (image,name,doctor service,consultation fees)
+      >>api:for small screen get all doctors on by one...fetch (image,name,doctor service,consultation fees)
                status (available)   
 
 
-    >> next screen full doctor details :
+    >>api: next screen full doctor details :
         name,doctor service(name),rating ,experience,patients treated,sa    tisfaction(rating),consultation fees,
         about,specilisations (heart disease,Hypertension,cardiccare,ECG,prevention care)
         working hours (monday 9am-1pm)
@@ -45,8 +45,48 @@ when the user login fetch the present co-ordinates *
     (upcomming,completed,cancelled)
 
        
+similarly for video cunsultation and home checkup
+for labtestes api :
+   fetch all available labtestes with the filters (popular,price low to high,high to low)
+   then user will select the labtestes and book the appointmnet 
+
+   in the booking screen show all details with the amount and payment gateway process
+
+   in user bookings sreen fetch all bookings only change is change the statuss and fetch the data 
+   (upcomming,completed,cancelled)
+
+
+   for medical equipment rental :
+      fetch all available equipment with the filters (popular,price low to high,high to low)
+      then user will select the equipment and book the appointmnet 
+
+      in the booking screen show all details with the amount and payment gateway process
+
+      in user bookings sreen fetch all bookings only change is change the statuss and fetch the data 
+      (upcomming,completed,cancelled)
+
+     for ambulence emergency service :
+        fetch all available ambulence with the filters (popular,price low to high,high to low)
+        then user will select the ambulence and book the appointmnet 
+
+        in the booking screen show all details with the amount and payment gateway process
+
+        in user bookings sreen fetch all bookings only change is change the statuss and fetch the data 
+        (upcomming,completed,cancelled)
+
+for the admin pannel :
+  admin will login through the mobile number and otp verification through the firebase
+  then he will manage all the services do crud operation on the services (create,update,delete)
+  then he will manage all the doctors approve or reject the doctors 
+  then he will manage all the user bookings and doctor appointments
+   then he will manage all the labtestes bookings 
+   then he will manage all the medical equipment rental bookings
+   then he will manage all the ambulence emergency service bookings
+   then he will see the reports and analytics of the app and pannel usage
 
 
 
+
+check the present apis after that complete the remaining apis 
 
 

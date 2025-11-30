@@ -7,29 +7,42 @@ const BookingSchema = new Schema({
         ref: 'User',
         required: true
     },
+    // Doctor is optional now, as we might book other things
     doctorId: {
         type: Schema.Types.ObjectId,
-        ref: 'User', // Doctor is also a User
-        required: true
+        ref: 'User'
     },
+    // Generic Item Reference (for LabTest, Equipment, Ambulance)
+    itemId: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        refPath: 'itemType' // Dynamic reference based on itemType field
+    },
+    itemType: {
+        type: String,
+        required: true,
+        enum: ['User', 'LabTest', 'MedicalEquipment', 'Ambulance', 'Service'], // 'User' for Doctor
+        default: 'User'
+    },
+    // Service Category (e.g., OPD, Lab, etc.) - Optional if implied by itemType
     serviceId: {
         type: Schema.Types.ObjectId,
-        ref: 'Service',
-        required: true
+        ref: 'Service'
     },
     slot: {
-        start_time: { type: Date, required: true },
-        end_time: { type: Date, required: true },
-        slot_id: { type: String, unique: true } // Unique ID generated for the slot
+        start_time: { type: Date }, // Optional for non-slot based bookings
+        end_time: { type: Date },
+        slot_id: { type: String }
     },
     booking_date: { type: Date, required: true },
     status: {
         type: String,
         required: true,
-        enum: ['Upcoming', 'Completed', 'Cancelled', 'Pending Payment'],
+        enum: ['Upcoming', 'Completed', 'Cancelled', 'Pending Payment', 'Approved', 'Rejected'],
         default: 'Pending Payment'
     },
-    consultation_fee: { type: Number, required: true },
+    consultation_fee: { type: Number }, // Specific to Doctor
+    item_price: { type: Number },       // For Lab/Equipment/Ambulance
     platform_fee: { type: Number, required: true },
     total_amount: { type: Number, required: true },
     payment_status: {
@@ -37,6 +50,11 @@ const BookingSchema = new Schema({
         required: true,
         enum: ['INITIATED', 'PAID', 'FAILED', 'REFUNDED'],
         default: 'INITIATED'
+    },
+    payment_details: {
+        transaction_id: String,
+        method: String,
+        timestamp: Date
     },
     created_at: {
         type: Date,

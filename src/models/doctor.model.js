@@ -8,6 +8,11 @@ const DoctorSchema = new Schema({
         required: true,
         unique: true
     },
+    status: {
+        type: String,
+        enum: ['Inactive', 'Pending', 'Active', 'Rejected'],
+        default: 'Inactive' // Default status is Inactive
+    },
     experience: { type: Number },
     patients_treated: { type: Number, default: 0 },
     satisfaction_rating: { type: Number, default: 0.0 }, // 1.0 to 5.0

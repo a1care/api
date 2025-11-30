@@ -1,17 +1,18 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/user.model'); 
-const Doctor = require('../models/doctor.model'); 
+const User = require('../models/user.model');
+const Doctor = require('../models/doctor.model');
+const Role = require('../models/role.model');
 
 // --- Helper: Generate JWT Token ---
 const generateToken = (userId, roleName) => {
     // Generate a minimal JWT payload: only ID and Role
     return jwt.sign(
-        { 
-            id: userId, 
-            role: roleName 
-        }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: '365d' } 
+        {
+            id: userId,
+            role: roleName
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '365d' }
     );
 };
 
@@ -28,8 +29,15 @@ exports.login = async (req, res) => {
     if (!mobile_number || !role) {
         return res.status(400).json({ message: 'Mobile number and role are required.' });
     }
-    if (!['User', 'Doctor', 'Admin'].includes(role)) {
-        return res.status(400).json({ message: 'Invalid role specified.' });
+
+    // Dynamic Role Validation
+    const validRoles = ['User', 'Doctor', 'Admin'];
+    if (!validRoles.includes(role)) {
+        // Check DB
+        const dbRole = await Role.findOne({ name: role });
+        if (!dbRole) {
+            return res.status(400).json({ message: 'Invalid role specified.' });
+        }
     }
 
     try {
@@ -44,11 +52,11 @@ exports.login = async (req, res) => {
                 fcm_token, // Save the initial token
             });
             user = newUser;
-            
+
             // If the new user is a Doctor, create a corresponding Doctor document
             // This links the Doctor profile details to the base User document
             if (role === 'Doctor') {
-                await Doctor.create({ 
+                await Doctor.create({
                     userId: newUser._id,
                     consultation_fee: 0,
                     experience: 0,
@@ -77,7 +85,7 @@ exports.login = async (req, res) => {
         console.error('Login error:', error);
         // Handle MongoDB duplicate key error (mobile_number uniqueness)
         if (error.code === 11000) {
-             return res.status(409).json({ message: 'Mobile number is already registered under a different role.' });
+            return res.status(409).json({ message: 'Mobile number is already registered under a different role.' });
         }
         res.status(500).json({ message: 'Server error during authentication.' });
     }
@@ -91,7 +99,7 @@ exports.login = async (req, res) => {
  */
 exports.updateCoordinates = async (req, res) => {
     // userId is pulled from the token via authenticate.js middleware
-    const userId = req.userId.id; 
+    const userId = req.userId.id;
     const { latitude, longitude } = req.body;
 
     if (latitude === undefined || longitude === undefined) {
@@ -109,18 +117,16 @@ exports.updateCoordinates = async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             message: 'Coordinates updated successfully.'
         });
-        
+
     } catch (error) {
         console.error('Coordinate update error:', error);
         res.status(500).json({ message: 'Server error during coordinate update.' });
     }
 };
-
-// Add this function to src/controllers/auth.controller.js
 
 /**
  * @route PUT /api/auth/profile
@@ -130,12 +136,12 @@ exports.updateCoordinates = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
     // 1. Get User ID from authenticated token
-    const userId = req.userId.id; 
+    const userId = req.userId.id;
     const { name, email } = req.body;
 
     // Object to hold fields we want to update
     const updateFields = {};
-    
+
     // 2. Validate and prepare update object
     if (name) {
         updateFields.name = name;
@@ -145,7 +151,7 @@ exports.updateProfile = async (req, res) => {
         updateFields.email = email;
     }
 
-  
+
     // Check if there's anything to update
     if (Object.keys(updateFields).length === 0) {
         return res.status(400).json({ message: 'No valid fields provided for update.' });
@@ -180,7 +186,7 @@ exports.updateProfile = async (req, res) => {
         console.error('Profile update error:', error);
         // Handle unique constraint violation (e.g., if new mobile_number is taken)
         if (error.code === 11000) {
-             return res.status(409).json({ message: 'Mobile number or email already in use.' });
+            return res.status(409).json({ message: 'Mobile number or email already in use.' });
         }
         res.status(500).json({ message: 'Server error during profile update.' });
     }
