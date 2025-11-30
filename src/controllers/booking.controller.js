@@ -281,6 +281,10 @@ exports.createBooking = async (req, res) => {
         }
 
         // 2. Create the new booking document
+        const isCOD = payment_method === 'COD';
+        const initialStatus = isCOD ? 'Upcoming' : 'Pending Payment';
+        const initialPaymentStatus = isCOD ? 'INITIATED' : 'INITIATED';
+
         const newBooking = new Booking({
             userId,
             itemId,
@@ -296,8 +300,8 @@ exports.createBooking = async (req, res) => {
             item_price: itemPrice,
             platform_fee: PLATFORM_FEE,
             total_amount: TOTAL_AMOUNT,
-            status: 'Pending Payment',
-            payment_status: 'INITIATED',
+            status: initialStatus,
+            payment_status: initialPaymentStatus,
             payment_details: {
                 method: payment_method
             }
@@ -305,7 +309,21 @@ exports.createBooking = async (req, res) => {
 
         await newBooking.save();
 
-        // 3. Return the full booking view for the payment screen
+        // 3. Return response
+        if (isCOD) {
+            return res.status(201).json({
+                success: true,
+                message: 'Booking confirmed with Cash on Delivery.',
+                booking_details: {
+                    booking_id: newBooking._id,
+                    status: newBooking.status,
+                    total_amount: newBooking.total_amount,
+                    payment_method: 'COD'
+                }
+            });
+        }
+
+        // Return the full booking view for the payment screen (Online Payment)
         res.status(201).json({
             success: true,
             message: 'Booking initiated. Proceed to payment.',
