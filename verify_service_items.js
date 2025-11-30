@@ -12,8 +12,15 @@ async function verify() {
 
         console.log(`Found ${data.services.length} services.`);
 
-        // Pick a service (e.g., LabTest)
-        const service = data.services.find(s => s.type === 'LabTest') || data.services[0];
+        // Pick a service that should have items (e.g., LabTest)
+        const service = data.services.find(s => s.type === 'LabTest');
+
+        if (!service) {
+            console.log('No LabTest service found. Listing all available services:');
+            data.services.forEach(s => console.log(`- ${s.name} (${s.type})`));
+            return;
+        }
+
         console.log('Service Object:', JSON.stringify(service, null, 2));
         const serviceId = service.id || service._id;
         console.log(`Testing with Service: ${service.name} (ID: ${serviceId})`);

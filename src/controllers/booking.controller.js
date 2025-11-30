@@ -51,13 +51,13 @@ exports.getServiceItems = async (req, res) => {
         switch (service.type) {
             case 'LabTest':
                 const LabTest = require('../models/labTest.model');
-                items = await LabTest.find({ is_available: true });
+                items = await LabTest.find({ is_active: true });
                 itemType = 'LabTest';
                 break;
 
             case 'MedicalEquipment':
                 const MedicalEquipment = require('../models/medicalEquipment.model');
-                items = await MedicalEquipment.find({ is_available: true });
+                items = await MedicalEquipment.find({ is_active: true });
                 itemType = 'MedicalEquipment';
                 break;
 

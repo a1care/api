@@ -4,7 +4,7 @@ const path = require('path');
 // Base URL
 const BASE_URL = 'https://api-esf1.onrender.com/api';
 
-// Admin Credentials (assuming role exists and we can login/signup)
+// Admin Credentials
 const ADMIN_USER = {
     mobile_number: '8888888888',
     role: 'Admin',
@@ -13,11 +13,11 @@ const ADMIN_USER = {
 
 // Data to Seed
 const SERVICES = [
-    { name: 'OPD Booking', title: 'Consult Best Doctors' },
-    { name: 'Lab Tests', title: 'Home Sample Collection' },
-    { name: 'Medical Equipment', title: 'Rent or Buy' },
-    { name: 'Ambulance', title: '24/7 Emergency' },
-    { name: 'Video Consultation', title: 'Connect Instantly' }
+    { name: 'OPD Booking', title: 'Consult Best Doctors', type: 'OPD', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
+    { name: 'Lab Tests', title: 'Sample Collection at Home', type: 'LabTest', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
+    { name: 'Medical Equipment', title: 'Rent or Buy Equipment', type: 'MedicalEquipment', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
+    { name: 'Ambulance', title: 'Emergency Services', type: 'Ambulance', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
+    { name: 'Video Consultation', title: 'Connect with Doctors Online', type: 'VideoConsultation', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' }
 ];
 
 const LAB_TESTS = [
@@ -110,7 +110,6 @@ async function seed() {
         // 2. Seed Lab Tests
         console.log('\nSeeding Lab Tests...');
         for (const test of LAB_TESTS) {
-            // Lab tests allow image upload but we'll skip it for speed/simplicity or use dummy
             const res = await uploadWithFile(`${BASE_URL}/homescreen/lab-tests`, test, 'dummy.png');
             console.log(`Lab Test '${test.name}': ${res.success ? 'Success' : res.message}`);
         }
