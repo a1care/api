@@ -7,6 +7,7 @@ const LabTestSchema = new Schema({
     description: { type: String },
     price: { type: Number, required: true },
     image_url: { type: String },
+    serviceId: { type: Schema.Types.ObjectId, ref: 'Service', required: true },
     is_active: { type: Boolean, default: true },
     created_at: { type: Date, default: Date.now }
 });

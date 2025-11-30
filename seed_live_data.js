@@ -1,172 +1,125 @@
-const fs = require('fs');
-const path = require('path');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const Service = require('./src/models/service.model');
+const LabTest = require('./src/models/labTest.model');
+const MedicalEquipment = require('./src/models/medicalEquipment.model');
+const Ambulance = require('./src/models/ambulance.model');
 
-// Base URL
-const BASE_URL = 'https://api-esf1.onrender.com/api';
+dotenv.config();
 
-// Admin Credentials
-const ADMIN_USER = {
-    mobile_number: '8888888888',
-    role: 'Admin',
-    fcm_token: 'seed_script_token'
-};
-
-// Data to Seed
-const SERVICES = [
-    { name: 'OPD Booking', title: 'Consult Best Doctors', type: 'OPD', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
-    { name: 'Lab Tests', title: 'Sample Collection at Home', type: 'LabTest', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
-    { name: 'Medical Equipment', title: 'Rent or Buy Equipment', type: 'MedicalEquipment', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
-    { name: 'Ambulance', title: 'Emergency Services', type: 'Ambulance', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' },
-    { name: 'Video Consultation', title: 'Connect with Doctors Online', type: 'VideoConsultation', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514709331-dummy.png' }
-];
-
-const LAB_TESTS = [
-    { name: 'Full Body Checkup', description: 'Complete health checkup including 50+ tests', price: 1500 },
-    { name: 'Thyroid Profile', description: 'T3, T4, TSH tests', price: 500 },
-    { name: 'Diabetes Screen', description: 'HbA1c, Fasting Sugar', price: 400 },
-    { name: 'Vitamin D Test', description: 'Check Vitamin D levels', price: 800 },
-    { name: 'CBC', description: 'Complete Blood Count', price: 300 }
-];
-
-const EQUIPMENT = [
-    { name: 'Oxygen Concentrator', description: '5L Oxygen Concentrator', rental_price: 500 },
-    { name: 'Wheelchair', description: 'Foldable Wheelchair', rental_price: 100 },
-    { name: 'Hospital Bed', description: 'Semi-fowler bed', rental_price: 300 },
-    { name: 'Nebulizer', description: 'Portable Nebulizer', rental_price: 50 },
-    { name: 'Crutches', description: 'Adjustable Crutches', rental_price: 30 }
-];
-
-const AMBULANCES = [
-    { vehicle_number: 'KA-01-AB-1234', type: 'Basic', price_per_km: 20, base_fare: 500, driver_name: 'Ramesh', driver_phone: '9000000001' },
-    { vehicle_number: 'KA-02-CD-5678', type: 'Advance', price_per_km: 50, base_fare: 1000, driver_name: 'Suresh', driver_phone: '9000000002' },
-    { vehicle_number: 'KA-03-EF-9012', type: 'Basic', price_per_km: 15, base_fare: 400, driver_name: 'Mahesh', driver_phone: '9000000003' },
-    { vehicle_number: 'KA-04-GH-3456', type: 'ICU', price_per_km: 60, base_fare: 1500, driver_name: 'Ganesh', driver_phone: '9000000004' },
-    { vehicle_number: 'KA-05-IJ-7890', type: 'Basic', price_per_km: 20, base_fare: 500, driver_name: 'Dinesh', driver_phone: '9000000005' }
-];
-
-async function seed() {
+const seedLiveData = async () => {
     try {
-        console.log('Logging in as Admin...');
-        const loginRes = await fetch(`${BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(ADMIN_USER)
-        });
-        const loginData = await loginRes.json();
-
-        if (!loginData.success) {
-            throw new Error(`Login failed: ${loginData.message}`);
-        }
-
-        const token = loginData.token;
-        console.log('Admin logged in. Token received.');
-
-        // Helper to upload with file
-        const uploadWithFile = async (url, fields, filePath) => {
-            const formData = new FormData();
-            for (const key in fields) {
-                formData.append(key, fields[key]);
-            }
-            if (filePath) {
-                const fileContent = fs.readFileSync(filePath);
-                const blob = new Blob([fileContent], { type: 'image/png' });
-                formData.append('serviceImage', blob, 'dummy.png');
-            }
-
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            const text = await res.text();
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error(`Failed to parse JSON from ${url}. Response: ${text.substring(0, 200)}...`);
-                return { success: false, message: 'Invalid JSON response' };
-            }
-        };
-
-        // Helper for JSON post
-        const postJson = async (url, data) => {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            return res.json();
-        };
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log('MongoDB Connected for Seeding');
 
         // 1. Seed Services
-        console.log('\nSeeding Services...');
-        for (const service of SERVICES) {
-            const res = await uploadWithFile(`${BASE_URL}/homescreen/services`, service, 'dummy.png');
-            console.log(`Service '${service.name}': ${res.success ? 'Success' : res.message}`);
+        const services = [
+            { name: 'OPD Booking', title: 'Book Doctor Appointment', type: 'OPD', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514707000-dummy.png' },
+            { name: 'Lab Tests', title: 'Home Sample Collection', type: 'LabTest', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514710930-dummy.png' },
+            { name: 'Medical Equipment', title: 'Rent or Buy Equipment', type: 'MedicalEquipment', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+            { name: 'Ambulance', title: 'Emergency & Transport', type: 'Ambulance', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514716766-dummy.png' },
+            { name: 'Video Consultation', title: 'Connect with Doctors Online', type: 'VideoConsultation', image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514718641-dummy.png' }
+        ];
+
+        // Upsert Services and get their IDs
+        const serviceMap = {}; // name -> _id
+
+        for (const service of services) {
+            const updatedService = await Service.findOneAndUpdate(
+                { name: service.name },
+                service,
+                { upsert: true, new: true }
+            );
+            serviceMap[service.type] = updatedService._id;
+            console.log(`Service seeded/updated: ${service.name} (ID: ${updatedService._id})`);
         }
 
         // 2. Seed Lab Tests
-        console.log('\nSeeding Lab Tests...');
-        for (const test of LAB_TESTS) {
-            const res = await uploadWithFile(`${BASE_URL}/homescreen/lab-tests`, test, 'dummy.png');
-            console.log(`Lab Test '${test.name}': ${res.success ? 'Success' : res.message}`);
+        if (serviceMap['LabTest']) {
+            const labTests = [
+                { name: 'Full Body Checkup', description: 'Complete health checkup including 50+ tests', price: 1500, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Thyroid Profile', description: 'T3, T4, TSH tests', price: 600, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Diabetes Screen', description: 'HbA1c, Fasting Blood Sugar', price: 400, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Vitamin D Test', description: 'Check Vitamin D levels', price: 800, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'CBC', description: 'Complete Blood Count', price: 300, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Lipid Profile', description: 'Cholesterol, HDL, LDL', price: 700, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Liver Function Test', description: 'Check liver health', price: 900, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Kidney Function Test', description: 'Creatinine, Urea, etc.', price: 850, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Iron Studies', description: 'Iron, TIBC, Ferritin', price: 1200, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Calcium Test', description: 'Serum Calcium levels', price: 250, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Urine Routine', description: 'Routine urine analysis', price: 150, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Dengue NS1', description: 'Dengue antigen test', price: 600, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Malaria Parasite', description: 'Smear test for Malaria', price: 200, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Typhoid Widal', description: 'Test for Typhoid', price: 300, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' },
+                { name: 'Hepatitis B', description: 'HBsAg test', price: 500, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514714883-dummy.png' }
+            ];
+
+            for (const test of labTests) {
+                await LabTest.findOneAndUpdate(
+                    { name: test.name },
+                    { ...test, serviceId: serviceMap['LabTest'] },
+                    { upsert: true }
+                );
+            }
+            console.log('Lab Tests seeded with Service ID.');
         }
 
-        // 3. Seed Equipment
-        console.log('\nSeeding Medical Equipment...');
-        for (const item of EQUIPMENT) {
-            const res = await uploadWithFile(`${BASE_URL}/homescreen/medical-equipment`, item, 'dummy.png');
-            console.log(`Equipment '${item.name}': ${res.success ? 'Success' : res.message}`);
+        // 3. Seed Medical Equipment
+        if (serviceMap['MedicalEquipment']) {
+            const equipment = [
+                { name: 'Oxygen Concentrator', description: '5L Oxygen Concentrator', rental_price: 500, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Wheelchair', description: 'Foldable Wheelchair', rental_price: 100, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Hospital Bed', description: 'Semi-fowler Bed', rental_price: 300, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Nebulizer', description: 'Portable Nebulizer', rental_price: 50, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Suction Machine', description: 'Phlegm Suction Machine', rental_price: 200, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Air Mattress', description: 'Anti-decubitus Air Mattress', rental_price: 80, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Walker', description: 'Adjustable Walker', rental_price: 30, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Commode Chair', description: 'Foldable Commode Chair', rental_price: 60, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Pulse Oximeter', description: 'Fingertip Pulse Oximeter', rental_price: 20, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'BP Monitor', description: 'Digital BP Monitor', rental_price: 40, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Glucometer', description: 'Blood Sugar Monitor', rental_price: 30, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'IV Stand', description: 'Adjustable IV Stand', rental_price: 20, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'BiPAP Machine', description: 'BiPAP for Sleep Apnea', rental_price: 800, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'CPAP Machine', description: 'CPAP for Sleep Apnea', rental_price: 700, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' },
+                { name: 'Infusion Pump', description: 'Syringe Infusion Pump', rental_price: 400, image_url: 'https://a1-care.s3.ap-south-2.amazonaws.com/services/1764514712891-dummy.png' }
+            ];
+
+            for (const item of equipment) {
+                await MedicalEquipment.findOneAndUpdate(
+                    { name: item.name },
+                    { ...item, serviceId: serviceMap['MedicalEquipment'] },
+                    { upsert: true }
+                );
+            }
+            console.log('Medical Equipment seeded with Service ID.');
         }
 
         // 4. Seed Ambulances
-        console.log('\nSeeding Ambulances...');
-        for (const amb of AMBULANCES) {
-            const res = await postJson(`${BASE_URL}/homescreen/ambulance`, amb);
-            console.log(`Ambulance '${amb.vehicle_number}': ${res.success ? 'Success' : res.message}`);
-        }
+        if (serviceMap['Ambulance']) {
+            const ambulances = [
+                { vehicle_number: 'KA-01-AB-1234', type: 'Basic', price_per_km: 20, base_fare: 500, driver_name: 'Ramesh', driver_phone: '9876543210' },
+                { vehicle_number: 'KA-02-CD-5678', type: 'ICU', price_per_km: 50, base_fare: 1500, driver_name: 'Suresh', driver_phone: '9876543211' },
+                { vehicle_number: 'KA-03-EF-9012', type: 'Advance', price_per_km: 40, base_fare: 1000, driver_name: 'Mahesh', driver_phone: '9876543212' },
+                { vehicle_number: 'KA-04-GH-3456', type: 'Basic', price_per_km: 20, base_fare: 500, driver_name: 'Ganesh', driver_phone: '9876543213' },
+                { vehicle_number: 'KA-05-IJ-7890', type: 'ICU', price_per_km: 50, base_fare: 1500, driver_name: 'Dinesh', driver_phone: '9876543214' }
+            ];
 
-        // 5. Seed Doctors
-        console.log('\nSeeding Doctors...');
-        for (let i = 1; i <= 5; i++) {
-            const docPhone = `990000000${i}`;
-            // Login/Signup as Doctor
-            const docLoginRes = await fetch(`${BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile_number: docPhone, role: 'Doctor', fcm_token: 'doc_token' })
-            });
-            const docData = await docLoginRes.json();
-
-            if (docData.success) {
-                // Approve the doctor
-                const base64Url = docData.token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const payload = JSON.parse(jsonPayload);
-                const doctorId = payload.id;
-
-                // Approve
-                const approveRes = await fetch(`${BASE_URL}/homescreen/doctors/${doctorId}/approve`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const approveData = await approveRes.json();
-                console.log(`Doctor ${docPhone}: Created & ${approveData.success ? 'Approved' : 'Approval Failed: ' + approveData.message}`);
-            } else {
-                console.log(`Doctor ${docPhone}: Creation Failed - ${docData.message}`);
+            for (const amb of ambulances) {
+                await Ambulance.findOneAndUpdate(
+                    { vehicle_number: amb.vehicle_number },
+                    { ...amb, serviceId: serviceMap['Ambulance'] },
+                    { upsert: true }
+                );
             }
+            console.log('Ambulances seeded with Service ID.');
         }
 
-        console.log('\nSeeding Completed!');
-
+        console.log('Live Data Seeding Completed Successfully!');
+        process.exit();
     } catch (error) {
         console.error('Seeding Error:', error);
+        process.exit(1);
     }
-}
+};
 
-seed();
+seedLiveData();

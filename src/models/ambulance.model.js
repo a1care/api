@@ -12,6 +12,7 @@ const AmbulanceSchema = new Schema({
     base_fare: { type: Number, default: 0 },
     driver_name: { type: String },
     driver_phone: { type: String },
+    serviceId: { type: Schema.Types.ObjectId, ref: 'Service', required: true },
     is_available: { type: Boolean, default: true },
     current_location: {
         latitude: Number,
