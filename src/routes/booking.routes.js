@@ -17,7 +17,19 @@ router.get('/services', bookingController.getServices);
  * @description Fetch sub-items for a specific service (e.g., Lab Tests for "Lab Test" service).
  * @access Public
  */
-router.get('/services/:serviceId/items', bookingController.getServiceItems);
+router.get('/services/:serviceId/', bookingController.getServiceItems);
+
+// --- Private Routes (Requires Token) ---
+
+/**
+ * @route GET /api/booking/doctors/opd
+ * @description Fetch doctors near the user, ordered by distance and rating (Nearest Doctor Search).
+ * @access Private
+ * @middleware protect - Provides user location for the search query.
+ */
+router.get('/doctors/opd', protect, bookingController.getAvailableDoctors);
+
+// --- Public Routes (Specific params) ---
 
 /**
  * @route GET /api/booking/doctors/:doctorId
@@ -32,17 +44,6 @@ router.get('/doctors/:doctorId', bookingController.getDoctorDetails);
  * @access Public
  */
 router.get('/doctors/:doctorId/slots', bookingController.getAvailableSlots);
-
-
-// --- Private Routes (Requires Token) ---
-
-/**
- * @route GET /api/booking/doctors/opd
- * @description Fetch doctors near the user, ordered by distance and rating (Nearest Doctor Search).
- * @access Private
- * @middleware protect - Provides user location for the search query.
- */
-router.get('/doctors/opd', protect, bookingController.getAvailableDoctors);
 
 
 /**
