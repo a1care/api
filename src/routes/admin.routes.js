@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/service.admin.controller');
-const labTestController = require('../controllers/labTest.controller');
-const equipmentController = require('../controllers/medicalEquipment.controller');
-const ambulanceController = require('../controllers/ambulance.controller');
+const serviceItemController = require('../controllers/serviceItem.controller');
 const adminController = require('../controllers/admin.controller');
 
 const { uploadServiceImage } = require('../middleware/upload');
@@ -17,9 +15,10 @@ const { protect } = require('../middleware/authenticate');
 router.post('/services', protect, uploadServiceImage, serviceController.createService);
 router.get('/services', protect, serviceController.getAllServices);
 
-router.post('/lab-tests', protect, uploadServiceImage, labTestController.createLabTest);
-router.post('/medical-equipment', protect, uploadServiceImage, equipmentController.createEquipment);
-router.post('/ambulance', protect, ambulanceController.createAmbulance);
+// Service Item Management (Generic Replacement for LabTest, Equipment, Ambulance)
+router.post('/service-items', protect, uploadServiceImage, serviceItemController.createServiceItem);
+router.put('/service-items/:id', protect, uploadServiceImage, serviceItemController.updateServiceItem);
+router.delete('/service-items/:id', protect, serviceItemController.deleteServiceItem);
 
 // Doctor Management
 router.put('/doctors/:doctorId/approve', protect, adminController.approveDoctor);

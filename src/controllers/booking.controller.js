@@ -3,9 +3,7 @@ const User = require('../models/user.model');
 const Doctor = require('../models/doctor.model');
 const Service = require('../models/service.model');
 const Booking = require('../models/booking.model');
-const LabTest = require('../models/labTest.model');
-const MedicalEquipment = require('../models/medicalEquipment.model');
-const Ambulance = require('../models/ambulance.model');
+const ServiceItem = require('../models/serviceItem.model');
 
 // Register 2dsphere index for geospatial queries (run this once on app startup or in a migration)
 // User.collection.createIndex({ location: "2dsphere" }); 
@@ -40,14 +38,8 @@ exports.getServiceItems = async (req, res) => {
             return res.status(404).json({ message: 'Service not found.' });
         }
 
-        let items = [];
-        if (service.type === 'LabTest') {
-            items = await LabTest.find({ serviceId, is_active: true });
-        } else if (service.type === 'MedicalEquipment') {
-            items = await MedicalEquipment.find({ serviceId, is_active: true });
-        } else if (service.type === 'Ambulance') {
-            items = await Ambulance.find({ serviceId, is_active: true });
-        }
+        // Consolidated fetch for all service types using ServiceItem
+        const items = await ServiceItem.find({ serviceId, is_active: true });
 
         res.status(200).json({ success: true, items });
     } catch (error) {
@@ -189,8 +181,8 @@ exports.getAvailableSlots = async (req, res) => {
 exports.createBooking = async (req, res) => {
     const userId = req.userId.id;
     const {
-        itemType, // 'User' (for Doctor), 'LabTest', 'MedicalEquipment', 'Ambulance'
-        itemId,   // ID of the Doctor, LabTest, etc.
+        itemType, // 'User' (for Doctor), 'ServiceItem' (for Lab, Equipment, Ambulance)
+        itemId,   // ID of the Doctor or ServiceItem
         serviceId, // Optional, mainly for Doctor/OPD
         slotId,
         slotStartTime,
@@ -199,34 +191,8 @@ exports.createBooking = async (req, res) => {
         payment_method
     } = req.body;
 
-    // --- Mock Fee Calculation ---
-    // In a real app, fetch price from the DB based on itemId
     let itemPrice = 0;
     let consultationFee = 0;
-
-    // Fetch item details to get price (Simplified for this flow)
-    // You would typically query the specific model here.
-
-    // For now, we assume frontend sends the price or we use a default for the mock
-    const MOCK_PRICES = {
-        'User': 600, // Doctor Consultation
-        'LabTest': 500,
-        'MedicalEquipment': 200, // Per day
-        'Ambulance': 1000 // Base fare
-    };
-
-    const basePrice = MOCK_PRICES[itemType] || 0;
-
-    if (itemType === 'User') {
-        consultationFee = basePrice;
-    } else {
-        itemPrice = basePrice;
-    }
-
-    const PLATFORM_FEE_RATE = 0.10;
-    const PLATFORM_FEE = parseFloat(((consultationFee + itemPrice) * PLATFORM_FEE_RATE).toFixed(2));
-    const TOTAL_AMOUNT = consultationFee + itemPrice + PLATFORM_FEE;
-    // ----------------------------
 
     try {
         // 1. Basic Validation
@@ -234,7 +200,33 @@ exports.createBooking = async (req, res) => {
             return res.status(400).json({ message: 'Missing booking details.' });
         }
 
-        // 2. Create the new booking document
+        // 2. Fetch Price
+        if (itemType === 'User') {
+            // Fetch Doctor Consultation Fee (Mock or from DB)
+            // const doctor = await Doctor.findOne({ userId: itemId });
+            // consultationFee = doctor ? doctor.consultation_fee : 600;
+            consultationFee = 600; // Mock default
+        } else if (itemType === 'ServiceItem') {
+            const serviceItem = await ServiceItem.findById(itemId);
+            if (!serviceItem) {
+                return res.status(404).json({ message: 'Service Item not found.' });
+            }
+            itemPrice = serviceItem.price;
+        } else {
+            // Fallback for legacy types if any, or error
+            // For now, assume if it's not User, it might be legacy types mapped to ServiceItem logic?
+            // But we changed the enum in model, so it must be ServiceItem.
+            // If frontend sends 'LabTest', we should probably handle it or expect frontend update.
+            // Assuming frontend sends 'ServiceItem' or we map it here?
+            // Let's assume strict 'ServiceItem' for now as per model.
+            return res.status(400).json({ message: 'Invalid item type. Must be User or ServiceItem.' });
+        }
+
+        const PLATFORM_FEE_RATE = 0.10;
+        const PLATFORM_FEE = parseFloat(((consultationFee + itemPrice) * PLATFORM_FEE_RATE).toFixed(2));
+        const TOTAL_AMOUNT = consultationFee + itemPrice + PLATFORM_FEE;
+
+        // 3. Create the new booking document
         const isCOD = payment_method === 'COD';
         const initialStatus = isCOD ? 'Upcoming' : 'Pending Payment';
         const initialPaymentStatus = isCOD ? 'INITIATED' : 'INITIATED';
@@ -263,7 +255,7 @@ exports.createBooking = async (req, res) => {
 
         await newBooking.save();
 
-        // 3. Return response
+        // 4. Return response
         if (isCOD) {
             return res.status(201).json({
                 success: true,
@@ -323,9 +315,18 @@ exports.getUserBookings = async (req, res) => {
             let itemName = 'N/A';
             if (booking.itemId) {
                 // Handle different item structures
-                if (booking.itemType === 'User') itemName = booking.itemId.name; // Doctor
-                else if (booking.itemType === 'Ambulance') itemName = booking.itemId.vehicle_number;
-                else itemName = booking.itemId.name; // LabTest, Equipment
+                if (booking.itemType === 'User') {
+                    itemName = booking.itemId.name; // Doctor
+                } else if (booking.itemType === 'ServiceItem') {
+                    itemName = booking.itemId.name; // Generic Service Item
+                    // If it's an ambulance and has vehicle number, maybe append it?
+                    if (booking.itemId.vehicle_number) {
+                        itemName += ` (${booking.itemId.vehicle_number})`;
+                    }
+                } else {
+                    // Fallback for old data if any
+                    itemName = booking.itemId.name || booking.itemId.vehicle_number || 'Unknown Item';
+                }
             }
 
             const bookingDetail = {

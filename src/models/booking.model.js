@@ -21,7 +21,7 @@ const BookingSchema = new Schema({
     itemType: {
         type: String,
         required: true,
-        enum: ['User', 'LabTest', 'MedicalEquipment', 'Ambulance', 'Service'], // 'User' for Doctor
+        enum: ['User', 'ServiceItem'], // 'User' for Doctor, 'ServiceItem' for everything else
         default: 'User'
     },
     // Service Category (e.g., OPD, Lab, etc.) - Optional if implied by itemType
