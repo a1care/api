@@ -5,7 +5,7 @@ const router = express.Router();
 const doctorController = require('../controllers/doctor.controller');
 const { protect } = require('../middleware/authenticate');
 // Import the new middleware
-const { uploadDoctorDocuments } = require('../middleware/upload'); 
+const { uploadDoctorDocuments } = require('../middleware/upload');
 
 // ... existing routes ...
 
@@ -20,5 +20,10 @@ router.put(
     uploadDoctorDocuments, // <--- NEW MULTI-FILE MIDDLEWARE
     doctorController.uploadDocument
 );
+
+// New Doctor App Routes
+router.get('/appointments', protect, doctorController.getAppointments);
+router.post('/slots', protect, doctorController.manageSlots);
+router.put('/profile', protect, doctorController.updateProfile);
 
 module.exports = router;

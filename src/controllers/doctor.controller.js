@@ -28,7 +28,7 @@ const DOCUMENT_TYPE_MAP = {
  * @payload Form Data: multiple files named as defined in DOCUMENT_FIELDS
  */
 exports.uploadDocument = async (req, res) => {
-    const doctorId = req.userId.id; 
+    const doctorId = req.userId.id;
     const uploadedFiles = req.files; // Object of file arrays: { 'registration_cert': [file], ... }
 
     if (!uploadedFiles || Object.keys(uploadedFiles).length === 0) {
@@ -43,22 +43,22 @@ exports.uploadDocument = async (req, res) => {
     try {
         for (const fieldName of uploadedDocumentNames) {
             const fileArray = uploadedFiles[fieldName];
-            
+
             if (fileArray && fileArray.length > 0) {
                 const file = fileArray[0];
                 const documentType = DOCUMENT_TYPE_MAP[fieldName];
-                    
+
                 if (!documentType) continue; // Skip unexpected fields
 
                 // 1. Upsert (Insert or Update) the document record
                 const doc = await DoctorDocument.findOneAndUpdate(
                     { doctorId: doctorId, document_type: documentType },
-                    { 
-                        $set: { 
+                    {
+                        $set: {
                             s3_url: file.location, // S3 URL provided by Multer-S3
-                            is_verified: false, 
-                            uploaded_at: new Date() 
-                        } 
+                            is_verified: false,
+                            uploaded_at: new Date()
+                        }
                     },
                     { new: true, upsert: true, runValidators: true, session }
                 );
@@ -94,5 +94,89 @@ exports.uploadDocument = async (req, res) => {
         console.error('Document upload transaction error:', error);
         // Note: Clean up S3 files on abort is complex and usually handled by a separate process.
         res.status(500).json({ message: 'Transaction failed during document processing.' });
+    }
+};
+
+/**
+ * @route GET /api/doctor/appointments
+ * @description Fetch all bookings for the logged-in doctor
+ * @access Private (Doctor Role)
+ */
+exports.getAppointments = async (req, res) => {
+    const doctorId = req.userId.id;
+
+    try {
+        // Find bookings where itemType is 'User' and itemId is the doctor's userId
+        const appointments = await mongoose.model('Booking').find({
+            itemType: 'User',
+            itemId: doctorId
+        })
+            .populate('userId', 'name mobile_number')
+            .sort({ booking_date: -1, 'slot.start_time': 1 });
+
+        res.status(200).json({ success: true, appointments });
+    } catch (error) {
+        console.error('Get appointments error:', error);
+        res.status(500).json({ message: 'Server error fetching appointments.' });
+    }
+};
+
+/**
+ * @route POST /api/doctor/slots
+ * @description Update doctor's working hours (which drives slot generation)
+ * @access Private (Doctor Role)
+ * @payload { working_hours: [{ day: 'Monday', start: '09:00', end: '17:00' }] }
+ */
+exports.manageSlots = async (req, res) => {
+    const doctorId = req.userId.id;
+    const { working_hours } = req.body;
+
+    if (!working_hours || !Array.isArray(working_hours)) {
+        return res.status(400).json({ message: 'Invalid working_hours format.' });
+    }
+
+    try {
+        const doctor = await Doctor.findOne({ userId: doctorId });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found.' });
+        }
+
+        doctor.working_hours = working_hours;
+        await doctor.save();
+
+        res.status(200).json({ success: true, message: 'Working hours updated.', working_hours: doctor.working_hours });
+    } catch (error) {
+        console.error('Manage slots error:', error);
+        res.status(500).json({ message: 'Server error updating slots.' });
+    }
+};
+
+/**
+ * @route PUT /api/doctor/profile
+ * @description Update doctor's professional details
+ * @access Private (Doctor Role)
+ * @payload { consultation_fee, experience, about, specializations }
+ */
+exports.updateProfile = async (req, res) => {
+    const doctorId = req.userId.id;
+    const { consultation_fee, experience, about, specializations } = req.body;
+
+    try {
+        const doctor = await Doctor.findOne({ userId: doctorId });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found.' });
+        }
+
+        if (consultation_fee !== undefined) doctor.consultation_fee = consultation_fee;
+        if (experience !== undefined) doctor.experience = experience;
+        if (about !== undefined) doctor.about = about;
+        if (specializations !== undefined) doctor.specializations = specializations;
+
+        await doctor.save();
+
+        res.status(200).json({ success: true, message: 'Profile updated.', doctor });
+    } catch (error) {
+        console.error('Update doctor profile error:', error);
+        res.status(500).json({ message: 'Server error updating profile.' });
     }
 };
