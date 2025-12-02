@@ -188,3 +188,27 @@ exports.updateProfile = async (req, res) => {
         res.status(500).json({ message: 'Server error during profile update.' });
     }
 };
+
+/**
+ * @route GET /api/auth/profile
+ * @description Fetch current user profile details.
+ * @access Private
+ */
+exports.getProfile = async (req, res) => {
+    const userId = req.userId.id;
+
+    try {
+        const user = await User.findById(userId).select('-password -fcm_token -__v');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        res.status(200).json({
+            success: true,
+            profile: user
+        });
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ message: 'Server error fetching profile.' });
+    }
+};

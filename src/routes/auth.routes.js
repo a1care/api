@@ -22,6 +22,7 @@ AuthRouter.post('/login', authController.login);
  * @middleware protect - Uses the token to identify the user (req.userId)
  */
 AuthRouter.post('/coordinates', protect, authController.updateCoordinates);
+AuthRouter.get('/profile', protect, authController.getProfile);
 AuthRouter.put('/profile', protect, authController.updateProfile);
 
 module.exports = AuthRouter;

@@ -31,4 +31,8 @@ router.put('/bookings/:bookingId/status', protect, adminController.updateBooking
 // Analytics
 router.get('/analytics', protect, adminController.getAnalytics);
 
+// User Management
+router.get('/users', protect, adminController.getAllUsers);
+router.put('/users/:userId/status', protect, adminController.toggleUserStatus);
+
 module.exports = router;

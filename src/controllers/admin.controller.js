@@ -146,3 +146,51 @@ exports.updateBookingStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error updating booking status.' });
     }
 };
+
+/**
+ * @route GET /api/admin/users
+ * @description Get all users with role 'User'
+ * @access Private (Admin only)
+ */
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: 'User' }).select('-password -fcm_token -__v');
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error('Get all users error:', error);
+        res.status(500).json({ message: 'Server error fetching users.' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/users/:userId/status
+ * @description Block or Unblock a user
+ * @access Private (Admin only)
+ */
+exports.toggleUserStatus = async (req, res) => {
+    const { userId } = req.params;
+    const { is_active } = req.body; // Expect boolean
+
+    if (typeof is_active !== 'boolean') {
+        return res.status(400).json({ message: 'Invalid status. is_active must be boolean.' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        user.is_active = is_active;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: `User ${is_active ? 'unblocked' : 'blocked'} successfully.`,
+            user
+        });
+    } catch (error) {
+        console.error('Toggle user status error:', error);
+        res.status(500).json({ message: 'Server error updating user status.' });
+    }
+};
