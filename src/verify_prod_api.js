@@ -124,6 +124,36 @@ const runVerification = async () => {
         printCurl('POST', `${BASE_URL}/auth/login`, { 'Content-Type': 'application/json' }, doctorLoginData);
 
         // Doctor specific APIs can be added here if any (e.g., view own appointments)
+        const docAuthHeaders = {
+            'Authorization': `Bearer ${docToken}`,
+            'Content-Type': 'application/json'
+        };
+
+        // 2.2 Update Profile
+        console.log('2.2 Updating Doctor Profile...');
+        await fetchJson(`${BASE_URL}/doctor/profile`, {
+            method: 'PUT',
+            headers: docAuthHeaders,
+            body: JSON.stringify({ consultation_fee: 800, experience: 12, about: 'Expert Cardiologist' })
+        });
+        console.log('✅ Doctor Profile Updated.');
+        printCurl('PUT', `${BASE_URL}/doctor/profile`, docAuthHeaders, { consultation_fee: 800, experience: 12, about: 'Expert Cardiologist' });
+
+        // 2.3 Manage Slots (Working Hours)
+        console.log('2.3 Updating Working Hours...');
+        await fetchJson(`${BASE_URL}/doctor/slots`, {
+            method: 'POST',
+            headers: docAuthHeaders,
+            body: JSON.stringify({ working_hours: [{ day: 'Monday', start: '09:00', end: '17:00' }] })
+        });
+        console.log('✅ Working Hours Updated.');
+        printCurl('POST', `${BASE_URL}/doctor/slots`, docAuthHeaders, { working_hours: [{ day: 'Monday', start: '09:00', end: '17:00' }] });
+
+        // 2.4 Get Appointments
+        console.log('2.4 Fetching Doctor Appointments...');
+        await fetchJson(`${BASE_URL}/doctor/appointments`, { headers: docAuthHeaders });
+        console.log('✅ Fetched Doctor Appointments.');
+        printCurl('GET', `${BASE_URL}/doctor/appointments`, docAuthHeaders);
 
         console.log('\n🎉 Comprehensive API Verification Completed!');
 
