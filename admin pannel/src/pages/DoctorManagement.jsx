@@ -20,7 +20,14 @@ const DoctorManagement = () => {
         try {
             const response = await axios.get(`${API_URL}/admin/doctors`);
             if (response.data.success) {
-                setDoctors(response.data.doctors);
+                // Transform doctors data to flatten userId fields
+                const transformedDoctors = response.data.doctors.map(doctor => ({
+                    ...doctor,
+                    name: doctor.userId?.name || doctor.name || 'Unknown',
+                    email: doctor.userId?.email || doctor.email,
+                    mobile_number: doctor.userId?.mobile_number || doctor.mobile_number
+                }));
+                setDoctors(transformedDoctors);
             }
         } catch (error) {
             console.error('Error fetching doctors:', error);
