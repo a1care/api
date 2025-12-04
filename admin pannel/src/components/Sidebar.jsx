@@ -1,93 +1,78 @@
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Stethoscope, BriefcaseMedical, LogOut, Activity, Settings, HelpCircle } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Users, UserPlus, Stethoscope, Settings, LogOut, Activity, ChevronRight } from 'lucide-react';
 
 const Sidebar = () => {
-    const menuItems = [
-        { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-        { path: '/users', label: 'Patients', icon: Users },
-        { path: '/doctors', label: 'Medical Staff', icon: Stethoscope },
-        { path: '/services', label: 'Services & Depts', icon: BriefcaseMedical },
-    ];
+    const location = useLocation();
+    const isActive = (path) => location.pathname === path;
 
-    const bottomItems = [
-        { path: '/settings', label: 'Settings', icon: Settings },
-        { path: '/help', label: 'Help & Support', icon: HelpCircle },
+    const menuItems = [
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/users', icon: Users, label: 'Patients' },
+        { path: '/doctors', icon: Stethoscope, label: 'Doctors' },
+        { path: '/services', icon: Activity, label: 'Services' },
     ];
 
     return (
-        <aside className="w-72 bg-medical-primary text-white flex flex-col h-screen shadow-xl z-20">
-            {/* Logo Area */}
-            <div className="p-6 border-b border-teal-800/50 bg-teal-900/20">
+        <div className="w-64 bg-white h-screen fixed left-0 top-0 shadow-card z-20 flex flex-col transition-all duration-300">
+            {/* Logo Section */}
+            <div className="h-20 flex items-center px-6 border-b border-dashed border-gray-200">
                 <div className="flex items-center gap-3">
-                    <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10">
-                        <Activity className="h-6 w-6 text-medical-accent" />
+                    <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/40">
+                        M
                     </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight text-white">A1Care</h1>
-                        <p className="text-xs text-teal-200 font-medium tracking-wide uppercase opacity-80">Enterprise Admin</p>
-                    </div>
+                    <span className="text-xl font-bold text-dark-header tracking-tight">Mashfa</span>
                 </div>
             </div>
 
-            {/* Main Navigation */}
-            <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
-                <div>
-                    <h3 className="text-xs font-semibold text-teal-200/60 uppercase tracking-wider mb-3 px-3">Main Menu</h3>
-                    <nav className="space-y-1">
-                        {menuItems.map((item) => (
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                className={({ isActive }) =>
-                                    `flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive
-                                        ? 'bg-white/10 text-white font-medium shadow-lg border border-white/10'
-                                        : 'text-teal-100 hover:bg-white/5 hover:text-white'
-                                    }`
-                                }
-                            >
-                                <item.icon className={`h-5 w-5 transition-colors ${({ isActive }) => isActive ? 'text-medical-accent' : 'text-teal-300 group-hover:text-white'
-                                    }`} />
-                                <span className="text-sm">{item.label}</span>
-                            </NavLink>
-                        ))}
-                    </nav>
+            {/* Navigation */}
+            <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Main Menu
                 </div>
 
-                <div>
-                    <h3 className="text-xs font-semibold text-teal-200/60 uppercase tracking-wider mb-3 px-3">System</h3>
-                    <nav className="space-y-1">
-                        {bottomItems.map((item) => (
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                className={({ isActive }) =>
-                                    `flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive
-                                        ? 'bg-white/10 text-white font-medium shadow-lg border border-white/10'
-                                        : 'text-teal-100 hover:bg-white/5 hover:text-white'
-                                    }`
-                                }
-                            >
-                                <item.icon className="h-5 w-5 text-teal-300 group-hover:text-white" />
-                                <span className="text-sm">{item.label}</span>
-                            </NavLink>
-                        ))}
-                    </nav>
-                </div>
-            </div>
+                {menuItems.map((item) => {
+                    const active = isActive(item.path);
+                    return (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${active
+                                    ? 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-lg shadow-primary/30'
+                                    : 'text-dark-body hover:bg-gray-50 hover:translate-x-1'
+                                }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <item.icon className={`h-5 w-5 ${active ? 'text-white' : 'text-gray-500 group-hover:text-primary'}`} />
+                                <span className="font-medium text-sm">{item.label}</span>
+                            </div>
+                            {active && <ChevronRight className="h-4 w-4 text-white/80" />}
+                        </Link>
+                    );
+                })}
 
-            {/* Footer */}
-            <div className="p-4 border-t border-teal-800/50 bg-teal-900/40">
-                <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-medical-accent to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white/20">
-                        AD
+                <div className="mt-8 px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Settings
+                </div>
+
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-dark-body hover:bg-gray-50 hover:translate-x-1 transition-all duration-200">
+                    <Settings className="h-5 w-5 text-gray-500 group-hover:text-primary" />
+                    <span className="font-medium text-sm">Settings</span>
+                </button>
+            </nav>
+
+            {/* User Profile / Footer */}
+            <div className="p-4 border-t border-dashed border-gray-200 bg-gray-50/50">
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-white border border-gray-100 shadow-sm">
+                    <div className="h-10 w-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-lg">
+                        A
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">Admin User</p>
-                        <p className="text-xs text-teal-200 truncate">admin@a1care.com</p>
+                        <p className="text-sm font-bold text-dark-header truncate">Admin User</p>
+                        <p className="text-xs text-gray-500 truncate">admin@mashfa.com</p>
                     </div>
                 </div>
             </div>
-        </aside>
+        </div>
     );
 };
 

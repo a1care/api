@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DataTable from '../components/DataTable';
-import { Check, X, Eye, Stethoscope } from 'lucide-react';
+import { Check, X, Eye, Stethoscope, MoreVertical } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api-esf1.onrender.com/api';
@@ -44,14 +44,17 @@ const DoctorManagement = () => {
     const columns = [
         {
             key: 'name',
-            label: 'Medical Professional',
+            label: 'Doctor',
             sortable: true,
             render: (value) => (
-                <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs mr-3 border border-teal-200">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-info-light text-info flex items-center justify-center font-bold">
                         Dr
                     </div>
-                    <span className="font-medium text-slate-900">{value}</span>
+                    <div>
+                        <div className="font-semibold text-dark-header">{value}</div>
+                        <div className="text-xs text-gray-500">General Physician</div>
+                    </div>
                 </div>
             )
         },
@@ -62,28 +65,24 @@ const DoctorManagement = () => {
                 val && val.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                         {val.map((spec, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs border border-slate-200">
+                            <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">
                                 {spec}
                             </span>
                         ))}
                     </div>
-                ) : <span className="text-slate-400 italic">Not specified</span>
+                ) : <span className="text-gray-400 italic">Not specified</span>
             )
         },
-        { key: 'experience', label: 'Exp (Yrs)', sortable: true, render: (val) => <span className="font-mono text-slate-600">{val || 0}</span> },
-        { key: 'consultation_fee', label: 'Fee', render: (val) => <span className="font-medium text-slate-900">₹{val}</span> },
+        { key: 'experience', label: 'Exp', sortable: true, render: (val) => <span className="font-bold text-dark-body">{val || 0} Yrs</span> },
+        { key: 'consultation_fee', label: 'Fee', render: (val) => <span className="font-medium text-primary">₹{val}</span> },
         {
             key: 'status',
             label: 'Status',
             render: (status) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                            'bg-red-50 text-red-700 border-red-200'
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${status === 'Active' ? 'bg-success-light text-success' :
+                        status === 'Pending' ? 'bg-warning-light text-warning' :
+                            'bg-danger-light text-danger'
                     }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${status === 'Active' ? 'bg-emerald-500' :
-                            status === 'Pending' ? 'bg-amber-500' :
-                                'bg-red-500'
-                        }`}></span>
                     {status}
                 </span>
             )
@@ -97,21 +96,21 @@ const DoctorManagement = () => {
                         <>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleStatusChange(doctor._id, 'approve'); }}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
-                                title="Approve Application"
+                                className="p-2 text-success hover:bg-success-light rounded-lg transition-colors"
+                                title="Approve"
                             >
                                 <Check className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleStatusChange(doctor._id, 'reject'); }}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
-                                title="Reject Application"
+                                className="p-2 text-danger hover:bg-danger-light rounded-lg transition-colors"
+                                title="Reject"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                         </>
                     )}
-                    <button className="p-1.5 text-slate-400 hover:text-medical-primary hover:bg-teal-50 rounded-lg transition-colors" title="View Profile">
+                    <button className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">
                         <Eye className="h-4 w-4" />
                     </button>
                 </div>
@@ -120,19 +119,17 @@ const DoctorManagement = () => {
     ];
 
     return (
-        <div className="space-y-6 font-sans">
+        <div className="space-y-6">
             <Toaster position="top-right" />
             <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-2xl font-bold text-medical-text">Medical Staff</h1>
-                    <p className="text-medical-muted mt-1 text-sm">Manage doctor profiles and verification requests</p>
+                    <h1 className="text-2xl font-bold text-dark-header">Doctors</h1>
+                    <p className="text-gray-500 mt-1 text-sm">Manage doctor profiles and verification requests</p>
                 </div>
-                <div className="flex gap-3">
-                    <div className="text-sm text-medical-muted bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                        Pending: <span className="font-bold text-slate-900">{doctors.filter(d => d.status === 'Pending').length}</span>
-                    </div>
-                </div>
+                <button className="px-5 py-2.5 bg-primary text-white rounded-lg shadow-lg shadow-primary/40 hover:bg-primary-hover transition-all font-medium flex items-center gap-2">
+                    <Stethoscope className="h-4 w-4" />
+                    Add New Doctor
+                </button>
             </div>
 
             <DataTable

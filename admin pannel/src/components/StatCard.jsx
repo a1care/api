@@ -1,44 +1,34 @@
 import { ArrowUp, ArrowDown } from 'lucide-react';
 
-const StatCard = ({ title, value, icon: Icon, trend, color = 'medical-primary' }) => {
-    const colorStyles = {
-        'medical-primary': 'bg-teal-50 text-medical-primary',
-        'medical-secondary': 'bg-slate-50 text-medical-secondary',
-        'medical-accent': 'bg-cyan-50 text-medical-accent',
-        blue: 'bg-blue-50 text-blue-600',
-        green: 'bg-emerald-50 text-emerald-600',
-        purple: 'bg-violet-50 text-violet-600',
-        orange: 'bg-amber-50 text-amber-600',
+const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'primary' }) => {
+    const colorClasses = {
+        primary: 'bg-primary-light text-primary',
+        success: 'bg-success-light text-success',
+        warning: 'bg-warning-light text-warning',
+        danger: 'bg-danger-light text-danger',
+        info: 'bg-info-light text-info'
     };
 
     return (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:shadow-medical transition-all duration-200 group">
+        <div className="bg-white rounded-xl p-5 shadow-card hover:shadow-card-hover transition-all duration-300 border border-transparent hover:border-primary/10 group">
             <div className="flex justify-between items-start">
-                <div>
-                    <p className="text-xs font-semibold text-medical-muted uppercase tracking-wider">{title}</p>
-                    <h3 className="text-2xl font-bold text-medical-text mt-2 group-hover:text-medical-primary transition-colors">{value}</h3>
+                <div className="flex flex-col">
+                    <span className="text-gray-500 font-medium text-sm mb-1">{title}</span>
+                    <h3 className="text-2xl font-bold text-dark-header mb-2">{value}</h3>
+
+                    {trend && (
+                        <div className={`flex items-center text-xs font-semibold ${trend === 'up' ? 'text-success' : 'text-danger'}`}>
+                            {trend === 'up' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
+                            <span>{trendValue}</span>
+                            <span className="text-gray-400 ml-1 font-normal">vs last month</span>
+                        </div>
+                    )}
                 </div>
-                <div className={`p-3 rounded-lg ${colorStyles[color]} transition-colors`}>
+
+                <div className={`p-3 rounded-lg ${colorClasses[color]} group-hover:scale-110 transition-transform duration-300`}>
                     <Icon className="h-6 w-6" />
                 </div>
             </div>
-
-            {trend && (
-                <div className="mt-4 flex items-center text-sm">
-                    <span
-                        className={`flex items-center font-medium ${trend.isPositive ? 'text-emerald-600' : 'text-red-600'
-                            }`}
-                    >
-                        {trend.isPositive ? (
-                            <ArrowUp className="h-4 w-4 mr-1" />
-                        ) : (
-                            <ArrowDown className="h-4 w-4 mr-1" />
-                        )}
-                        {Math.abs(trend.value)}%
-                    </span>
-                    <span className="text-slate-400 ml-2 text-xs">vs last month</span>
-                </div>
-            )}
         </div>
     );
 };

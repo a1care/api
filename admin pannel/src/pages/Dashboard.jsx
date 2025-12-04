@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Stethoscope, Calendar, Activity, ArrowRight, Clock, CheckCircle } from 'lucide-react';
+import { Users, Stethoscope, Calendar, Activity, TrendingUp, DollarSign } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import StatCard from '../components/StatCard';
 
@@ -19,268 +19,214 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const response = await axios.get(`${API_URL}/admin/dashboard/stats`);
+                if (response.data.success) {
+                    setStats(response.data.stats);
+                    setRecentBookings(response.data.recentBookings || []);
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard stats:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchDashboardData();
     }, []);
 
-    const fetchDashboardData = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/admin/dashboard/stats`);
-            if (response.data.success) {
-                setStats(response.data.stats);
-                setRecentBookings(response.data.recentBookings || []);
-            }
-        } catch (error) {
-            console.error('Error fetching dashboard data:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Mock data for charts
     const chartData = [
-        { name: 'Mon', bookings: 4, users: 2 },
-        { name: 'Tue', bookings: 3, users: 5 },
-        { name: 'Wed', bookings: 7, users: 8 },
-        { name: 'Thu', bookings: 5, users: 4 },
-        { name: 'Fri', bookings: 9, users: 7 },
-        { name: 'Sat', bookings: 12, users: 10 },
-        { name: 'Sun', bookings: 8, users: 6 },
+        { name: 'Mon', bookings: 4, revenue: 2400 },
+        { name: 'Tue', bookings: 3, revenue: 1398 },
+        { name: 'Wed', bookings: 9, revenue: 9800 },
+        { name: 'Thu', bookings: 2, revenue: 3908 },
+        { name: 'Fri', bookings: 6, revenue: 4800 },
+        { name: 'Sat', bookings: 8, revenue: 3800 },
+        { name: 'Sun', bookings: 5, revenue: 4300 },
     ];
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-primary"></div>
+            <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 font-sans">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-bold text-medical-text">Hospital Overview</h1>
-                    <p className="text-medical-muted mt-1 text-sm">Real-time administration dashboard</p>
-                </div>
-                <div className="text-sm text-medical-muted bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    System Operational
-                </div>
-            </div>
-
+        <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Patients"
                     value={stats.totalUsers}
                     icon={Users}
-                    color="medical-primary"
-                    trend={{ value: 12, isPositive: true }}
+                    trend="up"
+                    trendValue="12%"
+                    color="primary"
                 />
                 <StatCard
-                    title="Medical Staff"
+                    title="Active Doctors"
                     value={stats.activeDoctors}
                     icon={Stethoscope}
-                    color="green"
-                    trend={{ value: 5, isPositive: true }}
+                    trend="up"
+                    trendValue="5%"
+                    color="success"
                 />
                 <StatCard
-                    title="Appointments"
+                    title="Total Bookings"
                     value={stats.totalBookings}
                     icon={Calendar}
-                    color="medical-accent"
-                    trend={{ value: 8, isPositive: true }}
+                    trend="up"
+                    trendValue="18%"
+                    color="warning"
                 />
                 <StatCard
-                    title="Active Services"
-                    value={stats.totalServices}
-                    icon={Activity}
-                    color="orange"
+                    title="Revenue"
+                    value="₹45k"
+                    icon={DollarSign}
+                    trend="down"
+                    trendValue="2%"
+                    color="danger"
                 />
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Chart */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-card">
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-medical-text">Appointment Trends</h3>
-                        <select className="text-xs border-slate-200 rounded-lg text-slate-500 focus:ring-medical-primary">
-                            <option>Last 7 Days</option>
-                            <option>Last 30 Days</option>
-                        </select>
+                        <div>
+                            <h3 className="text-lg font-bold text-dark-header">Revenue Analytics</h3>
+                            <p className="text-sm text-gray-500">Weekly earnings overview</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button className="px-3 py-1 text-xs font-medium bg-primary/10 text-primary rounded-md">Weekly</button>
+                            <button className="px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 rounded-md">Monthly</button>
+                        </div>
                     </div>
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
                                 <defs>
-                                    <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#0F766E" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
+                                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#7367F0" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#7367F0" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EBE9F1" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6E6B7B', fontSize: 12 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6E6B7B', fontSize: 12 }} />
                                 <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(15 118 110 / 0.1)' }}
+                                    contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 24px 0 rgba(34, 41, 47, 0.1)', border: 'none' }}
+                                    itemStyle={{ color: '#7367F0' }}
                                 />
-                                <Area
-                                    type="monotone"
-                                    dataKey="bookings"
-                                    stroke="#0F766E"
-                                    strokeWidth={2}
-                                    fillOpacity={1}
-                                    fill="url(#colorBookings)"
-                                />
+                                <Area type="monotone" dataKey="revenue" stroke="#7367F0" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-medical-text">Patient Growth</h3>
-                        <div className="flex gap-2">
-                            <span className="flex items-center text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-medium">
-                                <ArrowUp className="h-3 w-3 mr-1" /> +12%
-                            </span>
-                        </div>
-                    </div>
-                    <div className="h-80">
+                {/* Side Chart / Activity */}
+                <div className="bg-white p-6 rounded-xl shadow-card">
+                    <h3 className="text-lg font-bold text-dark-header mb-1">Bookings</h3>
+                    <p className="text-sm text-gray-500 mb-6">This week's activity</p>
+
+                    <div className="h-48 mb-6">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
                                 <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(15 118 110 / 0.1)' }}
+                                    contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 24px 0 rgba(34, 41, 47, 0.1)', border: 'none' }}
                                 />
-                                <Line
-                                    type="monotone"
-                                    dataKey="users"
-                                    stroke="#06B6D4"
-                                    strokeWidth={2}
-                                    dot={{ r: 4, fill: '#06B6D4', strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 6, fill: '#0F766E' }}
-                                />
+                                <Line type="monotone" dataKey="bookings" stroke="#FF9F43" strokeWidth={3} dot={{ r: 4, fill: '#FF9F43', strokeWidth: 2, stroke: '#fff' }} />
                             </LineChart>
                         </ResponsiveContainer>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                    <Activity className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-dark-header">Completed</p>
+                                    <p className="text-xs text-gray-500">145 bookings</p>
+                                </div>
+                            </div>
+                            <span className="text-success font-bold text-sm">+12%</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-warning/10 rounded-lg text-warning">
+                                    <Calendar className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-dark-header">Pending</p>
+                                    <p className="text-xs text-gray-500">24 bookings</p>
+                                </div>
+                            </div>
+                            <span className="text-warning font-bold text-sm">5%</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Recent Activity & Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Recent Bookings Table */}
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-medical-text">Recent Appointments</h3>
-                        <button className="text-sm text-medical-primary hover:text-teal-800 font-medium flex items-center">
-                            View All <ArrowRight className="h-4 w-4 ml-1" />
-                        </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-slate-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Patient</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Service</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {recentBookings.length > 0 ? (
-                                    recentBookings.map((booking) => (
-                                        <tr key={booking._id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center">
-                                                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs mr-3">
-                                                        {booking.userId?.name?.charAt(0) || 'U'}
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-medium text-slate-900">{booking.userId?.name || 'Unknown'}</div>
-                                                        <div className="text-xs text-slate-500">{booking.userId?.mobile_number}</div>
-                                                    </div>
+            {/* Recent Bookings Table */}
+            <div className="bg-white rounded-xl shadow-card overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-dark-header">Recent Bookings</h3>
+                    <button className="text-primary text-sm font-medium hover:underline">View All</button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {recentBookings.length > 0 ? (
+                                recentBookings.map((booking) => (
+                                    <tr key={booking._id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="h-8 w-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-xs mr-3">
+                                                    {booking.userId?.name?.charAt(0) || 'U'}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">{booking.itemDetails?.name || 'Service'}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                                                        booking.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                                                            'bg-blue-100 text-blue-800'
-                                                    }`}>
-                                                    {booking.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-medium text-slate-900">₹{booking.amount}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="4" className="px-6 py-12 text-center text-slate-500 text-sm">
-                                            No recent appointments found
+                                                <div>
+                                                    <div className="text-sm font-medium text-dark-header">{booking.userId?.name || 'Unknown'}</div>
+                                                    <div className="text-xs text-gray-500">{booking.userId?.mobile_number}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {new Date(booking.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-success-light text-success">
+                                                Confirmed
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-header">
+                                            ₹500
                                         </td>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-                    <h3 className="text-lg font-bold text-medical-text mb-4">Quick Actions</h3>
-                    <div className="space-y-3">
-                        <button className="w-full flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-medical-primary hover:bg-teal-50 transition-all group">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-teal-100 rounded-lg text-medical-primary group-hover:bg-white transition-colors">
-                                    <Stethoscope className="h-5 w-5" />
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-sm font-medium text-slate-900">Verify Doctor</div>
-                                    <div className="text-xs text-slate-500">Review pending applications</div>
-                                </div>
-                            </div>
-                            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-medical-primary" />
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-medical-primary hover:bg-teal-50 transition-all group">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600 group-hover:bg-white transition-colors">
-                                    <Activity className="h-5 w-5" />
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-sm font-medium text-slate-900">Add Service</div>
-                                    <div className="text-xs text-slate-500">Create new medical service</div>
-                                </div>
-                            </div>
-                            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-medical-primary" />
-                        </button>
-
-                        <button className="w-full flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-medical-primary hover:bg-teal-50 transition-all group">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-purple-100 rounded-lg text-purple-600 group-hover:bg-white transition-colors">
-                                    <Users className="h-5 w-5" />
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-sm font-medium text-slate-900">Patient Records</div>
-                                    <div className="text-xs text-slate-500">Search patient database</div>
-                                </div>
-                            </div>
-                            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-medical-primary" />
-                        </button>
-                    </div>
-
-                    <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="flex items-start gap-3">
-                            <Clock className="h-5 w-5 text-slate-400 mt-0.5" />
-                            <div>
-                                <div className="text-xs font-medium text-slate-900 uppercase tracking-wide">System Status</div>
-                                <div className="text-xs text-slate-500 mt-1">Last backup completed 2 hours ago. All systems nominal.</div>
-                            </div>
-                        </div>
-                    </div>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                                        No recent bookings found
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

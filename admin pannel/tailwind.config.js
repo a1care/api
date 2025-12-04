@@ -7,24 +7,51 @@ export default {
     theme: {
         extend: {
             colors: {
-                medical: {
-                    primary: '#0F766E', // Deep Teal
-                    secondary: '#475569', // Slate Blue
-                    accent: '#06B6D4', // Cyan
-                    surface: '#FFFFFF',
-                    background: '#F8FAFC', // Very light slate
-                    text: '#1E293B', // Slate 800
-                    muted: '#64748B', // Slate 500
+                primary: {
+                    DEFAULT: '#7367F0', // Mashfa Purple/Blue
+                    hover: '#685DD8',
+                    light: '#E9E7FD'
                 },
-                primary: '#0F766E', // Mapping to medical primary for compatibility
-                secondary: '#475569',
+                secondary: {
+                    DEFAULT: '#A8AAAE', // Grey
+                    light: '#F1F1F2'
+                },
+                success: {
+                    DEFAULT: '#28C76F', // Green
+                    light: '#DDF6E8'
+                },
+                danger: {
+                    DEFAULT: '#EA5455', // Red
+                    light: '#FCEAEA'
+                },
+                warning: {
+                    DEFAULT: '#FF9F43', // Orange
+                    light: '#FFF0E1'
+                },
+                info: {
+                    DEFAULT: '#00CFE8', // Cyan
+                    light: '#DFF7FA'
+                },
+                dark: {
+                    DEFAULT: '#4B4B4B',
+                    body: '#6E6B7B',
+                    header: '#5E5873'
+                },
+                background: {
+                    DEFAULT: '#F8F8F8', // Light grey background
+                    paper: '#FFFFFF'
+                }
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
+                sans: ['Public Sans', 'Montserrat', 'sans-serif'],
             },
             boxShadow: {
-                'medical': '0 4px 6px -1px rgba(15, 118, 110, 0.1), 0 2px 4px -1px rgba(15, 118, 110, 0.06)',
-                'medical-lg': '0 10px 15px -3px rgba(15, 118, 110, 0.1), 0 4px 6px -2px rgba(15, 118, 110, 0.05)',
+                'card': '0 4px 24px 0 rgba(34, 41, 47, 0.1)',
+                'card-hover': '0 6px 30px 0 rgba(34, 41, 47, 0.15)',
+                'soft': '0 2px 10px 0 rgba(34, 41, 47, 0.05)'
+            },
+            borderRadius: {
+                'xl': '10px'
             }
         },
     },
