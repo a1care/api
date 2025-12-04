@@ -10,6 +10,7 @@ router.get('/users', adminController.getAllUsers);
 
 // Doctor Management
 router.get('/doctors', adminController.getAllDoctors);
+router.post('/doctors', adminController.createDoctor);
 router.put('/doctors/:id/approve', adminController.approveDoctor);
 router.put('/doctors/:id/reject', adminController.rejectDoctor);
 

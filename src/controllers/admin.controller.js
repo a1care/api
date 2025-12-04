@@ -111,6 +111,82 @@ exports.getAllDoctors = async (req, res) => {
 };
 
 /**
+ * @route POST /api/admin/doctors
+ * @description Create a new doctor (admin only, skips OTP)
+ */
+exports.createDoctor = async (req, res) => {
+    try {
+        const {
+            name,
+            email,
+            mobile_number,
+            specializations,
+            experience,
+            consultation_fee,
+            about,
+            working_hours
+        } = req.body;
+
+        // Validate required fields
+        if (!name || !email || !mobile_number) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name, email, and mobile number are required'
+            });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({
+            $or: [{ email }, { mobile_number }]
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'User with this email or mobile number already exists'
+            });
+        }
+
+        // Create user account with Doctor role (skip OTP verification)
+        const user = await User.create({
+            name,
+            email,
+            mobile_number,
+            role: 'Doctor',
+            is_verified: true // Admin-created doctors are auto-verified
+        });
+
+        // Create doctor profile with all details
+        const doctor = await Doctor.create({
+            userId: user._id,
+            specializations: specializations || [],
+            experience: experience || 0,
+            consultation_fee: consultation_fee || 0,
+            about: about || '',
+            working_hours: working_hours || [],
+            status: 'Active', // Admin-created doctors are immediately active
+            is_available: true
+        });
+
+        // Populate user details for response
+        await doctor.populate('userId', 'name email mobile_number');
+
+        res.status(201).json({
+            success: true,
+            message: 'Doctor created successfully',
+            doctor
+        });
+    } catch (error) {
+        console.error('Create doctor error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating doctor',
+            error: error.message
+        });
+    }
+};
+
+/**
  * @route PUT /api/admin/doctors/:id/approve
  * @description Approve a doctor
  */

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DataTable from '../components/DataTable';
 import DoctorProfileModal from '../components/DoctorProfileModal';
+import AddDoctorModal from '../components/AddDoctorModal';
 import { Check, X, Eye, Stethoscope, MoreVertical } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -11,6 +12,7 @@ const DoctorManagement = () => {
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDoctor, setSelectedDoctor] = useState(null);
+    const [showAddModal, setShowAddModal] = useState(false);
 
     useEffect(() => {
         fetchDoctors();
@@ -146,7 +148,10 @@ const DoctorManagement = () => {
                     <h1 className="text-2xl font-bold text-dark-header">Doctors</h1>
                     <p className="text-gray-500 mt-1 text-sm">Manage doctor profiles and verification requests</p>
                 </div>
-                <button className="px-5 py-2.5 bg-primary text-white rounded-lg shadow-lg shadow-primary/40 hover:bg-primary-hover transition-all font-medium flex items-center gap-2">
+                <button
+                    onClick={() => setShowAddModal(true)}
+                    className="px-5 py-2.5 bg-primary text-white rounded-lg shadow-lg shadow-primary/40 hover:bg-primary-hover transition-all font-medium flex items-center gap-2"
+                >
                     <Stethoscope className="h-4 w-4" />
                     Add New Doctor
                 </button>
@@ -164,6 +169,17 @@ const DoctorManagement = () => {
                     doctor={selectedDoctor}
                     onClose={() => setSelectedDoctor(null)}
                     onUpdate={fetchDoctors}
+                />
+            )}
+
+            {/* Add Doctor Modal */}
+            {showAddModal && (
+                <AddDoctorModal
+                    onClose={() => setShowAddModal(false)}
+                    onSuccess={() => {
+                        setShowAddModal(false);
+                        fetchDoctors();
+                    }}
                 />
             )}
         </div>
