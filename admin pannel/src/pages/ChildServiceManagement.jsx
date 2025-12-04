@@ -141,7 +141,13 @@ const ChildServiceManagement = () => {
 };
 
 const ChildServiceModal = ({ item, subcategories, onClose, onSuccess }) => {
-    const [formData, setFormData] = useState(item || {
+    const [formData, setFormData] = useState(item ? {
+        subServiceId: item.subServiceId || '',
+        name: item.name || '',
+        description: item.description || '',
+        service_type: item.service_type || 'OPD',
+        price: item.price || 0
+    } : {
         subServiceId: '',
         name: '',
         description: '',
