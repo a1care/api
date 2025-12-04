@@ -1,289 +1,356 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import DataTable from '../components/DataTable';
-import { Plus, Edit2, Trash2, X, Activity, ArrowRight } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Edit2, Trash2, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const ServiceManagement = () => {
     const [services, setServices] = useState([]);
-    const [selectedService, setSelectedService] = useState(null);
-    const [serviceItems, setServiceItems] = useState([]);
-    const [showItemModal, setShowItemModal] = useState(false);
-    const [editingItem, setEditingItem] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [expandedServices, setExpandedServices] = useState({});
+    const [expandedSubServices, setExpandedSubServices] = useState({});
+    const [showModal, setShowModal] = useState(false);
+    const [modalConfig, setModalConfig] = useState({ type: '', item: null, parentId: null });
 
     useEffect(() => {
-        fetchServices();
+        fetchHierarchy();
     }, []);
 
-    const fetchServices = async () => {
+    const fetchHierarchy = async () => {
         try {
-            const response = await axios.get(`${API_URL}/booking/services`);
-            setServices(response.data.services || []);
+            setLoading(true);
+            const response = await axios.get(`${API_URL}/services/hierarchy`);
+            if (response.data.success) {
+                setServices(response.data.services);
+            }
         } catch (error) {
-            console.error('Error fetching services:', error);
+            console.error('Error:', error);
             toast.error('Failed to load services');
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchServiceItems = async (serviceId) => {
+    const toggleService = (id) => {
+        setExpandedServices(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const toggleSubService = (id) => {
+        setExpandedSubServices(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const openModal = (type, item = null, parentId = null) => {
+        setModalConfig({ type, item, parentId });
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setModalConfig({ type: '', item: null, parentId: null });
+    };
+
+    const handleDelete = async (type, id) => {
+        if (!confirm('Delete this item?')) return;
+
         try {
-            const response = await axios.get(`${API_URL}/booking/services/${serviceId}/`);
-            setServiceItems(response.data.items || []);
-            setSelectedService(serviceId);
+            const endpoints = {
+                service: `/booking/services/${id}`,
+                subService: `/services/sub-services/${id}`,
+                childService: `/services/child-services/${id}`
+            };
+            await axios.delete(`${API_URL}${endpoints[type]}`);
+            toast.success('Deleted successfully');
+            fetchHierarchy();
         } catch (error) {
-            console.error('Error fetching service items:', error);
-            toast.error('Failed to load service items');
+            toast.error('Failed to delete');
         }
     };
 
-    const handleSaveServiceItem = async (itemData) => {
-        try {
-            if (editingItem) {
-                await axios.put(`${API_URL}/service-items/${editingItem._id}`, itemData);
-                toast.success('Service item updated');
-            } else {
-                await axios.post(`${API_URL}/service-items`, itemData);
-                toast.success('Service item created');
-            }
-            fetchServiceItems(selectedService);
-            setShowItemModal(false);
-            setEditingItem(null);
-        } catch (error) {
-            console.error('Error saving service item:', error);
-            toast.error('Error saving service item');
-        }
-    };
-
-    const itemColumns = [
-        { key: 'name', label: 'Item Name', sortable: true, render: (val) => <span className="font-semibold text-dark-header">{val}</span> },
-        { key: 'price', label: 'Price', render: (val) => <span className="font-bold text-primary">₹{val}</span>, sortable: true },
-        {
-            key: 'booking_type',
-            label: 'Type',
-            render: (val) => (
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${val === 'OnlineConsultancy'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-blue-100 text-blue-700'
-                    }`}>
-                    {val === 'OnlineConsultancy' ? 'Online' : 'Direct'}
-                </span>
-            )
-        },
-        {
-            key: 'is_active',
-            label: 'Status',
-            render: (val) => (
-                <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${val ? 'bg-success-light text-success' : 'bg-secondary-light text-secondary'
-                    }`}>
-                    {val ? 'Active' : 'Inactive'}
-                </span>
-            )
-        },
-        {
-            key: 'actions',
-            label: 'Actions',
-            render: (_, item) => (
-                <button
-                    onClick={(e) => { e.stopPropagation(); setEditingItem(item); setShowItemModal(true); }}
-                    className="p-2 text-primary hover:bg-primary-light rounded-lg transition-colors"
-                >
-                    <Edit2 className="h-4 w-4" />
-                </button>
-            )
-        }
-    ];
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             <Toaster position="top-right" />
-            <div className="flex justify-between items-end">
+
+            <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-dark-header">Services</h1>
-                    <p className="text-gray-500 mt-1 text-sm">Manage medical services and pricing</p>
+                    <h1 className="text-2xl font-bold text-dark-header">Service Management</h1>
+                    <p className="text-sm text-gray-500 mt-1">Manage categories, subcategories, and services</p>
                 </div>
+                <button
+                    onClick={() => openModal('service')}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-lg shadow-primary/30 font-medium"
+                >
+                    <Plus className="h-4 w-4" />
+                    Add Category
+                </button>
             </div>
 
-            {/* Services Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {services.map((service) => (
-                    <div
-                        key={service._id}
-                        onClick={() => fetchServiceItems(service._id)}
-                        className={`cursor-pointer rounded-xl p-6 border transition-all duration-300 group relative overflow-hidden ${selectedService === service._id
-                            ? 'bg-white border-primary shadow-lg shadow-primary/20 ring-1 ring-primary'
-                            : 'bg-white border-transparent shadow-card hover:shadow-card-hover hover:-translate-y-1'
-                            }`}
-                    >
-                        <div className="flex justify-between items-start relative z-10">
-                            <div className={`p-3 rounded-lg transition-colors ${selectedService === service._id ? 'bg-primary text-white' : 'bg-primary-light text-primary'}`}>
-                                <Activity className="h-6 w-6" />
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${service.is_active ? 'bg-success-light text-success' : 'bg-secondary-light text-secondary'
-                                }`}>
-                                {service.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                        </div>
-                        <h3 className="text-lg font-bold mt-4 text-dark-header group-hover:text-primary transition-colors">{service.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{service.title}</p>
-
-                        <div className="mt-4 flex items-center text-sm font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-                            Manage Items <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
+            <div className="bg-white rounded-xl shadow-card p-6">
+                {services.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>No categories found. Click "Add Category" to start.</p>
                     </div>
-                ))}
+                ) : (
+                    <div className="space-y-2">
+                        {services.map(service => (
+                            <CategoryNode
+                                key={service._id}
+                                category={service}
+                                expanded={expandedServices[service._id]}
+                                onToggle={() => toggleService(service._id)}
+                                onEdit={() => openModal('service', service)}
+                                onDelete={() => handleDelete('service', service._id)}
+                                onAddSub={() => openModal('subService', null, service._id)}
+                                expandedSubs={expandedSubServices}
+                                toggleSub={toggleSubService}
+                                onEditSub={(sub) => openModal('subService', sub)}
+                                onDeleteSub={(id) => handleDelete('subService', id)}
+                                onAddChild={(subId) => openModal('childService', null, subId)}
+                                onEditChild={(child) => openModal('childService', child)}
+                                onDeleteChild={(id) => handleDelete('childService', id)}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Service Items Section */}
-            {selectedService && (
-                <div className="bg-white rounded-xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <h2 className="text-lg font-bold text-dark-header">Service Items</h2>
-                            <p className="text-xs text-gray-500 mt-0.5">Manage items for selected service</p>
-                        </div>
-                        <button
-                            onClick={() => { setEditingItem(null); setShowItemModal(true); }}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-lg shadow-primary/30 font-medium text-sm"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Item
-                        </button>
-                    </div>
-
-                    <DataTable
-                        columns={itemColumns}
-                        data={serviceItems}
-                        isLoading={false}
-                    />
-                </div>
-            )}
-
-            {/* Modal */}
-            {showItemModal && (
-                <div className="fixed inset-0 bg-dark/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm transition-opacity">
-                    <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-dark-header">
-                                {editingItem ? 'Edit Item' : 'New Item'}
-                            </h3>
-                            <button onClick={() => setShowItemModal(false)} className="text-gray-400 hover:text-danger transition-colors">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <ServiceItemForm
-                            item={editingItem}
-                            serviceId={selectedService}
-                            onSave={handleSaveServiceItem}
-                            onClose={() => setShowItemModal(false)}
-                        />
-                    </div>
-                </div>
+            {showModal && (
+                <ServiceModal
+                    config={modalConfig}
+                    onClose={closeModal}
+                    onSuccess={() => {
+                        closeModal();
+                        fetchHierarchy();
+                    }}
+                />
             )}
         </div>
     );
 };
 
-const ServiceItemForm = ({ item, serviceId, onSave, onClose }) => {
+const CategoryNode = ({ category, expanded, onToggle, onEdit, onDelete, onAddSub, expandedSubs, toggleSub, onEditSub, onDeleteSub, onAddChild, onEditChild, onDeleteChild }) => (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between p-3 bg-primary-light/20 hover:bg-primary-light/30">
+            <div className="flex items-center gap-2 flex-1">
+                <button onClick={onToggle} className="p-1 hover:bg-white/50 rounded">
+                    {expanded ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-primary" />}
+                </button>
+                <span className="font-bold text-dark-header">{category.name}</span>
+            </div>
+            <div className="flex items-center gap-1">
+                <button onClick={onAddSub} className="p-1.5 text-primary hover:bg-primary-light rounded" title="Add Subcategory">
+                    <Plus className="h-4 w-4" />
+                </button>
+                <button onClick={onEdit} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded">
+                    <Edit2 className="h-4 w-4" />
+                </button>
+                <button onClick={onDelete} className="p-1.5 text-danger hover:bg-danger-light rounded">
+                    <Trash2 className="h-4 w-4" />
+                </button>
+            </div>
+        </div>
+        {expanded && category.subServices?.length > 0 && (
+            <div className="pl-8 bg-gray-50/50">
+                {category.subServices.map(sub => (
+                    <SubCategoryNode
+                        key={sub._id}
+                        subCategory={sub}
+                        expanded={expandedSubs[sub._id]}
+                        onToggle={() => toggleSub(sub._id)}
+                        onEdit={() => onEditSub(sub)}
+                        onDelete={() => onDeleteSub(sub._id)}
+                        onAddChild={() => onAddChild(sub._id)}
+                        onEditChild={onEditChild}
+                        onDeleteChild={onDeleteChild}
+                    />
+                ))}
+            </div>
+        )}
+    </div>
+);
+
+const SubCategoryNode = ({ subCategory, expanded, onToggle, onEdit, onDelete, onAddChild, onEditChild, onDeleteChild }) => (
+    <div className="border-l-2 border-primary/30 ml-4 my-2">
+        <div className="flex items-center justify-between p-2.5 bg-white hover:bg-gray-50 rounded-r-lg">
+            <div className="flex items-center gap-2 flex-1">
+                <button onClick={onToggle} className="p-1 hover:bg-gray-100 rounded">
+                    {expanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-600" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-600" />}
+                </button>
+                <span className="font-semibold text-sm text-dark-body">{subCategory.name}</span>
+            </div>
+            <div className="flex items-center gap-1">
+                <button onClick={onAddChild} className="p-1 text-primary hover:bg-primary-light rounded" title="Add Service">
+                    <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={onEdit} className="p-1 text-gray-600 hover:bg-gray-100 rounded">
+                    <Edit2 className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={onDelete} className="p-1 text-danger hover:bg-danger-light rounded">
+                    <Trash2 className="h-3.5 w-3.5" />
+                </button>
+            </div>
+        </div>
+        {expanded && subCategory.childServices?.length > 0 && (
+            <div className="pl-6 py-1 space-y-1">
+                {subCategory.childServices.map(child => (
+                    <ChildServiceNode
+                        key={child._id}
+                        service={child}
+                        onEdit={() => onEditChild(child)}
+                        onDelete={() => onDeleteChild(child._id)}
+                    />
+                ))}
+            </div>
+        )}
+    </div>
+);
+
+const ChildServiceNode = ({ service, onEdit, onDelete }) => (
+    <div className="flex items-center justify-between p-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200">
+        <div className="flex items-center gap-2">
+            <div className="w-1 h-4 bg-warning rounded"></div>
+            <span className="text-sm text-dark-body">{service.name}</span>
+            <span className="px-2 py-0.5 bg-info-light text-info rounded text-xs font-semibold">
+                {service.service_type}
+            </span>
+            <span className="text-xs text-gray-500">₹{service.price}</span>
+        </div>
+        <div className="flex items-center gap-1">
+            <button onClick={onEdit} className="p-1 text-gray-600 hover:bg-gray-200 rounded">
+                <Edit2 className="h-3 w-3" />
+            </button>
+            <button onClick={onDelete} className="p-1 text-danger hover:bg-danger-light rounded">
+                <Trash2 className="h-3 w-3" />
+            </button>
+        </div>
+    </div>
+);
+
+const ServiceModal = ({ config, onClose, onSuccess }) => {
+    const { type, item, parentId } = config;
     const [formData, setFormData] = useState(item || {
         name: '',
         description: '',
-        price: '',
-        booking_type: 'DirectBooking',
-        is_active: true,
-        serviceId: serviceId
+        service_type: 'OPD',
+        price: 0,
+        is_active: true
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSave(formData);
+        try {
+            const endpoints = {
+                service: item ? `/booking/services/${item._id}` : '/booking/services',
+                subService: item ? `/services/sub-services/${item._id}` : `/services/${parentId}/sub-services`,
+                childService: item ? `/services/child-services/${item._id}` : `/services/sub-services/${parentId}/child-services`
+            };
+
+            const method = item ? 'put' : 'post';
+            await axios[method](`${API_URL}${endpoints[type]}`, formData);
+            toast.success(`${item ? 'Updated' : 'Created'} successfully`);
+            onSuccess();
+        } catch (error) {
+            console.error('Save error:', error);
+            toast.error(error.response?.data?.message || 'Failed to save');
+        }
+    };
+
+    const titles = {
+        service: 'Category',
+        subService: 'Subcategory',
+        childService: 'Service'
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-                <label className="block text-sm font-semibold text-dark-body mb-1.5">Item Name</label>
-                <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                    placeholder="e.g., General Consultation"
-                    required
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-semibold text-dark-body mb-1.5">Description</label>
-                <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                    rows="3"
-                    placeholder="Brief details..."
-                />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-semibold text-dark-body mb-1.5">Price (₹)</label>
-                    <input
-                        type="number"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm font-bold text-dark-header"
-                        placeholder="0.00"
-                        required
-                    />
+        <div className="fixed inset-0 bg-dark/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-dark-header">
+                        {item ? 'Edit' : 'Add'} {titles[type]}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-dark">
+                        <X className="h-5 w-5" />
+                    </button>
                 </div>
-                <div>
-                    <label className="block text-sm font-semibold text-dark-body mb-1.5">Type</label>
-                    <select
-                        value={formData.booking_type}
-                        onChange={(e) => setFormData({ ...formData, booking_type: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm bg-white"
-                    >
-                        <option value="DirectBooking">Direct</option>
-                        <option value="OnlineConsultancy">Online</option>
-                    </select>
-                </div>
-            </div>
-            <div className="flex items-center pt-2">
-                <label className="flex items-center cursor-pointer">
-                    <div className="relative">
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-dark-body mb-1.5">Name</label>
                         <input
-                            type="checkbox"
-                            className="sr-only"
-                            checked={formData.is_active}
-                            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                            required
                         />
-                        <div className={`block w-10 h-6 rounded-full transition-colors ${formData.is_active ? 'bg-success' : 'bg-gray-300'}`}></div>
-                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${formData.is_active ? 'transform translate-x-4' : ''}`}></div>
                     </div>
-                    <div className="ml-3 text-sm font-medium text-dark-body">
-                        Active Status
+
+                    <div>
+                        <label className="block text-sm font-semibold text-dark-body mb-1.5">Description</label>
+                        <textarea
+                            value={formData.description || ''}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                            rows="3"
+                        />
                     </div>
-                </label>
+
+                    {type === 'childService' && (
+                        <>
+                            <div>
+                                <label className="block text-sm font-semibold text-dark-body mb-1.5">Mode</label>
+                                <select
+                                    value={formData.service_type}
+                                    onChange={(e) => setFormData({ ...formData, service_type: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white"
+                                >
+                                    <option value="OPD">OPD</option>
+                                    <option value="Emergency">Emergency</option>
+                                    <option value="Online">Online</option>
+                                    <option value="Home Visit">Home Visit</option>
+                                    <option value="Lab Test">Lab Test</option>
+                                    <option value="Pharmacy">Pharmacy</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-dark-body mb-1.5">Price (₹)</label>
+                                <input
+                                    type="number"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                    min="0"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2.5 bg-gray-100 text-dark-body rounded-lg hover:bg-gray-200 font-semibold text-sm"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-bold text-sm shadow-lg shadow-primary/30"
+                        >
+                            {item ? 'Update' : 'Create'}
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div className="flex gap-3 pt-4 mt-6">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="flex-1 px-4 py-2.5 bg-gray-100 text-dark-body rounded-lg hover:bg-gray-200 font-semibold text-sm transition-colors"
-                >
-                    Cancel
-                </button>
-                <button
-                    type="submit"
-                    className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-bold text-sm shadow-lg shadow-primary/30 transition-all"
-                >
-                    Save Changes
-                </button>
-            </div>
-        </form>
+        </div>
     );
 };
 
