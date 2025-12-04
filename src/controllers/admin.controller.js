@@ -49,8 +49,8 @@ exports.getDashboardStats = async (req, res) => {
  */
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find({ role: 'User' })
-            .select('-password -fcm_token')
+        const users = await User.find({ role: { $in: ['User', 'Doctor'] } })
+            .select('-__v')
             .sort({ created_at: -1 });
 
         res.status(200).json({
@@ -65,36 +65,13 @@ exports.getAllUsers = async (req, res) => {
 
 /**
  * @route GET /api/admin/doctors
- * @description Get all doctors with their profiles
+ * @description Get all doctors with their details
  */
 exports.getAllDoctors = async (req, res) => {
     try {
-        const doctors = await User.aggregate([
-            { $match: { role: 'Doctor' } },
-            {
-                $lookup: {
-                    from: 'doctors',
-                    localField: '_id',
-                    foreignField: 'userId',
-                    as: 'profile'
-                }
-            },
-            { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    name: 1,
-                    mobile_number: 1,
-                    email: 1,
-                    created_at: 1,
-                    status: '$profile.status',
-                    experience: '$profile.experience',
-                    specializations: '$profile.specializations',
-                    consultation_fee: '$profile.consultation_fee',
-                    satisfaction_rating: '$profile.satisfaction_rating'
-                }
-            },
-            { $sort: { created_at: -1 } }
-        ]);
+        const doctors = await Doctor.find()
+            .populate('userId', 'name email mobile_number')
+            .sort({ created_at: -1 });
 
         res.status(200).json({
             success: true,
@@ -112,13 +89,11 @@ exports.getAllDoctors = async (req, res) => {
  */
 exports.approveDoctor = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const doctor = await Doctor.findOneAndUpdate(
-            { userId: id },
+        const doctor = await Doctor.findByIdAndUpdate(
+            req.params.id,
             { status: 'Active' },
             { new: true }
-        );
+        ).populate('userId', 'name email mobile_number');
 
         if (!doctor) {
             return res.status(404).json({ message: 'Doctor not found' });
@@ -141,13 +116,11 @@ exports.approveDoctor = async (req, res) => {
  */
 exports.rejectDoctor = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const doctor = await Doctor.findOneAndUpdate(
-            { userId: id },
+        const doctor = await Doctor.findByIdAndUpdate(
+            req.params.id,
             { status: 'Rejected' },
             { new: true }
-        );
+        ).populate('userId', 'name email mobile_number');
 
         if (!doctor) {
             return res.status(404).json({ message: 'Doctor not found' });
@@ -155,7 +128,7 @@ exports.rejectDoctor = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'Doctor rejected',
+            message: 'Doctor rejected successfully',
             doctor
         });
     } catch (error) {
@@ -170,17 +143,7 @@ exports.rejectDoctor = async (req, res) => {
  */
 exports.createService = async (req, res) => {
     try {
-        const { name, title, type, image_url } = req.body;
-
-        const service = new Service({
-            name,
-            title,
-            type,
-            image_url,
-            is_active: true
-        });
-
-        await service.save();
+        const service = await Service.create(req.body);
 
         res.status(201).json({
             success: true,
@@ -199,10 +162,11 @@ exports.createService = async (req, res) => {
  */
 exports.updateService = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updates = req.body;
-
-        const service = await Service.findByIdAndUpdate(id, updates, { new: true });
+        const service = await Service.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
 
         if (!service) {
             return res.status(404).json({ message: 'Service not found' });
@@ -225,9 +189,7 @@ exports.updateService = async (req, res) => {
  */
 exports.deleteService = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const service = await Service.findByIdAndDelete(id);
+        const service = await Service.findByIdAndDelete(req.params.id);
 
         if (!service) {
             return res.status(404).json({ message: 'Service not found' });
@@ -240,5 +202,79 @@ exports.deleteService = async (req, res) => {
     } catch (error) {
         console.error('Delete service error:', error);
         res.status(500).json({ message: 'Error deleting service' });
+    }
+};
+
+/**
+ * @route GET /api/admin/doctors/:id/profile
+ * @description Get complete doctor profile with documents
+ */
+exports.getDoctorProfile = async (req, res) => {
+    try {
+        const doctor = await Doctor.findById(req.params.id)
+            .populate('userId', 'name email mobile_number created_at');
+
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        // Mock documents - in real implementation, these would come from a documents collection
+        const documents = [
+            {
+                id: '1',
+                type: 'Medical License',
+                url: 'https://via.placeholder.com/600x400/7367F0/FFFFFF?text=Medical+License',
+                status: 'pending',
+                uploadedAt: new Date()
+            },
+            {
+                id: '2',
+                type: 'Degree Certificate',
+                url: 'https://via.placeholder.com/600x400/28C76F/FFFFFF?text=Degree+Certificate',
+                status: 'verified',
+                uploadedAt: new Date()
+            },
+            {
+                id: '3',
+                type: 'ID Proof',
+                url: 'https://via.placeholder.com/600x400/FF9F43/FFFFFF?text=ID+Proof',
+                status: 'pending',
+                uploadedAt: new Date()
+            }
+        ];
+
+        res.status(200).json({
+            success: true,
+            doctor: {
+                ...doctor.toObject(),
+                documents
+            }
+        });
+    } catch (error) {
+        console.error('Get doctor profile error:', error);
+        res.status(500).json({ message: 'Error fetching doctor profile' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/doctors/:id/verify-document
+ * @description Verify or reject a doctor's document
+ */
+exports.verifyDoctorDocument = async (req, res) => {
+    try {
+        const { documentId, status, reason } = req.body;
+
+        // In real implementation, update the document status in database
+        // For now, just return success
+        res.status(200).json({
+            success: true,
+            message: `Document ${status === 'verified' ? 'verified' : 'rejected'} successfully`,
+            documentId,
+            status,
+            reason
+        });
+    } catch (error) {
+        console.error('Verify document error:', error);
+        res.status(500).json({ message: 'Error verifying document' });
     }
 };

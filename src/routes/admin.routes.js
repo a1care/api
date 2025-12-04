@@ -18,4 +18,8 @@ router.post('/services', adminController.createService);
 router.put('/services/:id', adminController.updateService);
 router.delete('/services/:id', adminController.deleteService);
 
+// Doctor Profile & Document Verification
+router.get('/doctors/:id/profile', adminController.getDoctorProfile);
+router.put('/doctors/:id/verify-document', adminController.verifyDoctorDocument);
+
 module.exports = router;

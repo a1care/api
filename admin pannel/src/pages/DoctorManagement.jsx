@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DataTable from '../components/DataTable';
+import DoctorProfileModal from '../components/DoctorProfileModal';
 import { Check, X, Eye, Stethoscope, MoreVertical } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -9,6 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const DoctorManagement = () => {
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDoctor, setSelectedDoctor] = useState(null);
 
     useEffect(() => {
         fetchDoctors();
@@ -110,7 +112,7 @@ const DoctorManagement = () => {
                             </button>
                         </>
                     )}
-                    <button className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-colors">
+                    <button className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-colors" onClick={(e) => { e.stopPropagation(); setSelectedDoctor(doctor); }}>
                         <Eye className="h-4 w-4" />
                     </button>
                 </div>
@@ -137,6 +139,15 @@ const DoctorManagement = () => {
                 data={doctors}
                 isLoading={loading}
             />
+
+            {/* Doctor Profile Modal */}
+            {selectedDoctor && (
+                <DoctorProfileModal
+                    doctor={selectedDoctor}
+                    onClose={() => setSelectedDoctor(null)}
+                    onUpdate={fetchDoctors}
+                />
+            )}
         </div>
     );
 };
