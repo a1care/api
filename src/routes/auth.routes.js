@@ -11,6 +11,7 @@ const { protect } = require('../middleware/authenticate'); // Import the protect
  * @access Public
  */
 AuthRouter.post('/login', authController.login);
+AuthRouter.post('/register', protect, authController.register);
 
 
 // --- Private Routes (Requires Token) ---

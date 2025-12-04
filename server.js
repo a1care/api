@@ -2,7 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config({ silent: true });
 
 const express = require('express');
-const connectDB = require('./src/config/db'); 
+const connectDB = require('./src/config/db');
 const mainRoutes = require('./src/routes/mainroutes');
 
 // Load environment variables (kept at the top for safety)
@@ -23,8 +23,8 @@ app.use('/api', mainRoutes);
 
 // --- 2. Root Route (Specific) ---
 // This must be placed before the 404 handler
-app.get('/', (req, res) => {    
-    res.send(`
+app.get('/', (req, res) => {
+    res.send(`
         <html>
         <head>
             <title>A1Care API</title>
@@ -56,15 +56,15 @@ app.get('/', (req, res) => {    
 // --- 3. 404 Catch-All Middleware (Must be last route handler) ---
 // This only executes if the request didn't match /api, /, or any other routes above
 app.use((req, res, next) => {
-    // We send a JSON 404 response instead of the default HTML
-    res.status(404).json({
-        success: false,
-        message: `Route not found: ${req.method} ${req.originalUrl}`
-    });
+    // We send a JSON 404 response instead of the default HTML
+    res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.method} ${req.originalUrl}`
+    });
 });
 
 
 // Start Server (Listen remains at the bottom)
 app.listen(PORT, () => {
-    console.log(`Server is listening at http://localhost:${PORT}`);
+    console.log(`Server is listening at http://localhost:${PORT}`);
 });

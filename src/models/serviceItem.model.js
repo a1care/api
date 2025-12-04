@@ -14,6 +14,12 @@ const ServiceItemSchema = new Schema({
 
     serviceId: { type: Schema.Types.ObjectId, ref: 'Service', required: true },
 
+    booking_type: {
+        type: String,
+        enum: ['DirectBooking', 'OnlineConsultancy'],
+        default: 'DirectBooking'
+    },
+
     is_active: { type: Boolean, default: true },
 
     // Optional fields for specific types (Inventory tracking)

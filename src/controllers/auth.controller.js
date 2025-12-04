@@ -70,12 +70,16 @@ exports.login = async (req, res) => {
         // 5. Generate JWT Token
         const token = generateToken(user._id, user.role);
 
-        // 6. Return success response
+        // 6. Check if user is registered (has name and email)
+        const isRegistered = !!(user.name && user.email);
+
+        // 7. Return success response
         res.status(200).json({
             success: true,
             message: 'Login successful.',
             token: token,
             role: user.role,
+            isRegistered: isRegistered
         });
 
     } catch (error) {
@@ -210,5 +214,57 @@ exports.getProfile = async (req, res) => {
     } catch (error) {
         console.error('Get profile error:', error);
         res.status(500).json({ message: 'Server error fetching profile.' });
+    }
+};
+
+/**
+ * @route POST /api/auth/register
+ * @description Completes user profile (name, email) after initial login.
+ * @access Private (Requires JWT)
+ * @payload { name, email, [doctor_details] }
+ */
+exports.register = async (req, res) => {
+    const userId = req.userId.id;
+    const { name, email, ...otherDetails } = req.body;
+
+    if (!name || !email) {
+        return res.status(400).json({ message: 'Name and email are required.' });
+    }
+
+    try {
+        // 1. Update User Profile
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { name, email },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // 2. If Doctor, update Doctor Profile
+        if (updatedUser.role === 'Doctor') {
+            // For now, we accept otherDetails as part of doctor profile
+            // In future, handle file uploads for documents
+            await Doctor.findOneAndUpdate(
+                { userId: userId },
+                { $set: otherDetails }, // Update available fields
+                { upsert: true, new: true }
+            );
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Registration successful.',
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        if (error.code === 11000) {
+            return res.status(409).json({ message: 'Email already in use.' });
+        }
+        res.status(500).json({ message: 'Server error during registration.' });
     }
 };
