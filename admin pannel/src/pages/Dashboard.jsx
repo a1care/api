@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Stethoscope, Calendar, Activity, TrendingUp, DollarSign } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { Users, Stethoscope, Calendar, Activity, TrendingUp, DollarSign, Layers, FolderTree, Package } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -11,9 +11,14 @@ const Dashboard = () => {
         totalUsers: 0,
         totalDoctors: 0,
         totalBookings: 0,
-        totalServices: 0,
+        totalCategories: 0,
+        totalSubcategories: 0,
+        totalChildServices: 0,
         pendingDoctors: 0,
-        activeDoctors: 0
+        activeDoctors: 0,
+        activeCategories: 0,
+        inactiveCategories: 0,
+        serviceTypeBreakdown: {}
     });
     const [recentBookings, setRecentBookings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -91,6 +96,42 @@ const Dashboard = () => {
                     trendValue="2%"
                     color="danger"
                 />
+            </div>
+
+            {/* Service Hierarchy Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard
+                    title="Categories"
+                    value={stats.totalCategories}
+                    subtitle={`${stats.activeCategories} Active, ${stats.inactiveCategories} Inactive`}
+                    icon={Layers}
+                    color="primary"
+                />
+                <StatCard
+                    title="Subcategories"
+                    value={stats.totalSubcategories}
+                    icon={FolderTree}
+                    color="info"
+                />
+                <StatCard
+                    title="Child Services"
+                    value={stats.totalChildServices}
+                    icon={Package}
+                    color="success"
+                />
+            </div>
+
+            {/* Service Type Breakdown */}
+            <div className="bg-white p-6 rounded-xl shadow-card">
+                <h3 className="text-lg font-bold text-dark-header mb-4">Service Type Breakdown</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {Object.entries(stats.serviceTypeBreakdown).map(([type, count]) => (
+                        <div key={type} className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-2xl font-bold text-primary">{count}</div>
+                            <div className="text-xs text-gray-600 mt-1">{type}</div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Charts Section */}

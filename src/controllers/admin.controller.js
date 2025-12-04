@@ -3,6 +3,8 @@ const Doctor = require('../models/doctor.model');
 const Booking = require('../models/booking.model');
 const Service = require('../models/service.model');
 const ServiceItem = require('../models/serviceItem.model');
+const SubService = require('../models/subService.model');
+const ChildService = require('../models/childService.model');
 
 /**
  * @route GET /api/admin/dashboard/stats
@@ -10,15 +12,31 @@ const ServiceItem = require('../models/serviceItem.model');
  */
 exports.getDashboardStats = async (req, res) => {
     try {
-        const [totalUsers, totalDoctors, totalBookings, totalServices] = await Promise.all([
+        const [totalUsers, totalDoctors, totalBookings, totalServices, totalSubServices, totalChildServices] = await Promise.all([
             User.countDocuments({ role: 'User' }),
             User.countDocuments({ role: 'Doctor' }),
             Booking.countDocuments(),
-            Service.countDocuments()
+            Service.countDocuments(),
+            SubService.countDocuments(),
+            ChildService.countDocuments()
         ]);
 
         const pendingDoctors = await Doctor.countDocuments({ status: 'Pending' });
         const activeDoctors = await Doctor.countDocuments({ status: 'Active' });
+
+        // Get service type breakdown
+        const serviceTypeBreakdown = await ChildService.aggregate([
+            {
+                $group: {
+                    _id: '$service_type',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Get active/inactive counts
+        const activeCategories = await Service.countDocuments({ is_active: true });
+        const inactiveCategories = await Service.countDocuments({ is_active: false });
 
         const recentBookings = await Booking.find()
             .populate('userId', 'name mobile_number')
@@ -32,8 +50,17 @@ exports.getDashboardStats = async (req, res) => {
                 totalDoctors,
                 totalBookings,
                 totalServices,
+                totalCategories: totalServices,
+                totalSubcategories: totalSubServices,
+                totalChildServices,
                 pendingDoctors,
-                activeDoctors
+                activeDoctors,
+                activeCategories,
+                inactiveCategories,
+                serviceTypeBreakdown: serviceTypeBreakdown.reduce((acc, item) => {
+                    acc[item._id] = item.count;
+                    return acc;
+                }, {})
             },
             recentBookings
         });
