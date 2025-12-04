@@ -83,7 +83,7 @@ async function verifyAdminAPI() {
             const createRes = await axios.post(`${API_URL}/admin/services`, {
                 name: 'Test Service ' + Date.now(),
                 title: 'Verification Test Service',
-                type: 'Test',
+                type: 'OPD',
                 image_url: 'https://via.placeholder.com/150'
             });
             if (createRes.status === 201 && createRes.data.success) {

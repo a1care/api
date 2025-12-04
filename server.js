@@ -1,4 +1,20 @@
+const express = require('express');
+const dotenv = require('dotenv');
+const connectDB = require('./src/config/db');
+const mainRoutes = require('./src/routes/mainroutes');
 
+// Load env vars
+dotenv.config();
+
+// Connect to database
+connectDB();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // --- 1. API Routes (Specific) ---
 app.use('/api', mainRoutes);
@@ -7,31 +23,31 @@ app.use('/api', mainRoutes);
 // This must be placed before the 404 handler
 app.get('/', (req, res) => {
     res.send(`
-        <html>
-        <head>
-            <title>A1Care API</title>
-            <style>
-                body {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    margin: 0;
-                    background: #f5f7fa;
-                    font-family: Arial, sans-serif;
-                }
-                .msg {
-                    font-size: 28px;
-                    font-weight: bold;
-                    color: #2c3e50;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="msg">🚀 A1Care 24×7 API is up and running! 💙✨</div>
-        </body>
-        </html>
-    `);
+        <html>
+        <head>
+            <title>A1Care API</title>
+            <style>
+                body {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    background: #f5f7fa;
+                    font-family: Arial, sans-serif;
+                }
+                .msg {
+                    font-size: 28px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="msg">🚀 A1Care 24×7 API is up and running! 💙✨</div>
+        </body>
+        </html>
+    `);
 });
 
 
