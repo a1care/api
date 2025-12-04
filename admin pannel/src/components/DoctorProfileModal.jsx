@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, FileText, CheckCircle, XCircle, Download, Eye, Calendar, Mail, Phone, MapPin, Award, Briefcase, Star } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -6,12 +6,12 @@ import toast from 'react-hot-toast';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const DoctorProfileModal = ({ doctor, onClose, onUpdate }) => {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [profileData, setProfileData] = useState(null);
     const [selectedDocument, setSelectedDocument] = useState(null);
 
     // Fetch complete profile when modal opens
-    useState(() => {
+    useEffect(() => {
         fetchDoctorProfile();
     }, []);
 
@@ -92,8 +92,8 @@ const DoctorProfileModal = ({ doctor, onClose, onUpdate }) => {
                     <div className="flex items-center gap-3">
                         <span className="text-sm font-semibold text-gray-600">Status:</span>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${profileData.status === 'Active' ? 'bg-success-light text-success' :
-                                profileData.status === 'Pending' ? 'bg-warning-light text-warning' :
-                                    'bg-danger-light text-danger'
+                            profileData.status === 'Pending' ? 'bg-warning-light text-warning' :
+                                'bg-danger-light text-danger'
                             }`}>
                             {profileData.status}
                         </span>
@@ -170,8 +170,8 @@ const DocumentCard = ({ document, onVerify, onReject, onView }) => (
             <div className="flex justify-between items-start mb-2">
                 <h4 className="text-sm font-bold text-dark-header">{document.type}</h4>
                 <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${document.status === 'verified' ? 'bg-success-light text-success' :
-                        document.status === 'rejected' ? 'bg-danger-light text-danger' :
-                            'bg-warning-light text-warning'
+                    document.status === 'rejected' ? 'bg-danger-light text-danger' :
+                        'bg-warning-light text-warning'
                     }`}>
                     {document.status}
                 </span>
