@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Plus, Filter, Calendar, DollarSign, User, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import DataTable from '../components/DataTable';
+import AddBookingModal from '../components/AddBookingModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -258,6 +259,17 @@ const BookingManagement = () => {
                     onClose={() => setSelectedBooking(null)}
                     onSuccess={() => {
                         setSelectedBooking(null);
+                        fetchBookings();
+                    }}
+                />
+            )}
+
+            {/* Add Booking Modal */}
+            {showAddModal && (
+                <AddBookingModal
+                    onClose={() => setShowAddModal(false)}
+                    onSuccess={() => {
+                        setShowAddModal(false);
                         fetchBookings();
                     }}
                 />
