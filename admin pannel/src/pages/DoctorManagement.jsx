@@ -4,7 +4,7 @@ import DataTable from '../components/DataTable';
 import { Check, X, Eye, Stethoscope, MoreVertical } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-esf1.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const DoctorManagement = () => {
     const [doctors, setDoctors] = useState([]);
@@ -80,8 +80,8 @@ const DoctorManagement = () => {
             label: 'Status',
             render: (status) => (
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${status === 'Active' ? 'bg-success-light text-success' :
-                        status === 'Pending' ? 'bg-warning-light text-warning' :
-                            'bg-danger-light text-danger'
+                    status === 'Pending' ? 'bg-warning-light text-warning' :
+                        'bg-danger-light text-danger'
                     }`}>
                     {status}
                 </span>

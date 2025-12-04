@@ -4,7 +4,7 @@ import { Users, Stethoscope, Calendar, Activity, TrendingUp, DollarSign } from '
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import StatCard from '../components/StatCard';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-esf1.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const Dashboard = () => {
     const [stats, setStats] = useState({

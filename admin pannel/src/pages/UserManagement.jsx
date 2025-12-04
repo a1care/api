@@ -3,7 +3,7 @@ import axios from 'axios';
 import DataTable from '../components/DataTable';
 import { Eye, Shield, User } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-esf1.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);

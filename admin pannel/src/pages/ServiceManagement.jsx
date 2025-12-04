@@ -4,7 +4,7 @@ import DataTable from '../components/DataTable';
 import { Plus, Edit2, Trash2, X, Activity, ArrowRight } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-esf1.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const ServiceManagement = () => {
     const [services, setServices] = useState([]);

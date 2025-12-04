@@ -17,10 +17,10 @@ const Sidebar = () => {
             {/* Logo Section */}
             <div className="h-20 flex items-center px-6 border-b border-dashed border-gray-200">
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/40">
-                        M
+                    <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/40">
+                        A1
                     </div>
-                    <span className="text-xl font-bold text-dark-header tracking-tight">Mashfa</span>
+                    <span className="text-lg font-bold text-dark-header tracking-tight">A1CARE 24/7</span>
                 </div>
             </div>
 
@@ -37,8 +37,8 @@ const Sidebar = () => {
                             key={item.path}
                             to={item.path}
                             className={`group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${active
-                                    ? 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-lg shadow-primary/30'
-                                    : 'text-dark-body hover:bg-gray-50 hover:translate-x-1'
+                                ? 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-lg shadow-primary/30'
+                                : 'text-dark-body hover:bg-gray-50 hover:translate-x-1'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
@@ -68,7 +68,7 @@ const Sidebar = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-dark-header truncate">Admin User</p>
-                        <p className="text-xs text-gray-500 truncate">admin@mashfa.com</p>
+                        <p className="text-xs text-gray-500 truncate">admin@a1care.com</p>
                     </div>
                 </div>
             </div>
