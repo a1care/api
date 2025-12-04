@@ -120,7 +120,11 @@ const SubcategoryManagement = () => {
 };
 
 const SubcategoryModal = ({ item, categories, onClose, onSuccess }) => {
-    const [formData, setFormData] = useState(item || { serviceId: '', name: '', description: '' });
+    const [formData, setFormData] = useState(item ? {
+        serviceId: item.serviceId || '',
+        name: item.name,
+        description: item.description || ''
+    } : { serviceId: '', name: '', description: '' });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
