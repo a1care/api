@@ -99,7 +99,15 @@ const CategoryManagement = () => {
 };
 
 const CategoryModal = ({ category, onClose, onSuccess }) => {
-    const [formData, setFormData] = useState(category || { name: '', description: '' });
+    const [formData, setFormData] = useState({ name: '', description: '' });
+
+    useEffect(() => {
+        if (category) {
+            setFormData({ name: category.name, description: category.description || '' });
+        } else {
+            setFormData({ name: '', description: '' });
+        }
+    }, [category]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

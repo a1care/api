@@ -141,19 +141,33 @@ const ChildServiceManagement = () => {
 };
 
 const ChildServiceModal = ({ item, subcategories, onClose, onSuccess }) => {
-    const [formData, setFormData] = useState(item ? {
-        subServiceId: item.subServiceId || '',
-        name: item.name || '',
-        description: item.description || '',
-        service_type: item.service_type || 'OPD',
-        price: item.price || 0
-    } : {
+    const [formData, setFormData] = useState({
         subServiceId: '',
         name: '',
         description: '',
         service_type: 'OPD',
         price: 0
     });
+
+    useEffect(() => {
+        if (item) {
+            setFormData({
+                subServiceId: item.subServiceId || '',
+                name: item.name || '',
+                description: item.description || '',
+                service_type: item.service_type || 'OPD',
+                price: item.price || 0
+            });
+        } else {
+            setFormData({
+                subServiceId: '',
+                name: '',
+                description: '',
+                service_type: 'OPD',
+                price: 0
+            });
+        }
+    }, [item]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
