@@ -101,29 +101,33 @@ const DoctorManagement = () => {
             label: 'Actions',
             render: (doctor) => (
                 <div className="flex gap-2">
-                    {doctor.status === 'Pending' && (
-                        <>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleStatusChange(doctor._id, 'approve'); }}
-                                className="p-2 text-success hover:bg-success-light rounded-lg transition-colors"
-                                title="Approve"
-                            >
-                                <Check className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleStatusChange(doctor._id, 'reject'); }}
-                                className="p-2 text-danger hover:bg-danger-light rounded-lg transition-colors"
-                                title="Reject"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        </>
+                    {/* Show Approve button if not Active */}
+                    {doctor.status !== 'Active' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleStatusChange(doctor._id, 'approve'); }}
+                            className="p-2 text-success hover:bg-success-light rounded-lg transition-colors"
+                            title="Approve & Activate"
+                        >
+                            <Check className="h-4 w-4" />
+                        </button>
                     )}
+
+                    {/* Show Reject button if not Rejected */}
+                    {doctor.status !== 'Rejected' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleStatusChange(doctor._id, 'reject'); }}
+                            className="p-2 text-danger hover:bg-danger-light rounded-lg transition-colors"
+                            title="Reject"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+
+                    {/* Always show View button */}
                     <button
                         className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-colors"
                         onClick={(e) => {
                             e.stopPropagation();
-                            console.log('Selected doctor:', doctor);
                             setSelectedDoctor(doctor);
                         }}
                     >
