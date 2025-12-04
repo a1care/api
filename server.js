@@ -7,11 +7,26 @@ const mainRoutes = require('./src/routes/mainroutes');
 // Load env vars
 dotenv.config();
 
+// Connect to database
+connectDB();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// CORS Configuration - Temporarily allow all origins
+app.use(cors({
+    origin: '*',  // Allow all origins temporarily - REMEMBER TO RESTRICT LATER
+    credentials: false  // Must be false when origin is *
+}));
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // --- 1. API Routes (Specific) ---
 app.use('/api', mainRoutes);
 
 // --- 2. Root Route (Specific) ---
-// This must be placed before the 404 handler
 app.get('/', (req, res) => {
     res.send(`
         <html>
@@ -41,19 +56,15 @@ app.get('/', (req, res) => {
     `);
 });
 
-
-// --- 3. 404 Catch-All Middleware (Must be last route handler) ---
-// This only executes if the request didn't match /api, /, or any other routes above
+// --- 3. 404 Catch-All Middleware ---
 app.use((req, res, next) => {
-    // We send a JSON 404 response instead of the default HTML
     res.status(404).json({
         success: false,
         message: `Route not found: ${req.method} ${req.originalUrl}`
     });
 });
 
-
-// Start Server (Listen remains at the bottom)
+// Start Server
 app.listen(PORT, () => {
     console.log(`Server is listening at http://localhost:${PORT}`);
 });
