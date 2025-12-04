@@ -12,8 +12,10 @@ const DoctorProfileModal = ({ doctor, onClose, onUpdate }) => {
 
     // Fetch complete profile when modal opens
     useEffect(() => {
-        fetchDoctorProfile();
-    }, []);
+        if (doctor && doctor._id) {
+            fetchDoctorProfile();
+        }
+    }, [doctor]);
 
     const fetchDoctorProfile = async () => {
         try {
@@ -25,6 +27,8 @@ const DoctorProfileModal = ({ doctor, onClose, onUpdate }) => {
         } catch (error) {
             console.error('Error fetching doctor profile:', error);
             toast.error('Failed to load doctor profile');
+            // Fallback to using the doctor prop if API fails
+            setProfileData(doctor);
         } finally {
             setLoading(false);
         }
