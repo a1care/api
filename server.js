@@ -1,21 +1,3 @@
-const dotenv = require('dotenv');
-dotenv.config({ silent: true });
-
-const express = require('express');
-const connectDB = require('./src/config/db');
-const mainRoutes = require('./src/routes/mainroutes');
-
-// Load environment variables (kept at the top for safety)
-
-connectDB();
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-
-// --- Middleware ---
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 
 // --- 1. API Routes (Specific) ---

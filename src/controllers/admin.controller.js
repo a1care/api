@@ -1,196 +1,244 @@
 const User = require('../models/user.model');
 const Doctor = require('../models/doctor.model');
 const Booking = require('../models/booking.model');
-const mongoose = require('mongoose');
+const Service = require('../models/service.model');
+const ServiceItem = require('../models/serviceItem.model');
 
 /**
- * @route PUT /api/admin/doctors/:doctorId/approve
- * @description Approve a doctor account
- * @access Private (Admin only)
+ * @route GET /api/admin/dashboard/stats
+ * @description Get dashboard statistics
  */
-exports.approveDoctor = async (req, res) => {
-    const { doctorId } = req.params;
-
+exports.getDashboardStats = async (req, res) => {
     try {
-        const doctor = await Doctor.findOne({ userId: doctorId });
-        if (!doctor) {
-            return res.status(404).json({ message: 'Doctor profile not found.' });
-        }
-
-        doctor.status = 'Approved';
-        doctor.is_available = true; // Make them available upon approval
-        await doctor.save();
-
-        res.status(200).json({ success: true, message: 'Doctor approved successfully.' });
-    } catch (error) {
-        console.error('Approve doctor error:', error);
-        res.status(500).json({ message: 'Server error approving doctor.' });
-    }
-};
-
-/**
- * @route PUT /api/admin/doctors/:doctorId/reject
- * @description Reject a doctor account
- * @access Private (Admin only)
- */
-exports.rejectDoctor = async (req, res) => {
-    const { doctorId } = req.params;
-
-    try {
-        const doctor = await Doctor.findOne({ userId: doctorId });
-        if (!doctor) {
-            return res.status(404).json({ message: 'Doctor profile not found.' });
-        }
-
-        doctor.status = 'Rejected';
-        doctor.is_available = false;
-        await doctor.save();
-
-        res.status(200).json({ success: true, message: 'Doctor rejected.' });
-    } catch (error) {
-        console.error('Reject doctor error:', error);
-        res.status(500).json({ message: 'Server error rejecting doctor.' });
-    }
-};
-
-/**
- * @route GET /api/admin/bookings
- * @description Get all bookings with filters
- * @access Private (Admin only)
- */
-exports.getAllBookings = async (req, res) => {
-    try {
-        const { status, date, type } = req.query;
-        let query = {};
-
-        if (status) query.status = status;
-        if (date) query.booking_date = date;
-        if (type) query.itemType = type;
-
-        const bookings = await Booking.find(query)
-            .populate('userId', 'name mobile_number')
-            .populate('itemId')
-            .sort({ booking_date: -1 });
-
-        res.status(200).json({ success: true, bookings });
-    } catch (error) {
-        console.error('Get all bookings error:', error);
-        res.status(500).json({ message: 'Server error fetching bookings.' });
-    }
-};
-
-/**
- * @route GET /api/admin/analytics
- * @description Get app analytics (counts, revenue)
- * @access Private (Admin only)
- */
-exports.getAnalytics = async (req, res) => {
-    try {
-        const userCount = await User.countDocuments({ role: 'User' });
-        const doctorCount = await Doctor.countDocuments();
-        const bookingCount = await Booking.countDocuments();
-
-        // Calculate total revenue (sum of total_amount from completed bookings)
-        const revenueAgg = await Booking.aggregate([
-            { $match: { status: 'Completed' } },
-            { $group: { _id: null, total: { $sum: '$total_amount' } } }
+        const [totalUsers, totalDoctors, totalBookings, totalServices] = await Promise.all([
+            User.countDocuments({ role: 'User' }),
+            User.countDocuments({ role: 'Doctor' }),
+            Booking.countDocuments(),
+            Service.countDocuments()
         ]);
-        const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
+
+        const pendingDoctors = await Doctor.countDocuments({ status: 'Pending' });
+        const activeDoctors = await Doctor.countDocuments({ status: 'Active' });
+
+        const recentBookings = await Booking.find()
+            .populate('userId', 'name mobile_number')
+            .sort({ created_at: -1 })
+            .limit(5);
 
         res.status(200).json({
             success: true,
-            analytics: {
-                users: userCount,
-                doctors: doctorCount,
-                bookings: bookingCount,
-                revenue: totalRevenue
-            }
+            stats: {
+                totalUsers,
+                totalDoctors,
+                totalBookings,
+                totalServices,
+                pendingDoctors,
+                activeDoctors
+            },
+            recentBookings
         });
     } catch (error) {
-        console.error('Get analytics error:', error);
-        res.status(500).json({ message: 'Server error fetching analytics.' });
-    }
-};
-
-/**
- * @route PUT /api/admin/bookings/:bookingId/status
- * @description Update booking status (e.g., to Completed, Cancelled)
- * @access Private (Admin only)
- */
-exports.updateBookingStatus = async (req, res) => {
-    const { bookingId } = req.params;
-    const { status } = req.body;
-
-    const validStatuses = ['Upcoming', 'Completed', 'Cancelled', 'Pending Payment', 'Approved', 'Rejected'];
-    if (!validStatuses.includes(status)) {
-        return res.status(400).json({ message: 'Invalid status.' });
-    }
-
-    try {
-        const booking = await Booking.findById(bookingId);
-        if (!booking) {
-            return res.status(404).json({ message: 'Booking not found.' });
-        }
-
-        booking.status = status;
-        // If completed, ensure payment status is PAID (optional logic)
-        if (status === 'Completed') {
-            booking.payment_status = 'PAID';
-        }
-
-        await booking.save();
-
-        res.status(200).json({ success: true, message: 'Booking status updated.', booking });
-    } catch (error) {
-        console.error('Update booking status error:', error);
-        res.status(500).json({ message: 'Server error updating booking status.' });
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({ message: 'Error fetching dashboard stats' });
     }
 };
 
 /**
  * @route GET /api/admin/users
- * @description Get all users with role 'User'
- * @access Private (Admin only)
+ * @description Get all users with pagination
  */
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find({ role: 'User' }).select('-password -fcm_token -__v');
-        res.status(200).json({ success: true, users });
+        const users = await User.find({ role: 'User' })
+            .select('-password -fcm_token')
+            .sort({ created_at: -1 });
+
+        res.status(200).json({
+            success: true,
+            users
+        });
     } catch (error) {
-        console.error('Get all users error:', error);
-        res.status(500).json({ message: 'Server error fetching users.' });
+        console.error('Get users error:', error);
+        res.status(500).json({ message: 'Error fetching users' });
     }
 };
 
 /**
- * @route PUT /api/admin/users/:userId/status
- * @description Block or Unblock a user
- * @access Private (Admin only)
+ * @route GET /api/admin/doctors
+ * @description Get all doctors with their profiles
  */
-exports.toggleUserStatus = async (req, res) => {
-    const { userId } = req.params;
-    const { is_active } = req.body; // Expect boolean
-
-    if (typeof is_active !== 'boolean') {
-        return res.status(400).json({ message: 'Invalid status. is_active must be boolean.' });
-    }
-
+exports.getAllDoctors = async (req, res) => {
     try {
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-
-        user.is_active = is_active;
-        await user.save();
+        const doctors = await User.aggregate([
+            { $match: { role: 'Doctor' } },
+            {
+                $lookup: {
+                    from: 'doctors',
+                    localField: '_id',
+                    foreignField: 'userId',
+                    as: 'profile'
+                }
+            },
+            { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    name: 1,
+                    mobile_number: 1,
+                    email: 1,
+                    created_at: 1,
+                    status: '$profile.status',
+                    experience: '$profile.experience',
+                    specializations: '$profile.specializations',
+                    consultation_fee: '$profile.consultation_fee',
+                    satisfaction_rating: '$profile.satisfaction_rating'
+                }
+            },
+            { $sort: { created_at: -1 } }
+        ]);
 
         res.status(200).json({
             success: true,
-            message: `User ${is_active ? 'unblocked' : 'blocked'} successfully.`,
-            user
+            doctors
         });
     } catch (error) {
-        console.error('Toggle user status error:', error);
-        res.status(500).json({ message: 'Server error updating user status.' });
+        console.error('Get doctors error:', error);
+        res.status(500).json({ message: 'Error fetching doctors' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/doctors/:id/approve
+ * @description Approve a doctor
+ */
+exports.approveDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const doctor = await Doctor.findOneAndUpdate(
+            { userId: id },
+            { status: 'Active' },
+            { new: true }
+        );
+
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Doctor approved successfully',
+            doctor
+        });
+    } catch (error) {
+        console.error('Approve doctor error:', error);
+        res.status(500).json({ message: 'Error approving doctor' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/doctors/:id/reject
+ * @description Reject a doctor
+ */
+exports.rejectDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const doctor = await Doctor.findOneAndUpdate(
+            { userId: id },
+            { status: 'Rejected' },
+            { new: true }
+        );
+
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Doctor rejected',
+            doctor
+        });
+    } catch (error) {
+        console.error('Reject doctor error:', error);
+        res.status(500).json({ message: 'Error rejecting doctor' });
+    }
+};
+
+/**
+ * @route POST /api/admin/services
+ * @description Create a new service
+ */
+exports.createService = async (req, res) => {
+    try {
+        const { name, title, type, image_url } = req.body;
+
+        const service = new Service({
+            name,
+            title,
+            type,
+            image_url,
+            is_active: true
+        });
+
+        await service.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Service created successfully',
+            service
+        });
+    } catch (error) {
+        console.error('Create service error:', error);
+        res.status(500).json({ message: 'Error creating service' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/services/:id
+ * @description Update a service
+ */
+exports.updateService = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+
+        const service = await Service.findByIdAndUpdate(id, updates, { new: true });
+
+        if (!service) {
+            return res.status(404).json({ message: 'Service not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Service updated successfully',
+            service
+        });
+    } catch (error) {
+        console.error('Update service error:', error);
+        res.status(500).json({ message: 'Error updating service' });
+    }
+};
+
+/**
+ * @route DELETE /api/admin/services/:id
+ * @description Delete a service
+ */
+exports.deleteService = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const service = await Service.findByIdAndDelete(id);
+
+        if (!service) {
+            return res.status(404).json({ message: 'Service not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Service deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete service error:', error);
+        res.status(500).json({ message: 'Error deleting service' });
     }
 };
