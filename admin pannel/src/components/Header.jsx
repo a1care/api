@@ -10,7 +10,7 @@ const Header = () => {
     };
 
     return (
-        <header className="bg-white/80 backdrop-blur-md h-16 flex items-center justify-between px-6 sticky top-0 z-10 m-4 rounded-xl shadow-card mb-6">
+        <header className="bg-white/80 backdrop-blur-md h-16 flex items-center justify-between px-6 sticky top-0 z-10 shadow-card border-b border-gray-100">
             {/* Search Bar */}
             <div className="flex items-center gap-4">
                 <button className="md:hidden p-2 text-dark-body hover:bg-gray-100 rounded-lg">
