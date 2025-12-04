@@ -108,7 +108,7 @@ const DataTable = ({ columns, data, isLoading, onRowClick, actions }) => {
                                             className="px-6 py-4 text-sm text-dark-body whitespace-nowrap"
                                         >
                                             {column.render
-                                                ? column.render(item[column.key], item)
+                                                ? column.render(item)
                                                 : item[column.key] || '-'}
                                         </td>
                                     ))}
