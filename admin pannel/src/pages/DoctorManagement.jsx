@@ -48,13 +48,13 @@ const DoctorManagement = () => {
             key: 'name',
             label: 'Doctor',
             sortable: true,
-            render: (value) => (
+            render: (doctor) => (
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-info-light text-info flex items-center justify-center font-bold">
                         Dr
                     </div>
                     <div>
-                        <div className="font-semibold text-dark-header">{value}</div>
+                        <div className="font-semibold text-dark-header">{doctor.name}</div>
                         <div className="text-xs text-gray-500">General Physician</div>
                     </div>
                 </div>
@@ -63,10 +63,10 @@ const DoctorManagement = () => {
         {
             key: 'specializations',
             label: 'Specialization',
-            render: (val) => (
-                val && val.length > 0 ? (
+            render: (doctor) => (
+                doctor.specializations && doctor.specializations.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                        {val.map((spec, i) => (
+                        {doctor.specializations.map((spec, i) => (
                             <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">
                                 {spec}
                             </span>
@@ -75,24 +75,24 @@ const DoctorManagement = () => {
                 ) : <span className="text-gray-400 italic">Not specified</span>
             )
         },
-        { key: 'experience', label: 'Exp', sortable: true, render: (val) => <span className="font-bold text-dark-body">{val || 0} Yrs</span> },
-        { key: 'consultation_fee', label: 'Fee', render: (val) => <span className="font-medium text-primary">₹{val}</span> },
+        { key: 'experience', label: 'Exp', sortable: true, render: (doctor) => <span className="font-bold text-dark-body">{doctor.experience || 0} Yrs</span> },
+        { key: 'consultation_fee', label: 'Fee', render: (doctor) => <span className="font-medium text-primary">₹{doctor.consultation_fee}</span> },
         {
             key: 'status',
             label: 'Status',
-            render: (status) => (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${status === 'Active' ? 'bg-success-light text-success' :
-                    status === 'Pending' ? 'bg-warning-light text-warning' :
+            render: (doctor) => (
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${doctor.status === 'Active' ? 'bg-success-light text-success' :
+                    doctor.status === 'Pending' ? 'bg-warning-light text-warning' :
                         'bg-danger-light text-danger'
                     }`}>
-                    {status}
+                    {doctor.status}
                 </span>
             )
         },
         {
             key: 'actions',
             label: 'Actions',
-            render: (_, doctor) => (
+            render: (doctor) => (
                 <div className="flex gap-2">
                     {doctor.status === 'Pending' && (
                         <>

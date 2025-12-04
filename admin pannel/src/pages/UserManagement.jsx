@@ -31,14 +31,14 @@ const UserManagement = () => {
             key: 'name',
             label: 'User',
             sortable: true,
-            render: (value, user) => (
+            render: (user) => (
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm">
-                        {value?.charAt(0) || <User className="h-5 w-5" />}
+                        {user.name?.charAt(0) || <User className="h-5 w-5" />}
                     </div>
                     <div>
-                        <div className="font-semibold text-dark-header">{value}</div>
-                        <div className="text-xs text-gray-500">@{value?.toLowerCase().replace(/\s/g, '')}</div>
+                        <div className="font-semibold text-dark-header">{user.name}</div>
+                        <div className="text-xs text-gray-500">@{user.name?.toLowerCase().replace(/\s/g, '')}</div>
                     </div>
                 </div>
             )
@@ -48,18 +48,18 @@ const UserManagement = () => {
         {
             key: 'role',
             label: 'Role',
-            render: (value) => (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${value === 'Doctor' ? 'bg-info-light text-info' : 'bg-success-light text-success'
+            render: (user) => (
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${user.role === 'Doctor' ? 'bg-info-light text-info' : 'bg-success-light text-success'
                     }`}>
-                    {value === 'Doctor' ? <Shield className="w-3 h-3 mr-1" /> : <User className="w-3 h-3 mr-1" />}
-                    {value}
+                    {user.role === 'Doctor' ? <Shield className="w-3 h-3 mr-1" /> : <User className="w-3 h-3 mr-1" />}
+                    {user.role}
                 </span>
             )
         },
         {
             key: 'actions',
             label: 'Actions',
-            render: (_, user) => (
+            render: (user) => (
                 <div className="flex gap-2">
                     <button className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-all" title="View Details">
                         <Eye className="h-4 w-4" />
