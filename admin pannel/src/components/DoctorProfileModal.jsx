@@ -36,17 +36,29 @@ const DoctorProfileModal = ({ doctor, onClose, onUpdate }) => {
 
     const handleVerifyDocument = async (documentId, status, reason = '') => {
         try {
+            // Optimistically update the UI
+            setProfileData(prev => ({
+                ...prev,
+                documents: prev.documents.map(doc =>
+                    doc.id === documentId ? { ...doc, status } : doc
+                )
+            }));
+
             await axios.put(`${API_URL}/admin/doctors/${doctor._id}/verify-document`, {
                 documentId,
                 status,
                 reason
             });
             toast.success(`Document ${status === 'verified' ? 'verified' : 'rejected'} successfully`);
-            fetchDoctorProfile(); // Refresh data
+
+            // Refresh to get latest data from server
+            await fetchDoctorProfile();
             if (onUpdate) onUpdate();
         } catch (error) {
             console.error('Error verifying document:', error);
             toast.error('Failed to update document status');
+            // Revert optimistic update on error
+            await fetchDoctorProfile();
         }
     };
 

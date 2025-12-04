@@ -38,13 +38,33 @@ const BookingSchema = new Schema({
     status: {
         type: String,
         required: true,
-        enum: ['Upcoming', 'Completed', 'Cancelled', 'Pending Payment', 'Approved', 'Rejected'],
-        default: 'Pending Payment'
+        enum: ['New', 'Accepted', 'Assigned', 'Confirmed', 'Completed', 'Cancelled', 'Upcoming', 'Pending Payment', 'Approved', 'Rejected'],
+        default: 'New'
     },
+    // Admin workflow fields
+    created_by: {
+        type: String,
+        enum: ['User', 'Admin'],
+        default: 'User'
+    },
+    assigned_doctor: {
+        type: Schema.Types.ObjectId,
+        ref: 'Doctor'
+    },
+    doctor_confirmation: {
+        type: Boolean,
+        default: false
+    },
+    admin_notes: { type: String },
     consultation_fee: { type: Number }, // Specific to Doctor
     item_price: { type: Number },       // For Lab/Equipment/Ambulance
     platform_fee: { type: Number, required: true },
     total_amount: { type: Number, required: true },
+    payment_mode: {
+        type: String,
+        enum: ['COD', 'Online', 'Insurance', 'Not Specified'],
+        default: 'COD'
+    },
     payment_status: {
         type: String,
         required: true,
