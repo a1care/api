@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import DoctorManagement from './pages/DoctorManagement';
+import BookingManagement from './pages/BookingManagement';
 import CategoryManagement from './pages/CategoryManagement';
 import SubcategoryManagement from './pages/SubcategoryManagement';
 import ChildServiceManagement from './pages/ChildServiceManagement';
@@ -38,6 +39,7 @@ function App() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/users" element={<UserManagement />} />
                       <Route path="/doctors" element={<DoctorManagement />} />
+                      <Route path="/bookings" element={<BookingManagement />} />
                       <Route path="/services/categories" element={<CategoryManagement />} />
                       <Route path="/services/subcategories" element={<SubcategoryManagement />} />
                       <Route path="/services/child-services" element={<ChildServiceManagement />} />

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Stethoscope, Settings, Activity, ChevronRight, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Users, Stethoscope, Calendar, Settings, Activity, ChevronRight, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 const Sidebar = () => {
@@ -11,6 +11,7 @@ const Sidebar = () => {
         { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/users', icon: Users, label: 'Patients' },
         { path: '/doctors', icon: Stethoscope, label: 'Doctors' },
+        { path: '/bookings', icon: Calendar, label: 'Bookings' },
     ];
 
     const serviceSubItems = [
