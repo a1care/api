@@ -1,15 +1,22 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, UserPlus, Stethoscope, Settings, LogOut, Activity, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, Stethoscope, Settings, Activity, ChevronRight, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 const Sidebar = () => {
     const location = useLocation();
+    const [servicesOpen, setServicesOpen] = useState(true);
     const isActive = (path) => location.pathname === path;
 
     const menuItems = [
         { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/users', icon: Users, label: 'Patients' },
         { path: '/doctors', icon: Stethoscope, label: 'Doctors' },
-        { path: '/services', icon: Activity, label: 'Services' },
+    ];
+
+    const serviceSubItems = [
+        { path: '/services/categories', label: 'Categories' },
+        { path: '/services/subcategories', label: 'Subcategories' },
+        { path: '/services/child-services', label: 'Child Services' },
     ];
 
     return (
@@ -49,6 +56,47 @@ const Sidebar = () => {
                         </Link>
                     );
                 })}
+
+                {/* Services with Submenu */}
+                <div>
+                    <button
+                        onClick={() => setServicesOpen(!servicesOpen)}
+                        className={`w-full group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${serviceSubItems.some(item => isActive(item.path))
+                            ? 'bg-gradient-to-r from-primary to-primary-hover text-white shadow-lg shadow-primary/30'
+                            : 'text-dark-body hover:bg-gray-50'
+                            }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Activity className={`h-5 w-5 ${serviceSubItems.some(item => isActive(item.path)) ? 'text-white' : 'text-gray-500 group-hover:text-primary'}`} />
+                            <span className="font-medium text-sm">Services</span>
+                        </div>
+                        {servicesOpen ?
+                            <ChevronDown className={`h-4 w-4 ${serviceSubItems.some(item => isActive(item.path)) ? 'text-white/80' : 'text-gray-400'}`} /> :
+                            <ChevronRight className={`h-4 w-4 ${serviceSubItems.some(item => isActive(item.path)) ? 'text-white/80' : 'text-gray-400'}`} />
+                        }
+                    </button>
+
+                    {/* Submenu */}
+                    {servicesOpen && (
+                        <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-4">
+                            {serviceSubItems.map((item) => {
+                                const active = isActive(item.path);
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${active
+                                            ? 'bg-primary-light text-primary font-semibold'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+                                            }`}
+                                    >
+                                        {item.label}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
 
                 <div className="mt-8 px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     Settings
