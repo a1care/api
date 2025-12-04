@@ -112,7 +112,14 @@ const DoctorManagement = () => {
                             </button>
                         </>
                     )}
-                    <button className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-colors" onClick={(e) => { e.stopPropagation(); setSelectedDoctor(doctor); }}>
+                    <button
+                        className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-colors"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('Selected doctor:', doctor);
+                            setSelectedDoctor(doctor);
+                        }}
+                    >
                         <Eye className="h-4 w-4" />
                     </button>
                 </div>

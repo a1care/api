@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DataTable from '../components/DataTable';
+import UserViewModal from '../components/UserViewModal';
 import { Eye, Shield, User } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -8,6 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -61,7 +63,11 @@ const UserManagement = () => {
             label: 'Actions',
             render: (user) => (
                 <div className="flex gap-2">
-                    <button className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-all" title="View Details">
+                    <button
+                        className="p-2 text-gray-500 hover:text-primary hover:bg-primary-light rounded-lg transition-all"
+                        title="View Details"
+                        onClick={() => setSelectedUser(user)}
+                    >
                         <Eye className="h-4 w-4" />
                     </button>
                 </div>
@@ -89,6 +95,13 @@ const UserManagement = () => {
                 data={users}
                 isLoading={loading}
             />
+
+            {selectedUser && (
+                <UserViewModal
+                    user={selectedUser}
+                    onClose={() => setSelectedUser(null)}
+                />
+            )}
         </div>
     );
 };
