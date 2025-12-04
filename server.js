@@ -7,22 +7,6 @@ const mainRoutes = require('./src/routes/mainroutes');
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB();
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// CORS Configuration - Allow requests from admin panel
-app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true
-}));
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 // --- 1. API Routes (Specific) ---
 app.use('/api', mainRoutes);
 
