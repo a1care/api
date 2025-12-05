@@ -66,6 +66,24 @@ const ChildServiceManagement = () => {
     };
 
     const columns = [
+        {
+            key: 'image_url',
+            label: 'Image',
+            render: (item) => (
+                <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
+                    {item.image_url ? (
+                        <img
+                            src={item.image_url?.startsWith('http') ? item.image_url : `${API_URL.replace('/api', '')}${item.image_url}`}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">No Img</div>
+                    )}
+                </div>
+            )
+        },
+
         { key: 'categoryName', label: 'Category' },
         { key: 'subcategoryName', label: 'Subcategory' },
         { key: 'name', label: 'Service Name' },
@@ -203,7 +221,7 @@ const ChildServiceModal = ({ item, subcategories, onClose, onSuccess }) => {
                         <div className="relative h-24 w-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group">
                             {formData.image_url ? (
                                 <img
-                                    src={`${API_URL.replace('/api', '')}${formData.image_url}`}
+                                    src={formData.image_url?.startsWith('http') ? formData.image_url : `${API_URL.replace('/api', '')}${formData.image_url}`}
                                     alt="Service"
                                     className="h-full w-full object-cover"
                                 />

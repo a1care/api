@@ -40,6 +40,23 @@ const CategoryManagement = () => {
     };
 
     const columns = [
+        {
+            key: 'image_url',
+            label: 'Image',
+            render: (cat) => (
+                <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
+                    {cat.image_url ? (
+                        <img
+                            src={cat.image_url?.startsWith('http') ? cat.image_url : `${API_URL.replace('/api', '')}${cat.image_url}`}
+                            alt={cat.name}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">No Img</div>
+                    )}
+                </div>
+            )
+        },
         { key: 'name', label: 'Category Name' },
         { key: 'description', label: 'Description' },
         {
@@ -145,7 +162,7 @@ const CategoryModal = ({ category, onClose, onSuccess }) => {
                         <div className="relative h-24 w-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group">
                             {formData.image_url ? (
                                 <img
-                                    src={`${API_URL.replace('/api', '')}${formData.image_url}`}
+                                    src={formData.image_url?.startsWith('http') ? formData.image_url : `${API_URL.replace('/api', '')}${formData.image_url}`}
                                     alt="Category"
                                     className="h-full w-full object-cover"
                                 />

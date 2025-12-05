@@ -38,7 +38,7 @@ const UserManagement = () => {
                     <div className="h-10 w-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm overflow-hidden">
                         {user.profile_image ? (
                             <img
-                                src={`${API_URL.replace('/api', '')}${user.profile_image}`}
+                                src={user.profile_image?.startsWith('http') ? user.profile_image : `${API_URL.replace('/api', '')}${user.profile_image}`}
                                 alt={user.name}
                                 className="h-full w-full object-cover"
                             />

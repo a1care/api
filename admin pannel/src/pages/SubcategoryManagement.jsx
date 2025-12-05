@@ -59,6 +59,24 @@ const SubcategoryManagement = () => {
     };
 
     const columns = [
+        {
+            key: 'image_url',
+            label: 'Image',
+            render: (sub) => (
+                <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
+                    {sub.image_url ? (
+                        <img
+                            src={sub.image_url?.startsWith('http') ? sub.image_url : `${API_URL.replace('/api', '')}${sub.image_url}`}
+                            alt={sub.name}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">No Img</div>
+                    )}
+                </div>
+            )
+        },
+
         { key: 'categoryName', label: 'Category' },
         { key: 'name', label: 'Subcategory Name' },
         { key: 'description', label: 'Description' },
@@ -167,7 +185,7 @@ const SubcategoryModal = ({ item, categories, onClose, onSuccess }) => {
                         <div className="relative h-24 w-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group">
                             {formData.image_url ? (
                                 <img
-                                    src={`${API_URL.replace('/api', '')}${formData.image_url}`}
+                                    src={formData.image_url?.startsWith('http') ? formData.image_url : `${API_URL.replace('/api', '')}${formData.image_url}`}
                                     alt="Subcategory"
                                     className="h-full w-full object-cover"
                                 />

@@ -60,15 +60,15 @@ const DoctorManagement = () => {
             sortable: true,
             render: (doctor) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-info-light text-info flex items-center justify-center font-bold overflow-hidden">
+                    <div className="h-10 w-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm overflow-hidden">
                         {doctor.profile_image ? (
                             <img
-                                src={`${API_URL.replace('/api', '')}${doctor.profile_image}`}
+                                src={doctor.profile_image?.startsWith('http') ? doctor.profile_image : `${API_URL.replace('/api', '')}${doctor.profile_image}`}
                                 alt={doctor.name}
                                 className="h-full w-full object-cover"
                             />
                         ) : (
-                            'Dr'
+                            doctor.name?.charAt(0) || 'Dr'
                         )}
                     </div>
                     <div>
