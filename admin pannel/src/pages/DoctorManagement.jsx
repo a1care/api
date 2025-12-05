@@ -27,7 +27,8 @@ const DoctorManagement = () => {
                     ...doctor,
                     name: doctor.userId?.name || doctor.name || 'Unknown',
                     email: doctor.userId?.email || doctor.email,
-                    mobile_number: doctor.userId?.mobile_number || doctor.mobile_number
+                    mobile_number: doctor.userId?.mobile_number || doctor.mobile_number,
+                    profile_image: doctor.userId?.profile_image || doctor.profile_image
                 }));
                 setDoctors(transformedDoctors);
             }
@@ -59,8 +60,16 @@ const DoctorManagement = () => {
             sortable: true,
             render: (doctor) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-info-light text-info flex items-center justify-center font-bold">
-                        Dr
+                    <div className="h-10 w-10 rounded-lg bg-info-light text-info flex items-center justify-center font-bold overflow-hidden">
+                        {doctor.profile_image ? (
+                            <img
+                                src={`${API_URL.replace('/api', '')}${doctor.profile_image}`}
+                                alt={doctor.name}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            'Dr'
+                        )}
                     </div>
                     <div>
                         <div className="font-semibold text-dark-header">{doctor.name}</div>

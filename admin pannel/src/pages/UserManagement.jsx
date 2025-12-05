@@ -35,8 +35,16 @@ const UserManagement = () => {
             sortable: true,
             render: (user) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm">
-                        {user.name?.charAt(0) || <User className="h-5 w-5" />}
+                    <div className="h-10 w-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-sm overflow-hidden">
+                        {user.profile_image ? (
+                            <img
+                                src={`${API_URL.replace('/api', '')}${user.profile_image}`}
+                                alt={user.name}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            user.name?.charAt(0) || <User className="h-5 w-5" />
+                        )}
                     </div>
                     <div>
                         <div className="font-semibold text-dark-header">{user.name}</div>

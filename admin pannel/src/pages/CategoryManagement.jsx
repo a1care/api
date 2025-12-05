@@ -103,9 +103,13 @@ const CategoryModal = ({ category, onClose, onSuccess }) => {
 
     useEffect(() => {
         if (category) {
-            setFormData({ name: category.name, description: category.description || '' });
+            setFormData({
+                name: category.name,
+                description: category.description || '',
+                image_url: category.image_url || ''
+            });
         } else {
-            setFormData({ name: '', description: '' });
+            setFormData({ name: '', description: '', image_url: '' });
         }
     }, [category]);
 
@@ -137,6 +141,48 @@ const CategoryModal = ({ category, onClose, onSuccess }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="flex justify-center mb-4">
+                        <div className="relative h-24 w-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group">
+                            {formData.image_url ? (
+                                <img
+                                    src={`${API_URL.replace('/api', '')}${formData.image_url}`}
+                                    alt="Category"
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : (
+                                <span className="text-gray-400 text-xs text-center px-2">Upload Image</span>
+                            )}
+                            <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                <span className="text-white text-xs font-bold">Change</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+
+                                        const uploadData = new FormData();
+                                        uploadData.append('image', file);
+
+                                        try {
+                                            const res = await axios.post(`${API_URL}/upload`, uploadData, {
+                                                headers: { 'Content-Type': 'multipart/form-data' }
+                                            });
+                                            if (res.data.success) {
+                                                setFormData({ ...formData, image_url: res.data.url });
+                                                toast.success('Image uploaded');
+                                            }
+                                        } catch (err) {
+                                            console.error(err);
+                                            toast.error('Upload failed');
+                                        }
+                                    }}
+                                />
+                            </label>
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-semibold text-dark-body mb-1.5">Name</label>
                         <input

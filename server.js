@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./src/config/db');
 const mainRoutes = require('./src/routes/mainroutes');
+const path = require('path');
 
 // Load env vars
 dotenv.config();
@@ -22,6 +23,9 @@ app.use(cors({
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- 1. API Routes (Specific) ---
 app.use('/api', mainRoutes);

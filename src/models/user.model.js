@@ -14,11 +14,12 @@ const UserSchema = new Schema({
     },
     name: { type: String },
     email: { type: String },
+    profile_image: { type: String },
     latitude: { type: Number },
     longitude: { type: Number },
-    fcm_token: { 
-        type: String, 
-      
+    fcm_token: {
+        type: String,
+
     },
 
     created_at: {
