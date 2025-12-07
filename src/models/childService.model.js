@@ -27,6 +27,11 @@ const ChildServiceSchema = new Schema({
         type: Boolean,
         default: true
     },
+    booking_type: {
+        type: String,
+        enum: ['DirectBooking', 'OnlineConsultancy'],
+        default: 'DirectBooking'
+    },
     created_at: {
         type: Date,
         default: Date.now
