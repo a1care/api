@@ -188,7 +188,7 @@ exports.manageSlots = async (req, res) => {
         res.status(200).json({ success: true, message: 'Working hours updated.', working_hours: doctor.working_hours });
     } catch (error) {
         console.error('Manage slots error:', error);
-        res.status(500).json({ message: 'Server error updating slots.' });
+        res.status(500).json({ message: 'Server error updating slots.', error: error.message });
     }
 };
 
