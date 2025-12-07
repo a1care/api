@@ -21,7 +21,7 @@ const BookingSchema = new Schema({
     itemType: {
         type: String,
         required: true,
-        enum: ['User', 'ServiceItem'], // 'User' for Doctor, 'ServiceItem' for everything else
+        enum: ['User', 'ServiceItem', 'SubService', 'ChildService'], // 'User' for Doctor, 'ServiceItem' for legacy, others for new flow
         default: 'User'
     },
     // Service Category (e.g., OPD, Lab, etc.) - Optional if implied by itemType

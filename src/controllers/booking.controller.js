@@ -4,6 +4,8 @@ const Doctor = require('../models/doctor.model');
 const Service = require('../models/service.model');
 const Booking = require('../models/booking.model');
 const ServiceItem = require('../models/serviceItem.model');
+const SubService = require('../models/subService.model');
+const ChildService = require('../models/childService.model');
 
 // Register 2dsphere index for geospatial queries (run this once on app startup or in a migration)
 // User.collection.createIndex({ location: "2dsphere" }); 
@@ -27,8 +29,38 @@ exports.getServices = async (req, res) => {
 };
 
 /**
+ * @route GET /api/booking/services/:serviceId/sub-services
+ * @description Fetch SubServices for a specific Service
+ */
+exports.getSubServices = async (req, res) => {
+    const { serviceId } = req.params;
+    try {
+        const subServices = await SubService.find({ serviceId, is_active: true });
+        res.status(200).json({ success: true, subServices });
+    } catch (error) {
+        console.error('Fetch sub-services error:', error);
+        res.status(500).json({ message: 'Server error fetching sub-services.' });
+    }
+};
+
+/**
+ * @route GET /api/booking/sub-services/:subServiceId/child-services
+ * @description Fetch ChildServices for a specific SubService
+ */
+exports.getChildServices = async (req, res) => {
+    const { subServiceId } = req.params;
+    try {
+        const childServices = await ChildService.find({ subServiceId, is_active: true });
+        res.status(200).json({ success: true, childServices });
+    } catch (error) {
+        console.error('Fetch child-services error:', error);
+        res.status(500).json({ message: 'Server error fetching child-services.' });
+    }
+};
+
+/**
  * @route GET /api/booking/services/:serviceId/items
- * @description Fetch sub-items for a specific service
+ * @description Fetch sub-items for a specific service (Legacy / Flat)
  */
 exports.getServiceItems = async (req, res) => {
     const { serviceId } = req.params;

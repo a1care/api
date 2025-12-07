@@ -12,9 +12,26 @@ const { protect } = require('../middleware/authenticate'); // Import the protect
  */
 router.get('/services', bookingController.getServices);
 
+// --- Explicit Hierarchy Routes ---
+
+/**
+ * @route GET /api/booking/services/:serviceId/sub-services
+ * @description Fetch Level 1 (SubServices) for a Main Service.
+ * @access Public
+ */
+router.get('/services/:serviceId/sub-services', bookingController.getSubServices);
+
+/**
+ * @route GET /api/booking/sub-services/:subServiceId/child-services
+ * @description Fetch Level 2 (ChildServices) for a SubService.
+ * @access Public
+ */
+router.get('/sub-services/:subServiceId/child-services', bookingController.getChildServices);
+
+
 /**
  * @route GET /api/booking/services/:serviceId/items
- * @description Fetch sub-items for a specific service (e.g., Lab Tests for "Lab Test" service).
+ * @description (Legacy) Fetch sub-items for a specific service.
  * @access Public
  */
 router.get('/services/:serviceId/items', bookingController.getServiceItems);
