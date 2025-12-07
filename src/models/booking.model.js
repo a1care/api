@@ -82,5 +82,8 @@ const BookingSchema = new Schema({
     }
 });
 
+// Prevent double booking for the same item (Doctor) at the same time
+BookingSchema.index({ itemId: 1, 'slot.start_time': 1 }, { unique: true });
+
 const Booking = mongoose.model('Booking', BookingSchema);
 module.exports = Booking;
