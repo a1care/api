@@ -17,7 +17,7 @@ router.get('/services', bookingController.getServices);
  * @description Fetch sub-items for a specific service (e.g., Lab Tests for "Lab Test" service).
  * @access Public
  */
-router.get('/services/:serviceId/', bookingController.getServiceItems);
+router.get('/services/:serviceId/items', bookingController.getServiceItems);
 
 // --- Private Routes (Requires Token) ---
 
