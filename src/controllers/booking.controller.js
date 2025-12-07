@@ -317,14 +317,21 @@ exports.createBooking = async (req, res) => {
                 return res.status(404).json({ message: 'Service Item not found.' });
             }
             itemPrice = serviceItem.price;
+        } else if (itemType === 'ChildService') {
+            const childService = await ChildService.findById(itemId);
+            if (!childService) {
+                return res.status(404).json({ message: 'Child Service not found.' });
+            }
+            itemPrice = childService.price;
+        } else if (itemType === 'SubService') {
+            const subService = await SubService.findById(itemId);
+            if (!subService) {
+                return res.status(404).json({ message: 'Sub Service not found.' });
+            }
+            // SubServices might not have a price, assume 0 or check model
+            itemPrice = 0;
         } else {
-            // Fallback for legacy types if any, or error
-            // For now, assume if it's not User, it might be legacy types mapped to ServiceItem logic?
-            // But we changed the enum in model, so it must be ServiceItem.
-            // If frontend sends 'LabTest', we should probably handle it or expect frontend update.
-            // Assuming frontend sends 'ServiceItem' or we map it here?
-            // Let's assume strict 'ServiceItem' for now as per model.
-            return res.status(400).json({ message: 'Invalid item type. Must be User or ServiceItem.' });
+            return res.status(400).json({ message: 'Invalid item type.' });
         }
 
         const PLATFORM_FEE_RATE = 0.10;
