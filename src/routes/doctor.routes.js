@@ -25,5 +25,6 @@ router.put(
 router.get('/appointments', protect, doctorController.getAppointments);
 router.post('/slots', protect, doctorController.manageSlots);
 router.put('/profile', protect, doctorController.updateProfile);
+router.put('/appointments/:bookingId/status', protect, doctorController.updateBookingStatus);
 
 module.exports = router;

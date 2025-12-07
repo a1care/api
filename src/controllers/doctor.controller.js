@@ -221,3 +221,37 @@ exports.updateProfile = async (req, res) => {
         res.status(500).json({ message: 'Server error updating profile.' });
     }
 };
+
+/**
+ * @route PUT /api/doctor/appointments/:bookingId/status
+ * @description Update status of a specific booking (e.g. to 'Completed', 'Cancelled')
+ * @access Private (Doctor Role)
+ */
+exports.updateBookingStatus = async (req, res) => {
+    const doctorId = req.userId.id;
+    const { bookingId } = req.params;
+    const { status } = req.body;
+
+    const VALID_STATUSES = ['Completed', 'Cancelled', 'Confirmed', 'Accepted'];
+
+    if (!VALID_STATUSES.includes(status)) {
+        return res.status(400).json({ message: 'Invalid status update.' });
+    }
+
+    try {
+        // Find booking that belongs to this doctor
+        const booking = await mongoose.model('Booking').findOne({ _id: bookingId, itemId: doctorId });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found or does not belong to you.' });
+        }
+
+        booking.status = status;
+        await booking.save();
+
+        res.status(200).json({ success: true, message: `Booking marked as ${status}`, booking });
+    } catch (error) {
+        console.error('Update booking status error:', error);
+        res.status(500).json({ message: 'Server error updating booking status.' });
+    }
+};
