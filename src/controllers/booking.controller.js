@@ -32,14 +32,29 @@ exports.getServices = async (req, res) => {
  */
 exports.getServiceItems = async (req, res) => {
     const { serviceId } = req.params;
+    const { parentServiceItemId } = req.query; // Optional: for fetching Level 2 items
+
     try {
         const service = await Service.findById(serviceId);
         if (!service) {
             return res.status(404).json({ message: 'Service not found.' });
         }
 
-        // Consolidated fetch for all service types using ServiceItem
-        const items = await ServiceItem.find({ serviceId, is_active: true });
+        const query = {
+            serviceId,
+            is_active: true
+        };
+
+        if (parentServiceItemId) {
+            // Fetch Child Services (Level 2)
+            query.parent_service_item_id = parentServiceItemId;
+        } else {
+            // Fetch Sub Services (Level 1) - items that DO NOT have a parent
+            // We consciously exclude items that are children of others to avoid duplication
+            query.parent_service_item_id = { $eq: null };
+        }
+
+        const items = await ServiceItem.find(query);
 
         res.status(200).json({ success: true, items });
     } catch (error) {
@@ -137,33 +152,91 @@ exports.getDoctorDetails = async (req, res) => {
  * @query date YYYY-MM-DD
  */
 exports.getAvailableSlots = async (req, res) => {
-    // NOTE: In a real app, slots would be generated based on the working_hours and existing bookings.
-    // For this flow, we will simulate a slot generation process.
     const { doctorId } = req.params;
-    const { date } = req.query;
-
-    // Validate date format if needed
+    const { date } = req.query; // YYYY-MM-DD
 
     if (!mongoose.Types.ObjectId.isValid(doctorId) || !date) {
         return res.status(400).json({ message: 'Invalid Doctor ID or Date parameter missing.' });
     }
 
-    // This is a simple mock generation. 
-    // In production, this would be complex service logic comparing schedule vs existing bookings.
     try {
-        const mockSlots = [
-            { id: 'SLOT_001', time: '09:00 AM - 09:30 AM', is_booked: false },
-            { id: 'SLOT_002', time: '09:30 AM - 10:00 AM', is_booked: false },
-            { id: 'SLOT_003', time: '10:00 AM - 10:30 AM', is_booked: true },
-            { id: 'SLOT_004', time: '02:00 PM - 02:30 PM', is_booked: false },
-        ];
+        const doctor = await Doctor.findOne({ userId: doctorId });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found.' });
+        }
 
-        const availableSlots = mockSlots.filter(slot => !slot.is_booked);
+        // 1. Get Day of Week (e.g., 'Monday')
+        const inputDate = new Date(date);
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[inputDate.getDay()];
+
+        // 2. Find working hours for this day
+        const daySchedule = doctor.working_hours.find(d => d.day === dayName && d.enabled);
+
+        if (!daySchedule) {
+            return res.status(200).json({ success: true, date, slots: [] });
+        }
+
+        // 3. Generate Slots (30 mins interval)
+        const slots = [];
+        let currentTime = new Date(`${date}T${daySchedule.start}`);
+        const endTime = new Date(`${date}T${daySchedule.end}`);
+
+        // Fetch existing bookings for this doctor on this date
+        // define start and end of the day for query
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingBookings = await Booking.find({
+            itemId: doctorId,
+            itemType: 'User',
+            booking_date: {
+                $gte: date, // String comparison might be risky, better to use Date objects if schema uses Date. 
+                // Based on createBooking, booking_date is passed as body.
+                // Let's rely on slot.start_time overlapping.
+            },
+            'slot.start_time': {
+                $gte: startOfDay,
+                $lte: endOfDay
+            },
+            status: { $nin: ['Cancelled', 'Rejected'] }
+        });
+
+        // Helper to formatting time
+        const formatTime = (dateObj) => {
+            return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        };
+
+        while (currentTime < endTime) {
+            const slotStart = new Date(currentTime);
+            const slotEnd = new Date(currentTime.getTime() + 30 * 60000); // +30 mins
+
+            if (slotEnd > endTime) break;
+
+            // Check if booked
+            const isBooked = existingBookings.some(booking => {
+                const bStart = new Date(booking.slot.start_time);
+                // Simple collision check: if booking starts at same time
+                return bStart.getTime() === slotStart.getTime();
+            });
+
+            slots.push({
+                id: slotStart.toISOString(),
+                start_time: slotStart.toISOString(), // For backend
+                end_time: slotEnd.toISOString(),     // For backend
+                label: `${formatTime(slotStart)} - ${formatTime(slotEnd)}`, // For display
+                is_booked: isBooked
+            });
+
+            currentTime = slotEnd;
+        }
 
         res.status(200).json({
             success: true,
             date: date,
-            slots: availableSlots
+            slots: slots
         });
 
     } catch (error) {

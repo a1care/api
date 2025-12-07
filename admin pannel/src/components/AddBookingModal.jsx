@@ -39,6 +39,33 @@ const AddBookingModal = ({ onClose, onSuccess }) => {
         fetchServices();
     }, []);
 
+    // New: Fetch slots when doctor/date changes
+    const [availableSlots, setAvailableSlots] = useState([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+
+    useEffect(() => {
+        if (formData.serviceType === 'Doctor' && formData.doctorId && formData.booking_date) {
+            fetchSlots(formData.doctorId, formData.booking_date);
+        } else {
+            setAvailableSlots([]);
+        }
+    }, [formData.doctorId, formData.booking_date, formData.serviceType]);
+
+    const fetchSlots = async (doctorId, date) => {
+        setLoadingSlots(true);
+        try {
+            const response = await axios.get(`${API_URL}/booking/doctors/${doctorId}/slots?date=${date}`);
+            if (response.data.success) {
+                setAvailableSlots(response.data.slots);
+            }
+        } catch (error) {
+            console.error('Error fetching slots:', error);
+            // toast.error('Failed to load available slots'); // Optional: noisy if user is just clicking around
+        } finally {
+            setLoadingSlots(false);
+        }
+    };
+
     const fetchUsers = async () => {
         try {
             const response = await axios.get(`${API_URL}/admin/users`);
@@ -326,25 +353,57 @@ const AddBookingModal = ({ onClose, onSuccess }) => {
                         </div>
 
                         {formData.serviceType === 'Doctor' && (
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-dark-body mb-2">Start Time</label>
-                                    <input
-                                        type="time"
-                                        value={formData.slot_start}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, slot_start: e.target.value }))}
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-dark-body mb-2">End Time</label>
-                                    <input
-                                        type="time"
-                                        value={formData.slot_end}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, slot_end: e.target.value }))}
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg"
-                                    />
-                                </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-semibold text-dark-body">Available Slots</label>
+                                {loadingSlots ? (
+                                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                                        Checking availability...
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <select
+                                            value={formData.slot_id || ''}
+                                            onChange={(e) => {
+                                                const slot = availableSlots.find(s => s.id === e.target.value);
+                                                if (slot) {
+                                                    // Extract HH:mm for existing form logic validity
+                                                    const formatTime = (isoString) => {
+                                                        const d = new Date(isoString);
+                                                        return d.toTimeString().slice(0, 5);
+                                                    };
+
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        slot_id: slot.id,
+                                                        slot_start: formatTime(slot.start_time),
+                                                        slot_end: formatTime(slot.end_time)
+                                                    }));
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 disabled:bg-gray-50"
+                                            disabled={!formData.booking_date || !availableSlots.length}
+                                        >
+                                            <option value="">
+                                                {!formData.booking_date
+                                                    ? 'Select Date first'
+                                                    : availableSlots.length === 0
+                                                        ? 'No slots available'
+                                                        : 'Select a time slot'}
+                                            </option>
+                                            {availableSlots.map(slot => (
+                                                <option key={slot.id} value={slot.id} disabled={slot.is_booked}>
+                                                    {slot.label} {slot.is_booked ? '(Booked)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                {formData.slot_start && (
+                                    <p className="text-xs text-success font-medium">
+                                        Selected: {formData.slot_start} - {formData.slot_end}
+                                    </p>
+                                )}
                             </div>
                         )}
 

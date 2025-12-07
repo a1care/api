@@ -14,6 +14,13 @@ const ServiceItemSchema = new Schema({
 
     serviceId: { type: Schema.Types.ObjectId, ref: 'Service', required: true },
 
+    // For Level 2 Hierarchy (Sub-Service -> Child Service)
+    parent_service_item_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'ServiceItem',
+        default: null
+    },
+
     booking_type: {
         type: String,
         enum: ['DirectBooking', 'OnlineConsultancy'],

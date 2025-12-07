@@ -129,206 +129,211 @@ const AddDoctorModal = ({ onClose, onSuccess }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-dark/50 flex items-center justify-center z-50 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-3xl w-full p-6 shadow-2xl my-8">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold text-dark-header">Add New Doctor</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-dark">
-                        <X className="h-6 w-6" />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Basic Information */}
-                    <div className="space-y-4">
-                        <h4 className="text-lg font-bold text-dark-header border-b pb-2">Basic Information</h4>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-dark-body mb-1.5">
-                                    Full Name <span className="text-danger">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => handleChange('name', e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                    placeholder="Dr. John Doe"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-dark-body mb-1.5">
-                                    Email <span className="text-danger">*</span>
-                                </label>
-                                <input
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={(e) => handleChange('email', e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                    placeholder="doctor@example.com"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-dark-body mb-1.5">
-                                    Mobile Number <span className="text-danger">*</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={formData.mobile_number}
-                                    onChange={(e) => handleChange('mobile_number', e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                    placeholder="9876543210"
-                                    maxLength="10"
-                                    required
-                                />
-                                <p className="text-xs text-gray-500 mt-1">No OTP verification required</p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-dark-body mb-1.5">
-                                    Experience (Years)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={formData.experience}
-                                    onChange={(e) => handleChange('experience', e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                    placeholder="5"
-                                    min="0"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-dark-body mb-1.5">
-                                    Consultation Fee (₹)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={formData.consultation_fee}
-                                    onChange={(e) => handleChange('consultation_fee', e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                    placeholder="500"
-                                    min="0"
-                                />
-                            </div>
-                        </div>
+        <div className="fixed inset-0 bg-dark/50 z-[100] backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+            <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                <div
+                    className="relative transform overflow-hidden bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl rounded-xl p-6"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-2xl font-bold text-dark-header">Add New Doctor</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-dark transition-colors">
+                            <X className="h-6 w-6" />
+                        </button>
                     </div>
 
-                    {/* Specializations */}
-                    <div className="space-y-4">
-                        <h4 className="text-lg font-bold text-dark-header border-b pb-2">Specializations</h4>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Basic Information */}
+                        <div className="space-y-4">
+                            <h4 className="text-lg font-bold text-dark-header border-b pb-2">Basic Information</h4>
 
-                        <div className="flex flex-wrap gap-2 mb-3">
-                            {formData.specializations.map((spec, index) => (
-                                <span key={index} className="inline-flex items-center gap-2 px-3 py-1 bg-primary-light text-primary rounded-full text-sm font-medium">
-                                    {spec}
-                                    <button
-                                        type="button"
-                                        onClick={() => removeSpecialization(spec)}
-                                        className="hover:text-danger"
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </button>
-                                </span>
-                            ))}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-dark-body mb-1.5">
+                                        Full Name <span className="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => handleChange('name', e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                        placeholder="Dr. John Doe"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-dark-body mb-1.5">
+                                        Email <span className="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) => handleChange('email', e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                        placeholder="doctor@example.com"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-dark-body mb-1.5">
+                                        Mobile Number <span className="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={formData.mobile_number}
+                                        onChange={(e) => handleChange('mobile_number', e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                        placeholder="9876543210"
+                                        maxLength="10"
+                                        required
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">No OTP verification required</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-dark-body mb-1.5">
+                                        Experience (Years)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.experience}
+                                        onChange={(e) => handleChange('experience', e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                        placeholder="5"
+                                        min="0"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-dark-body mb-1.5">
+                                        Consultation Fee (₹)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.consultation_fee}
+                                        onChange={(e) => handleChange('consultation_fee', e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                        placeholder="500"
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex gap-2">
-                            <select
-                                value={newSpecialization}
-                                onChange={(e) => setNewSpecialization(e.target.value)}
-                                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                            >
-                                <option value="">Select specialization...</option>
-                                {COMMON_SPECIALIZATIONS.map(spec => (
-                                    <option key={spec} value={spec}>{spec}</option>
+                        {/* Specializations */}
+                        <div className="space-y-4">
+                            <h4 className="text-lg font-bold text-dark-header border-b pb-2">Specializations</h4>
+
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {formData.specializations.map((spec, index) => (
+                                    <span key={index} className="inline-flex items-center gap-2 px-3 py-1 bg-primary-light text-primary rounded-full text-sm font-medium">
+                                        {spec}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeSpecialization(spec)}
+                                            className="hover:text-danger"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </span>
                                 ))}
-                            </select>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <select
+                                    value={newSpecialization}
+                                    onChange={(e) => setNewSpecialization(e.target.value)}
+                                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                >
+                                    <option value="">Select specialization...</option>
+                                    {COMMON_SPECIALIZATIONS.map(spec => (
+                                        <option key={spec} value={spec}>{spec}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => addSpecialization(newSpecialization)}
+                                    disabled={!newSpecialization}
+                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Plus className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* About */}
+                        <div>
+                            <label className="block text-sm font-semibold text-dark-body mb-1.5">About Doctor</label>
+                            <textarea
+                                value={formData.about}
+                                onChange={(e) => handleChange('about', e.target.value)}
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                rows="3"
+                                placeholder="Brief description about the doctor..."
+                            />
+                        </div>
+
+                        {/* Day-wise Slots */}
+                        <div className="space-y-4">
+                            <h4 className="text-lg font-bold text-dark-header border-b pb-2">Working Hours (Day-wise Slots)</h4>
+
+                            <div className="space-y-2 max-h-80 overflow-y-auto">
+                                {formData.working_hours.map((slot, index) => (
+                                    <div key={slot.day} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                        <input
+                                            type="checkbox"
+                                            checked={slot.enabled}
+                                            onChange={() => toggleDay(index)}
+                                            className="w-5 h-5 text-primary rounded focus:ring-primary"
+                                        />
+                                        <div className="w-28 font-medium text-dark-body">{slot.day}</div>
+
+                                        {slot.enabled && (
+                                            <>
+                                                <input
+                                                    type="time"
+                                                    value={slot.start}
+                                                    onChange={(e) => updateDayTime(index, 'start', e.target.value)}
+                                                    className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                                />
+                                                <span className="text-gray-500">to</span>
+                                                <input
+                                                    type="time"
+                                                    value={slot.end}
+                                                    onChange={(e) => updateDayTime(index, 'end', e.target.value)}
+                                                    className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                                />
+                                            </>
+                                        )}
+                                        {!slot.enabled && (
+                                            <span className="text-gray-400 italic text-sm">Not available</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Submit */}
+                        <div className="flex gap-3 pt-4">
                             <button
                                 type="button"
-                                onClick={() => addSpecialization(newSpecialization)}
-                                disabled={!newSpecialization}
-                                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={onClose}
+                                className="flex-1 px-4 py-2.5 bg-gray-100 text-dark-body rounded-lg hover:bg-gray-200 font-semibold text-sm"
                             >
-                                <Plus className="h-5 w-5" />
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-bold text-sm shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {submitting ? 'Creating...' : 'Create Doctor'}
                             </button>
                         </div>
-                    </div>
-
-                    {/* About */}
-                    <div>
-                        <label className="block text-sm font-semibold text-dark-body mb-1.5">About Doctor</label>
-                        <textarea
-                            value={formData.about}
-                            onChange={(e) => handleChange('about', e.target.value)}
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                            rows="3"
-                            placeholder="Brief description about the doctor..."
-                        />
-                    </div>
-
-                    {/* Day-wise Slots */}
-                    <div className="space-y-4">
-                        <h4 className="text-lg font-bold text-dark-header border-b pb-2">Working Hours (Day-wise Slots)</h4>
-
-                        <div className="space-y-2 max-h-80 overflow-y-auto">
-                            {formData.working_hours.map((slot, index) => (
-                                <div key={slot.day} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                    <input
-                                        type="checkbox"
-                                        checked={slot.enabled}
-                                        onChange={() => toggleDay(index)}
-                                        className="w-5 h-5 text-primary rounded focus:ring-primary"
-                                    />
-                                    <div className="w-28 font-medium text-dark-body">{slot.day}</div>
-
-                                    {slot.enabled && (
-                                        <>
-                                            <input
-                                                type="time"
-                                                value={slot.start}
-                                                onChange={(e) => updateDayTime(index, 'start', e.target.value)}
-                                                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                            />
-                                            <span className="text-gray-500">to</span>
-                                            <input
-                                                type="time"
-                                                value={slot.end}
-                                                onChange={(e) => updateDayTime(index, 'end', e.target.value)}
-                                                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                                            />
-                                        </>
-                                    )}
-                                    {!slot.enabled && (
-                                        <span className="text-gray-400 italic text-sm">Not available</span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Submit */}
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-2.5 bg-gray-100 text-dark-body rounded-lg hover:bg-gray-200 font-semibold text-sm"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-bold text-sm shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {submitting ? 'Creating...' : 'Create Doctor'}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

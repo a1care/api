@@ -106,7 +106,6 @@ exports.getAppointments = async (req, res) => {
     const doctorId = req.userId.id;
 
     try {
-        // Find bookings where itemType is 'User' and itemId is the doctor's userId
         const appointments = await mongoose.model('Booking').find({
             itemType: 'User',
             itemId: doctorId
@@ -114,7 +113,49 @@ exports.getAppointments = async (req, res) => {
             .populate('userId', 'name mobile_number')
             .sort({ booking_date: -1, 'slot.start_time': 1 });
 
-        res.status(200).json({ success: true, appointments });
+        // Grouping logic
+        const grouped = {
+            new: [],       // New requests
+            upcoming: [],  // Confirmed/Accepted/Assigned
+            completed: [], // Completed
+            cancelled: []  // Cancelled/Rejected
+        };
+
+        appointments.forEach(app => {
+            const status = app.status; // status is Case Sensitive as per model enum, but let's be safe
+
+            // Map statuses to groups
+            if (['New', 'Pending Payment', 'Upcoming'].includes(status)) {
+                // 'Upcoming' is default for COD, 'New' might be default for others.
+                // Assuming 'New' means explicitly waiting for doctor action if that flow exists.
+                // If 'Upcoming' implies confirmed, it goes to upcoming.
+                // Re-reading user request: "New booking, appointment confirmed booking"
+                // Let's treat 'New' and 'Pending Payment' as "New Bookings" needing attention/payment.
+                // 'Upcoming' usually means scheduled. 
+
+                // Refined logic based on standard flows:
+                if (status === 'New' || status === 'Pending Payment') {
+                    grouped.new.push(app);
+                } else if (['Confirmed', 'Accepted', 'Assigned', 'Upcoming', 'Approved'].includes(status)) {
+                    grouped.upcoming.push(app);
+                } else if (status === 'Completed') {
+                    grouped.completed.push(app);
+                } else if (['Cancelled', 'Rejected', 'Refunded', 'Failed'].includes(status)) {
+                    grouped.cancelled.push(app);
+                } else {
+                    // Fallback
+                    grouped.upcoming.push(app);
+                }
+            } else if (['Confirmed', 'Accepted', 'Assigned', 'Approved'].includes(status)) {
+                grouped.upcoming.push(app);
+            } else if (status === 'Completed') {
+                grouped.completed.push(app);
+            } else if (['Cancelled', 'Rejected', 'Refunded', 'Failed'].includes(status)) {
+                grouped.cancelled.push(app);
+            }
+        });
+
+        res.status(200).json({ success: true, appointments: grouped });
     } catch (error) {
         console.error('Get appointments error:', error);
         res.status(500).json({ message: 'Server error fetching appointments.' });
