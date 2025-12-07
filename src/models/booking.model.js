@@ -83,7 +83,15 @@ const BookingSchema = new Schema({
 });
 
 // Prevent double booking for the same item (Doctor) at the same time
-BookingSchema.index({ itemId: 1, 'slot.start_time': 1 }, { unique: true });
+// Prevent double booking for the same item (Doctor) at the same time
+// But allow multiple bookings for items without slots (e.g. Services) where start_time is null/undefined
+BookingSchema.index(
+    { itemId: 1, 'slot.start_time': 1 },
+    {
+        unique: true,
+        partialFilterExpression: { 'slot.start_time': { $exists: true, $ne: null } }
+    }
+);
 
 const Booking = mongoose.model('Booking', BookingSchema);
 module.exports = Booking;
