@@ -160,7 +160,11 @@ exports.getAppointments = async (req, res) => {
             }
         });
 
-        res.status(200).json({ success: true, appointments: grouped });
+        res.status(200).json({
+            success: true,
+            debug: { userId: userId, docId: doctor._id },
+            appointments: grouped
+        });
     } catch (error) {
         console.error('Get appointments error:', error);
         res.status(500).json({ message: 'Server error fetching appointments.' });
