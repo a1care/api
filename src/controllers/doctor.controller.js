@@ -103,12 +103,17 @@ exports.uploadDocument = async (req, res) => {
  * @access Private (Doctor Role)
  */
 exports.getAppointments = async (req, res) => {
-    const doctorId = req.userId.id;
+    const userId = req.userId.id;
 
     try {
+        const doctor = await Doctor.findOne({ userId: userId });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found.' });
+        }
+
         const appointments = await mongoose.model('Booking').find({
             itemType: 'User',
-            itemId: doctorId
+            itemId: doctor._id // Query using Doctor ID
         })
             .populate('userId', 'name mobile_number')
             .sort({ booking_date: -1, 'slot.start_time': 1 });
@@ -302,7 +307,7 @@ exports.updateProfile = async (req, res) => {
  * @access Private (Doctor Role)
  */
 exports.updateBookingStatus = async (req, res) => {
-    const doctorId = req.userId.id;
+    const userId = req.userId.id;
     const { bookingId } = req.params;
     const { status } = req.body;
 
@@ -313,8 +318,13 @@ exports.updateBookingStatus = async (req, res) => {
     }
 
     try {
+        const doctor = await Doctor.findOne({ userId: userId });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found.' });
+        }
+
         // Find booking that belongs to this doctor
-        const booking = await mongoose.model('Booking').findOne({ _id: bookingId, itemId: doctorId });
+        const booking = await mongoose.model('Booking').findOne({ _id: bookingId, itemId: doctor._id });
 
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found or does not belong to you.' });
