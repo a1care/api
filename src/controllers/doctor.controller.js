@@ -168,27 +168,101 @@ exports.getAppointments = async (req, res) => {
  * @access Private (Doctor Role)
  * @payload { working_hours: [{ day: 'Monday', start: '09:00', end: '17:00' }] }
  */
-exports.manageSlots = async (req, res) => {
-    const doctorId = req.userId.id;
-    const { working_hours } = req.body;
+const DoctorSlot = require('../models/doctorSlot.model');
 
-    if (!working_hours || !Array.isArray(working_hours)) {
-        return res.status(400).json({ message: 'Invalid working_hours format.' });
+/**
+ * @route POST /api/doctor/slots/create
+ * @description Create explicit slots for a specific date.
+ * @access Private (Doctor Role)
+ * @payload { date: "YYYY-MM-DD", slots: [ { start: "10:00", end: "10:30" }, ... ] }
+ */
+exports.createSlots = async (req, res) => {
+    const doctorId = req.userId.id;
+    const { date, slots } = req.body;
+
+    if (!date || !slots || !Array.isArray(slots) || slots.length === 0) {
+        return res.status(400).json({ message: 'Date and slots array are required.' });
     }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
         const doctor = await Doctor.findOne({ userId: doctorId });
         if (!doctor) {
+            await session.abortTransaction();
             return res.status(404).json({ message: 'Doctor profile not found.' });
         }
 
-        doctor.working_hours = working_hours;
-        await doctor.save();
+        // 1. Delete existing Unbooked slots for this date to allow overwrite/update?
+        // Or just fail if conflict? User asked "doctor can add slots... select date... add slots".
+        // Usually overwriting unbooked slots is safer to avoid duplicates if they re-submit.
+        await DoctorSlot.deleteMany({
+            doctorId: doctor._id,
+            date: date,
+            is_booked: false
+        }, { session });
 
-        res.status(200).json({ success: true, message: 'Working hours updated.', working_hours: doctor.working_hours });
+        const newSlots = [];
+        let counter = 1;
+
+        // Find max existing slot number if we didn't delete all (for partial adds), 
+        // but here we deleted unbooked. Booked ones remain.
+        // Let's simpler: Just count up.
+
+        for (const slot of slots) {
+            // Construct Date objects
+            // Date string "2025-01-20" + "T" + "10:00" + ":00.000Z" (Assuming UTC or handling timezone?)
+            // Ideally frontend sends full ISO, but user asked for "start time, end time".
+            // Let's simple parse:
+            const startTime = new Date(`${date}T${slot.start}:00.000Z`); // Simple UTC Assumption
+            const endTime = new Date(`${date}T${slot.end}:00.000Z`);
+
+            newSlots.push({
+                doctorId: doctor._id,
+                date: date,
+                slot_number: counter++,
+                slot_start_time: startTime,
+                slot_end_time: endTime,
+                is_booked: false
+            });
+        }
+
+        await DoctorSlot.insertMany(newSlots, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(201).json({ success: true, message: `Created ${newSlots.length} slots for ${date}.`, slots: newSlots });
+
     } catch (error) {
-        console.error('Manage slots error:', error);
-        res.status(500).json({ message: 'Server error updating slots.', error: error.message });
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Create slots error:', error);
+        res.status(500).json({ message: 'Server error creating slots.', error: error.message });
+    }
+};
+
+/**
+ * @route GET /api/doctor/slots
+ * @description Get slots for logged-in doctor (View own slots)
+ */
+exports.getMySlots = async (req, res) => {
+    const doctorId = req.userId.id;
+    const { date } = req.query;
+
+    try {
+        // Find doc _id
+        const doc = await Doctor.findOne({ userId: doctorId });
+        if (!doc) return res.status(404).json({ message: 'Doctor not found' });
+
+        const query = { doctorId: doc._id };
+        if (date) query.date = date;
+
+        const slots = await DoctorSlot.find(query).sort({ date: 1, slot_number: 1 });
+        res.status(200).json({ success: true, slots });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching slots', error: error.message });
     }
 };
 

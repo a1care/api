@@ -23,7 +23,9 @@ router.put(
 
 // New Doctor App Routes
 router.get('/appointments', protect, doctorController.getAppointments);
-router.post('/slots', protect, doctorController.manageSlots);
+// Updated Slot Management
+router.post('/slots', protect, doctorController.createSlots);
+router.get('/slots', protect, doctorController.getMySlots);
 router.put('/profile', protect, doctorController.updateProfile);
 router.put('/appointments/:bookingId/status', protect, doctorController.updateBookingStatus);
 

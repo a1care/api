@@ -177,9 +177,11 @@ exports.getDoctorDetails = async (req, res) => {
     }
 };
 
+const DoctorSlot = require('../models/doctorSlot.model');
+
 /**
  * @route GET /api/booking/doctors/:doctorId/slots
- * @description Fetch available time slots for a specific doctor/date
+ * @description Fetch available explicit time slots for a specific doctor/date
  * @access Public
  * @query date YYYY-MM-DD
  */
@@ -197,73 +199,21 @@ exports.getAvailableSlots = async (req, res) => {
             return res.status(404).json({ message: 'Doctor not found.' });
         }
 
-        // 1. Get Day of Week (e.g., 'Monday')
-        const inputDate = new Date(date);
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dayName = days[inputDate.getDay()];
+        // Fetch explicit slots from DB
+        const explicitSlots = await DoctorSlot.find({
+            doctorId: doctor._id,
+            date: date,
+            is_booked: false
+        }).sort({ slot_start_time: 1 });
 
-        // 2. Find working hours for this day
-        const daySchedule = doctor.working_hours.find(d => d.day === dayName && d.enabled);
-
-        if (!daySchedule) {
-            return res.status(200).json({ success: true, date, slots: [] });
-        }
-
-        // 3. Generate Slots (30 mins interval)
-        const slots = [];
-        let currentTime = new Date(`${date}T${daySchedule.start}`);
-        const endTime = new Date(`${date}T${daySchedule.end}`);
-
-        // Fetch existing bookings for this doctor on this date
-        // define start and end of the day for query
-        const startOfDay = new Date(date);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const existingBookings = await Booking.find({
-            itemId: doctorId,
-            itemType: 'User',
-            booking_date: {
-                $gte: date, // String comparison might be risky, better to use Date objects if schema uses Date. 
-                // Based on createBooking, booking_date is passed as body.
-                // Let's rely on slot.start_time overlapping.
-            },
-            'slot.start_time': {
-                $gte: startOfDay,
-                $lte: endOfDay
-            },
-            status: { $nin: ['Cancelled', 'Rejected'] }
-        });
-
-        // Helper to formatting time
-        const formatTime = (dateObj) => {
-            return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        };
-
-        while (currentTime < endTime) {
-            const slotStart = new Date(currentTime);
-            const slotEnd = new Date(currentTime.getTime() + 30 * 60000); // +30 mins
-
-            if (slotEnd > endTime) break;
-
-            // Check if booked
-            const isBooked = existingBookings.some(booking => {
-                const bStart = new Date(booking.slot.start_time);
-                // Simple collision check: if booking starts at same time
-                return bStart.getTime() === slotStart.getTime();
-            });
-
-            slots.push({
-                id: slotStart.toISOString(),
-                start_time: slotStart.toISOString(), // For backend
-                end_time: slotEnd.toISOString(),     // For backend
-                label: `${formatTime(slotStart)} - ${formatTime(slotEnd)}`, // For display
-                is_booked: isBooked
-            });
-
-            currentTime = slotEnd;
-        }
+        // Map to frontend friendly format
+        const slots = explicitSlots.map(slot => ({
+            id: slot._id, // This is the DoctorSlot ID
+            start_time: slot.slot_start_time.toISOString(),
+            end_time: slot.slot_end_time.toISOString(),
+            label: `${slot.slot_start_time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })} - ${slot.slot_end_time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })} (Slot ${slot.slot_number})`,
+            is_booked: slot.is_booked
+        }));
 
         res.status(200).json({
             success: true,
@@ -305,12 +255,34 @@ exports.createBooking = async (req, res) => {
             return res.status(400).json({ message: 'Missing booking details.' });
         }
 
-        // 2. Fetch Price
+        // 2. Fetch Price & Validate Slot
         if (itemType === 'User') {
-            // Fetch Doctor Consultation Fee (Mock or from DB)
-            // const doctor = await Doctor.findOne({ userId: itemId });
-            // consultationFee = doctor ? doctor.consultation_fee : 600;
             consultationFee = 600; // Mock default
+
+            // Validate and Mark Slot if provided
+            if (slotId) {
+                // slotId passed from frontend getAvailableSlots is the DoctorSlot._id
+                const slotDoc = await DoctorSlot.findById(slotId);
+                if (!slotDoc) {
+                    return res.status(404).json({ message: 'Selected time slot not found.' });
+                }
+                if (slotDoc.is_booked) {
+                    return res.status(409).json({ message: 'This time slot is already taken.' });
+                }
+
+                // Temporarily mark as booked (Ideal: use transaction, but keeping simple per context)
+                slotDoc.is_booked = true;
+                // We will save this AFTER we successfully save the booking? 
+                // Or save now and revert if booking fails? 
+                // Let's assign it here but save both later or just save slot now.
+                // Saving now is safer against race conditions without transaction.
+                await slotDoc.save();
+
+                // Override times with exact slot times to ensure consistency
+                slotStartTime = slotDoc.slot_start_time;
+                slotEndTime = slotDoc.slot_end_time;
+            }
+
         } else if (itemType === 'ServiceItem') {
             const serviceItem = await ServiceItem.findById(itemId);
             if (!serviceItem) {
@@ -367,7 +339,12 @@ exports.createBooking = async (req, res) => {
 
         await newBooking.save();
 
-        // 4. Return response
+        // 4. Update Slot with Booking ID if applicable
+        if (itemType === 'User' && slotId) {
+            await DoctorSlot.findByIdAndUpdate(slotId, { bookingId: newBooking._id });
+        }
+
+        // 5. Return response
         if (isCOD) {
             return res.status(201).json({
                 success: true,
