@@ -235,7 +235,7 @@ exports.getAvailableSlots = async (req, res) => {
     */
 exports.createBooking = async (req, res) => {
     const userId = req.userId.id;
-    const {
+    let {
         itemType, // 'User' (for Doctor), 'ServiceItem' (for Lab, Equipment, Ambulance)
         itemId,   // ID of the Doctor or ServiceItem
         serviceId, // Optional, mainly for Doctor/OPD
@@ -246,8 +246,6 @@ exports.createBooking = async (req, res) => {
         payment_method
     } = req.body;
 
-    console.log('--- DEBUG: HITTING CREATE BOOKING ---');
-    console.log('Payload:', req.body);
 
     let itemPrice = 0;
     let consultationFee = 0;
@@ -381,7 +379,7 @@ exports.createBooking = async (req, res) => {
         if (error.code === 11000) {
             return res.status(409).json({ message: 'This time slot is already taken.' });
         }
-        res.status(500).json({ message: 'Server error during booking creation.', error: error.message, stack: error.stack });
+        res.status(500).json({ message: 'Server error during booking creation.' });
     }
 };
 
