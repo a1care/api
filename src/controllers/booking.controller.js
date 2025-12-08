@@ -8,7 +8,7 @@ const SubService = require('../models/subService.model');
 const ChildService = require('../models/childService.model');
 
 // Register 2dsphere index for geospatial queries (run this once on app startup or in a migration)
-// User.collection.createIndex({ location: "2dsphere" }); 
+// User.collection.createIndex({location: "2dsphere" });
 // NOTE: Since our User schema uses 'latitude' and 'longitude' (Numbers), 
 // we will simulate the distance calculation using aggregation for simplicity. 
 // For production, consider storing location as a GeoJSON Point array: [longitude, latitude].
@@ -231,8 +231,8 @@ exports.getAvailableSlots = async (req, res) => {
  * @route POST /api/booking/create
  * @description Create a new booking (initial status: PENDING_PAYMENT)
  * @access Private
- * @payload { itemType, itemId, serviceId, slotId, slotStartTime, slotEndTime, booking_date, payment_method }
- */
+ * @payload {itemType, itemId, serviceId, slotId, slotStartTime, slotEndTime, booking_date, payment_method}
+    */
 exports.createBooking = async (req, res) => {
     const userId = req.userId.id;
     const {
@@ -245,6 +245,9 @@ exports.createBooking = async (req, res) => {
         booking_date,
         payment_method
     } = req.body;
+
+    console.log('--- DEBUG: HITTING CREATE BOOKING ---');
+    console.log('Payload:', req.body);
 
     let itemPrice = 0;
     let consultationFee = 0;
@@ -378,7 +381,7 @@ exports.createBooking = async (req, res) => {
         if (error.code === 11000) {
             return res.status(409).json({ message: 'This time slot is already taken.' });
         }
-        res.status(500).json({ message: 'Server error during booking creation.' });
+        res.status(500).json({ message: 'Server error during booking creation.', error: error.message, stack: error.stack });
     }
 };
 
