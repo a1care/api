@@ -47,6 +47,13 @@ const BookingSchema = new Schema({
         enum: ['User', 'Admin'],
         default: 'User'
     },
+    // Explicitly track who needs to fulfill this booking
+    target_role: {
+        type: String,
+        enum: ['Doctor', 'Admin'],
+        default: 'Admin',
+        required: true
+    },
     assigned_doctor: {
         type: Schema.Types.ObjectId,
         ref: 'Doctor'

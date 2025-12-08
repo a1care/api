@@ -247,8 +247,19 @@ exports.createBooking = async (req, res) => {
     } = req.body;
 
 
-    let itemPrice = 0;
-    let consultationFee = 0;
+    console.log('--- DEBUG: HITTING CREATE BOOKING (FIXED) ---');
+
+    // Determine Target Role
+    // Default logic: If itemType is 'User', it means a Doctor is being booked -> Target Doctor.
+    // For 'ServiceItem', 'SubService', 'ChildService' -> Target Admin (unless specialized logic added later).
+    // The user requirement: "available doctors and there user will book the slot for that doctor" -> Implies itemType='User'.
+    // "in any another case ... book to admin default" -> Implies itemType!='User' -> Admin.
+
+    let targetRole = 'Admin';
+    if (itemType === 'User') {
+        targetRole = 'Doctor';
+    }
+
 
     try {
         // 1. Basic Validation
@@ -335,7 +346,8 @@ exports.createBooking = async (req, res) => {
             payment_status: initialPaymentStatus,
             payment_details: {
                 method: payment_method
-            }
+            },
+            target_role: targetRole // <--- SETTING TARGET ROLE
         });
 
         await newBooking.save();
