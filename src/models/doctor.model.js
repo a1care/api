@@ -27,6 +27,11 @@ const DoctorSchema = new Schema({
     specializations: [{
         type: String // Storing specialization names directly (e.g., 'Cardiology')
     }],
+    offered_services: [{
+        type: String,
+        enum: ['OPD', 'Home Visit', 'Online', 'Emergency'],
+        default: 'OPD'
+    }],
     is_available: { type: Boolean, default: true }
 });
 

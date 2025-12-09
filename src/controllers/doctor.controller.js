@@ -279,7 +279,7 @@ exports.getMySlots = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
     const doctorId = req.userId.id;
-    const { consultation_fee, experience, about, specializations } = req.body;
+    const { consultation_fee, experience, about, specializations, offered_services } = req.body;
 
     try {
         const doctor = await Doctor.findOne({ userId: doctorId });
@@ -291,6 +291,7 @@ exports.updateProfile = async (req, res) => {
         if (experience !== undefined) doctor.experience = experience;
         if (about !== undefined) doctor.about = about;
         if (specializations !== undefined) doctor.specializations = specializations;
+        if (offered_services !== undefined) doctor.offered_services = offered_services;
 
         await doctor.save();
 

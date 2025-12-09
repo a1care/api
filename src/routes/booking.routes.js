@@ -48,6 +48,9 @@ router.get('/doctors/opd', protect, bookingController.getAvailableDoctors);
 
 // --- Public Routes (Specific params) ---
 
+// 6. Nearby Doctors (Location Based) - MUST BE BEFORE /:doctorId
+router.get('/doctors/nearby', bookingController.getNearbyDoctors);
+
 /**
  * @route GET /api/booking/doctors/:doctorId
  * @description Fetch full details for a specific doctor.

@@ -119,7 +119,7 @@ exports.getAvailableDoctors = async (req, res) => {
                     experience: '$profile.experience',
                     specializations: '$profile.specializations',
                     consultation_fees: '$profile.consultation_fee',
-                    // image_url: '$profile.image_url' 
+                    offered_services: '$profile.offered_services', // Include new field
                 }
             }
         ]);
@@ -129,6 +129,99 @@ exports.getAvailableDoctors = async (req, res) => {
         res.status(500).json({ message: 'Server error fetching doctors.' });
     }
 };
+
+/**
+ * @route GET /api/booking/doctors/nearby
+ * @description Fetch doctors nearby offering specific service
+ * @query lat, lng, radius (km), serviceType, specialization
+ */
+exports.getNearbyDoctors = async (req, res) => {
+    const { lat, lng, radius = 10, serviceType, specialization } = req.query;
+
+    if (!lat || !lng) {
+        return res.status(400).json({ message: 'Latitude and Longitude are required.' });
+    }
+
+    const userLat = parseFloat(lat);
+    const userLng = parseFloat(lng);
+    const searchRadius = parseFloat(radius);
+
+    try {
+        // 1. Build Query for Doctor Profile
+        const profileQuery = { is_available: true };
+        if (serviceType) {
+            profileQuery.offered_services = serviceType; // Exact match in array
+        }
+        if (specialization) {
+            profileQuery.specializations = { $regex: new RegExp(specialization, 'i') };
+        }
+
+        // 2. Fetch Users (Doctors) with Profile Lookup
+        const doctors = await User.aggregate([
+            { $match: { role: 'Doctor' } },
+            {
+                $lookup: {
+                    from: 'doctors',
+                    localField: '_id',
+                    foreignField: 'userId',
+                    as: 'profile'
+                }
+            },
+            { $unwind: '$profile' },
+            // Filter by Profile Criteria
+            {
+                $match: {
+                    'profile.is_available': true,
+                    ...(serviceType ? { 'profile.offered_services': serviceType } : {}),
+                    ...(specialization ? { 'profile.specializations': { $regex: new RegExp(specialization, 'i') } } : {})
+                }
+            },
+            // Project fields needed for distance calc
+            {
+                $project: {
+                    name: '$name',
+                    mobile: '$mobile_number',
+                    profile_image: '$profile_image',
+                    latitude: { $ifNull: ['$latitude', 0] }, // Safety
+                    longitude: { $ifNull: ['$longitude', 0] },
+                    profile: '$profile'
+                }
+            }
+        ]);
+
+        // 3. Calculate Distance and Filter (In-Memory for now, can be Geospatial Index later)
+        const nearbyDoctors = doctors.map(doc => {
+            const dist = getDistanceFromLatLonInKm(userLat, userLng, doc.latitude, doc.longitude);
+            return { ...doc, distance: parseFloat(dist.toFixed(2)) };
+        }).filter(doc => doc.distance <= searchRadius)
+            .sort((a, b) => a.distance - b.distance);
+
+        res.status(200).json({ success: true, count: nearbyDoctors.length, doctors: nearbyDoctors });
+
+    } catch (error) {
+        console.error('Nearby doctors error:', error);
+        res.status(500).json({ message: 'Server error fetching nearby doctors.' });
+    }
+};
+
+// Start Haversine Helper
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    if (!lat2 || !lon2) return 99999; // Assume far if no location
+    const R = 6371; // Radius of earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
+// End Haversine Helper
 
 exports.getDoctorDetails = async (req, res) => {
     const { doctorId } = req.params;
