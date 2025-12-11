@@ -1,12 +1,12 @@
 const axios = require('axios');
 
-const API_URL = 'https://api-esf1.onrender.com/api';
-// const API_URL = 'http://localhost:3000/api'; // Toggle for local testing if needed
+// const API_URL = 'https://api-esf1.onrender.com/api';
+const API_URL = 'http://localhost:3000/api'; // Toggle for local testing if needed
 
 const HIERARCHY = [
     {
         name: "Doctor Services",
-        type: "Doctor", // Custom flag for logic if needed, or just generic
+        type: "Doctor",
         subServices: [
             {
                 name: "Doctor Home Visit",
@@ -132,16 +132,25 @@ const HIERARCHY = [
     }
 ];
 
-// Random Generators
 const randomMobile = () => '9' + Math.floor(100000000 + Math.random() * 900000000);
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retryRequest(fn, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            console.log(`    ⚠️ Retrying... (${i + 1}/${retries}) error: ${error.message}`);
+            await sleep(2000);
+        }
+    }
+}
 
 async function seedHierarchy() {
-    console.log("🌱 Starting Live Hierarchy Seeding...");
+    console.log("🌱 Starting Live Hierarchy Seeding (v4 - Slow + Retry)...");
 
     try {
-        // 1. Login as Admin to get Token
-        // NOTE: Does an Admin exist? We'll create one or login if known.
-        // For Live, we'll try to create a fresh one to be sure.
         const adminMobile = randomMobile();
         console.log(`Loggin in/Creating Temp Admin (${adminMobile})...`);
 
@@ -153,138 +162,109 @@ async function seedHierarchy() {
         const token = loginRes.data.token;
         const headers = { Authorization: `Bearer ${token}` };
 
-        // 2. CLEANUP: Delete All Existing Data (As requested)
-        console.log("🧹 Cleaning up existing Services/SubServices/ChildServices...");
+        // 2. CLEANUP
+        // Only run cleanup if we explicitly want to nuke. 
+        // Given earlier failures, partial cleanup might have happened.
+        // Let's try to fetch list and delete.
+        console.log("🧹 Cleanup: Fetching existing services...");
         try {
-            // Delete Child Services
-            // We need to fetch them. If no "Get All" route, we rely on traversing.
-            // But `admin.routes.js` has `router.get('/services/hierarchy', ...)` which returns EVERYTHING.
-            const hierarchyRes = await axios.get(`${API_URL}/admin/services/hierarchy`, { headers });
-            const allServices = hierarchyRes.data.services;
+            // Use Retry
+            const servicesRes = await retryRequest(() => axios.get(`${API_URL}/booking/services`));
+            const allServices = servicesRes.data.services;
 
-            for (const s of allServices) {
-                // Delete SubServices (and their children if cascade not implemented)
-                // Actually, I should just delete the Services if the User wants a clean slate, 
-                // BUT orphan records might remain if I don't delete children explicitly.
-                // Let's rely on traversing the hierarchy we just fetched.
-
-                if (s.subServices) {
-                    for (const sub of s.subServices) {
-                        if (sub.childServices) {
-                            for (const child of sub.childServices) {
-                                await axios.delete(`${API_URL}/admin/services/child-services/${child._id}`, { headers });
-                            }
-                        }
-                        await axios.delete(`${API_URL}/admin/services/sub-services/${sub._id}`, { headers });
+            if (allServices && allServices.length > 0) {
+                for (const s of allServices) {
+                    console.log(`Deleting Service: ${s.name} (${s._id})`);
+                    try {
+                        await sleep(1000);
+                        await retryRequest(() => axios.delete(`${API_URL}/admin/services/${s._id}`, { headers }));
+                        console.log("   - Deleted.");
+                    } catch (e) {
+                        console.error(`   - Failed Delete: ${e.message}`);
                     }
                 }
-                await axios.delete(`${API_URL}/admin/services/${s._id}`, { headers });
             }
-            console.log("✅ Cleanup Complete.");
-        } catch (cleanupError) {
-            console.warn("⚠️ Cleanup warning (might be empty DB):", cleanupError.message);
+        } catch (e) {
+            console.warn("⚠️ Cleanup fetch failed:", e.message);
         }
 
-        // 3. Iterate and Create Hierarchy
+        console.log("\n🚀 Starting Creation...");
+
+        // 3. Create Hierarchy
         for (const service of HIERARCHY) {
-
             console.log(`\nProcessing Service: ${service.name}...`);
+            await sleep(2000);
 
-            // A. Create/check Main Service
-            // We use the admin route defined in admin.routes.js: router.post('/services', ...) ? 
-            // Wait, looking at admin.routes.js from memory/view_code:
-            // It has: router.get('/services/hierarchy')
-            // It has: router.post('/services/:id/sub-services').
-            // Does it have router.post('/services')?
-            // Let's assume we might need to manually insert if the API is missing, 
-            // BUT `routes/booking.routes.js` has `getServices`.
-            // Let's check if there is an endpoint to create a SERVICE.
-            // If not, we might fail here unless we use a seed script that connects to DB directly.
-            // USER SAID: "upload this realtime content... check with like url".
-            // Direct DB access to Render from here is hard (need connection string).
-            // Using API is safer.
-            // I need to be sure `POST /api/admin/services` exists. I haven't seen it in `admin.routes.js` snippet!
-            // I saw `router.post('/services/:id/sub-services')`.
-            // If `POST /services` is missing, I cannot create the root nodes via API.
-            // Let me quick-check admin.routes.js content again via previous context or assume I need to ADD it if missing.
-            // Actually, in `seed_live_data.js` (if it existed), how did we create services?
-            // "You have the ability to use and create workflows...".
-
-            // Fallback: If API missing, I can't do it via Axios.
-            // BUT, the Admin Panel surely has a "Create Service" button? 
-            // If the Admin Panel has it, the API exists.
-
-            // Let's Try `POST /api/admin/services` (Standard REST).
+            // A. Service
             let serviceId;
             try {
-                // Check if exists first to avoid duplicates
-                // GET /booking/services is public
-                const existingRes = await axios.get(`${API_URL}/booking/services`);
-                const existing = existingRes.data.services.find(s => s.name === service.name);
-
-                if (existing) {
-                    console.log(`  - Service '${service.name}' already exists.`);
-                    serviceId = existing._id;
-                } else {
-                    const createRes = await axios.post(`${API_URL}/admin/services`, {
-                        name: service.name,
-                        type: service.type || 'Service',
-                        description: `All ${service.name} services`,
-                        image: "https://via.placeholder.com/150"
-                    }, { headers });
-                    serviceId = createRes.data.service._id;
-                    console.log(`  - Created Service '${service.name}'`);
-                }
+                const createRes = await retryRequest(() => axios.post(`${API_URL}/admin/services`, {
+                    name: service.name,
+                    type: service.type || 'Service',
+                    description: `All ${service.name} services`,
+                    image: "https://via.placeholder.com/150",
+                    is_active: true
+                }, { headers }));
+                serviceId = createRes.data.service._id;
+                console.log(`  ✅ Created Service '${service.name}'`);
             } catch (e) {
-                console.error(`  ! Failed to create Service ${service.name}: ${e.response?.status} `);
-                if (e.response?.status === 404) console.error("    (Endpoint /admin/services might be missing!)");
-                continue;
+                console.error(`  ❌ Failed to create Service ${service.name}: ${e.message}`);
+                // Fallback: Check if exists
+                if (e.response && e.response.status === 400) {
+                    try {
+                        await sleep(1000);
+                        const existingRes = await retryRequest(() => axios.get(`${API_URL}/booking/services`));
+                        const existing = existingRes.data.services.find(s => s.name === service.name);
+                        if (existing) {
+                            serviceId = existing._id;
+                            console.log(`  ⚠️ Service Exists. Captured ID: ${serviceId}. Updating active status...`);
+                            // Ensure active
+                            await retryRequest(() => axios.put(`${API_URL}/admin/services/${serviceId}`, { is_active: true }, { headers }));
+                        }
+                    } catch (findErr) { console.error("    Could not find existing ID."); }
+                }
             }
 
-            // B. Create Sub-Services
+            if (!serviceId) continue;
+
+            // B. Sub-Services
             for (const sub of service.subServices) {
                 let subServiceId;
+                await sleep(1500);
                 try {
-                    // We don't have a GET sub-services by name easily, but can list all for parent
-                    const subListRes = await axios.get(`${API_URL}/booking/services/${serviceId}/sub-services`);
-                    const existingSub = subListRes.data.subServices.find(s => s.name === sub.name);
-
-                    if (existingSub) {
-                        console.log(`    - SubService '${sub.name}' already exists.`);
-                        subServiceId = existingSub._id;
-                    } else {
-                        const createSubRes = await axios.post(`${API_URL}/admin/services/${serviceId}/sub-services`, {
-                            name: sub.name,
-                            image: "https://via.placeholder.com/150",
-                            is_active: true
-                        }, { headers });
-                        subServiceId = createSubRes.data.subService._id;
-                        console.log(`    - Created SubService '${sub.name}'`);
-                    }
+                    const createSubRes = await retryRequest(() => axios.post(`${API_URL}/admin/services/${serviceId}/sub-services`, {
+                        name: sub.name,
+                        image: "https://via.placeholder.com/150",
+                        is_active: true
+                    }, { headers }));
+                    subServiceId = createSubRes.data.subService._id;
+                    console.log(`    ✅ Created SubService '${sub.name}'`);
                 } catch (e) {
-                    console.error(`    ! Failed SubService ${sub.name}: ${e.message}`);
-                    continue;
+                    console.error(`    ❌ Failed SubService ${sub.name}: ${e.message}`);
+                    try {
+                        await sleep(1000);
+                        const listSub = await retryRequest(() => axios.get(`${API_URL}/booking/services/${serviceId}/sub-services`));
+                        const existingSub = listSub.data.subServices.find(s => s.name === sub.name);
+                        if (existingSub) subServiceId = existingSub._id;
+                    } catch (err) { }
                 }
 
-                // C. Create Child-Services
-                for (const child of sub.childServices) {
-                    try {
-                        const childListRes = await axios.get(`${API_URL}/booking/sub-services/${subServiceId}/child-services`);
-                        const existingChild = childListRes.data.childServices.find(c => c.name === child.name);
+                if (!subServiceId) continue;
 
-                        if (existingChild) {
-                            console.log(`      - Child '${child.name}' already exists.`);
-                        } else {
-                            await axios.post(`${API_URL}/admin/services/sub-services/${subServiceId}/child-services`, {
-                                name: child.name,
-                                price: child.price,
-                                description: child.name,
-                                is_active: true
-                            }, { headers });
-                            console.log(`      - Created Child '${child.name}'`);
-                        }
+                // C. Child-Services
+                for (const child of sub.childServices) {
+                    await sleep(1500);
+                    try {
+                        await retryRequest(() => axios.post(`${API_URL}/admin/services/sub-services/${subServiceId}/child-services`, {
+                            name: child.name,
+                            price: child.price,
+                            description: child.name,
+                            is_active: true,
+                            service_type: child.name.includes("Orthopaedic") ? "Doctor" : "Service"
+                        }, { headers }));
+                        console.log(`      ✅ Created Child '${child.name}'`);
                     } catch (e) {
-                        console.error(`      ! Failed Child ${child.name}: ${e.message}`);
+                        console.error(`      ❌ Failed Child ${child.name}: ${e.message}`);
                     }
                 }
             }
@@ -294,7 +274,6 @@ async function seedHierarchy() {
 
     } catch (error) {
         console.error("❌ Fatal Error:", error.message);
-        if (error.response) console.error("Response:", error.response.status, error.response.data);
     }
 }
 

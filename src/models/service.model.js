@@ -6,7 +6,8 @@ const ServiceSchema = new Schema({
     title: { type: String },
     type: {
         type: String,
-        enum: ['OPD', 'LabTest', 'MedicalEquipment', 'Ambulance', 'HomeCheckup', 'VideoConsultation'],
+        // Expanded to support new hierarchy
+        enum: ['OPD', 'LabTest', 'MedicalEquipment', 'Ambulance', 'HomeCheckup', 'VideoConsultation', 'Doctor', 'Nursing', 'Pharmacy', 'Service'],
         default: 'OPD'
     },
     image_url: { type: String },

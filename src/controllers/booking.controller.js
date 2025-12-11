@@ -204,6 +204,22 @@ exports.getNearbyDoctors = async (req, res) => {
     }
 };
 
+/**
+ * @route GET /api/booking/specializations
+ * @description Fetch unique list of doctor specializations for dropdown
+ */
+exports.getSpecializations = async (req, res) => {
+    try {
+        // Fetch ChildServices that are flagged as 'Doctor' type
+        // This ensures dynamic population based on the Hierarchy Management
+        const specializations = await ChildService.find({ service_type: 'Doctor' }).distinct('name');
+        res.status(200).json({ success: true, specializations });
+    } catch (error) {
+        console.error('Fetch specializations error:', error);
+        res.status(500).json({ message: 'Server error fetching specializations.' });
+    }
+};
+
 // Start Haversine Helper
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     if (!lat2 || !lon2) return 99999; // Assume far if no location

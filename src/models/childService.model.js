@@ -16,7 +16,8 @@ const ChildServiceSchema = new Schema({
     },
     service_type: {
         type: String,
-        enum: ['OPD', 'Emergency', 'Online', 'Home Visit', 'Lab Test', 'Pharmacy'],
+        // Expanded Enum
+        enum: ['OPD', 'Emergency', 'Online', 'Home Visit', 'Lab Test', 'Pharmacy', 'Doctor', 'Service', 'Ambulance'],
         required: true
     },
     price: {

@@ -12,6 +12,13 @@ const { protect } = require('../middleware/authenticate'); // Import the protect
  */
 router.get('/services', bookingController.getServices);
 
+/**
+ * @route GET /api/booking/specializations
+ * @description Fetch list of unique doctor specializations.
+ * @access Public
+ */
+router.get('/specializations', bookingController.getSpecializations);
+
 // --- Explicit Hierarchy Routes ---
 
 /**

@@ -28,9 +28,19 @@ const DoctorSchema = new Schema({
         type: String // Storing specialization names directly (e.g., 'Cardiology')
     }],
     offered_services: [{
-        type: String,
-        enum: ['OPD', 'Home Visit', 'Online', 'Emergency'],
-        default: 'OPD'
+        serviceType: {
+            type: String,
+            enum: ['OPD', 'Home Visit', 'Online', 'Emergency'],
+            required: true
+        },
+        price: {
+            type: Number,
+            default: 0
+        },
+        is_active: {
+            type: Boolean,
+            default: true
+        }
     }],
     is_available: { type: Boolean, default: true }
 });
