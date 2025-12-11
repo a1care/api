@@ -21,6 +21,7 @@ const AddDoctorModal = ({ onClose, onSuccess }) => {
         email: '',
         mobile_number: '',
         specializations: [],
+        offered_services: [],
         experience: '',
         consultation_fee: '',
         about: '',
@@ -61,6 +62,36 @@ const AddDoctorModal = ({ onClose, onSuccess }) => {
             specializations: prev.specializations.filter(s => s !== spec)
         }));
     };
+
+    // --- New: Custom Service Pricing Handlers ---
+    const [newService, setNewService] = useState({
+        serviceType: 'OPD',
+        price: 500
+    });
+
+    const addOfferedService = () => {
+        // Prevent duplicates
+        if (formData.offered_services?.some(s => s.serviceType === newService.serviceType)) {
+            toast.error('Service type already added');
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            offered_services: [
+                ...(prev.offered_services || []),
+                { ...newService, is_active: true }
+            ]
+        }));
+    };
+
+    const removeOfferedService = (type) => {
+        setFormData(prev => ({
+            ...prev,
+            offered_services: prev.offered_services.filter(s => s.serviceType !== type)
+        }));
+    };
+
 
     const toggleDay = (dayIndex) => {
         setFormData(prev => {
@@ -259,6 +290,54 @@ const AddDoctorModal = ({ onClose, onSuccess }) => {
                                     className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Plus className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Custom Service Pricing */}
+                        <div className="space-y-4">
+                            <h4 className="text-lg font-bold text-dark-header border-b pb-2">Service Pricing</h4>
+
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {formData.offered_services?.map((svc, index) => (
+                                    <span key={index} className="inline-flex items-center gap-2 px-3 py-1 bg-info-light text-info rounded-full text-sm font-medium border border-info/20">
+                                        {svc.serviceType}: ₹{svc.price}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeOfferedService(svc.serviceType)}
+                                            className="hover:text-danger"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-2">
+                                <select
+                                    value={newService.serviceType}
+                                    onChange={(e) => setNewService({ ...newService, serviceType: e.target.value })}
+                                    className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm bg-white"
+                                >
+                                    <option value="OPD">OPD</option>
+                                    <option value="Home Visit">Home Visit</option>
+                                    <option value="Online">Online</option>
+                                    <option value="Emergency">Emergency</option>
+                                </select>
+                                <input
+                                    type="number"
+                                    value={newService.price}
+                                    onChange={(e) => setNewService({ ...newService, price: Number(e.target.value) })}
+                                    className="w-24 px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                                    placeholder="Price"
+                                    min="0"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addOfferedService}
+                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-md text-sm font-medium"
+                                >
+                                    Add
                                 </button>
                             </div>
                         </div>

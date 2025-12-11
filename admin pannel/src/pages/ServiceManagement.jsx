@@ -55,7 +55,7 @@ const ServiceManagement = () => {
 
         try {
             const endpoints = {
-                service: `/booking/services/${id}`,
+                service: `/admin/services/${id}`,
                 subService: `/services/sub-services/${id}`,
                 childService: `/services/child-services/${id}`
             };
@@ -248,7 +248,7 @@ const ServiceModal = ({ config, onClose, onSuccess }) => {
         e.preventDefault();
         try {
             const endpoints = {
-                service: item ? `/booking/services/${item._id}` : '/booking/services',
+                service: item ? `/admin/services/${item._id}` : '/admin/services',
                 subService: item ? `/services/sub-services/${item._id}` : `/services/${parentId}/sub-services`,
                 childService: item ? `/services/child-services/${item._id}` : `/services/sub-services/${parentId}/child-services`
             };
