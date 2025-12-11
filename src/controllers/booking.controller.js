@@ -355,8 +355,10 @@ exports.createBooking = async (req, res) => {
         payment_method
     } = req.body;
 
+    let consultationFee = 0;
+    let itemPrice = 0;
 
-    console.log('--- DEBUG: HITTING CREATE BOOKING (FIXED) ---');
+
 
     // Determine Target Role
     // Default logic: If itemType is 'User', it means a Doctor is being booked -> Target Doctor.
@@ -409,13 +411,13 @@ exports.createBooking = async (req, res) => {
             if (!serviceItem) {
                 return res.status(404).json({ message: 'Service Item not found.' });
             }
-            itemPrice = serviceItem.price;
+            itemPrice = serviceItem.price || 0;
         } else if (itemType === 'ChildService') {
             const childService = await ChildService.findById(itemId);
             if (!childService) {
                 return res.status(404).json({ message: 'Child Service not found.' });
             }
-            itemPrice = childService.price;
+            itemPrice = childService.price || 0;
         } else if (itemType === 'SubService') {
             const subService = await SubService.findById(itemId);
             if (!subService) {
@@ -430,6 +432,24 @@ exports.createBooking = async (req, res) => {
         const PLATFORM_FEE_RATE = 0.10;
         const PLATFORM_FEE = parseFloat(((consultationFee + itemPrice) * PLATFORM_FEE_RATE).toFixed(2));
         const TOTAL_AMOUNT = consultationFee + itemPrice + PLATFORM_FEE;
+
+        // Helper to combine date and time string to Date object
+        const combineDateAndTime = (dateStr, timeStr) => {
+            if (!dateStr || !timeStr) return null;
+            // dateStr: YYYY-MM-DD, timeStr: HH:mm
+            return new Date(`${dateStr}T${timeStr}:00`);
+        };
+
+        // If not a Doctor (User) booking, we might need to construct the date objects
+        // for slotStartTime/slotEndTime if they are simple time strings (e.g. "10:00")
+        if (itemType !== 'User') {
+            if (typeof slotStartTime === 'string' && slotStartTime.includes(':')) {
+                slotStartTime = combineDateAndTime(booking_date, slotStartTime);
+            }
+            if (typeof slotEndTime === 'string' && slotEndTime.includes(':')) {
+                slotEndTime = combineDateAndTime(booking_date, slotEndTime);
+            }
+        }
 
         // 3. Create the new booking document
         const isCOD = payment_method === 'COD';
@@ -500,7 +520,8 @@ exports.createBooking = async (req, res) => {
         if (error.code === 11000) {
             return res.status(409).json({ message: 'This time slot is already taken.' });
         }
-        res.status(500).json({ message: 'Server error during booking creation.' });
+        // DEBUG: Returning error details to client to diagnose 500
+        res.status(500).json({ message: 'Server error during booking creation (DEBUG MODE).', error: error.message, stack: error.toString() });
     }
 };
 
