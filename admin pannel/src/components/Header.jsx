@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Bell, Search, Moon, Sun, Menu } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ onMenuClick }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -13,7 +13,10 @@ const Header = () => {
         <header className="bg-white/80 backdrop-blur-md h-16 flex items-center justify-between px-6 sticky top-0 z-10 shadow-card border-b border-gray-100">
             {/* Search Bar */}
             <div className="flex items-center gap-4">
-                <button className="md:hidden p-2 text-dark-body hover:bg-gray-100 rounded-lg">
+                <button
+                    onClick={onMenuClick}
+                    className="md:hidden p-2 text-dark-body hover:bg-gray-100 rounded-lg"
+                >
                     <Menu className="h-5 w-5" />
                 </button>
                 <div className="relative hidden md:block group">

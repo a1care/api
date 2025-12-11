@@ -1,0 +1,14 @@
+### 1. Check Slots for Doctor (GET)
+curl --location 'https://api-esf1.onrender.com/api/booking/doctors/693642bd0579d6deed3cc655/slots?date=2025-01-25'
+
+### 2. Create Booking (POST)
+curl --location 'https://api-esf1.onrender.com/api/booking/create' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MzY0MmMxMDU3OWQ2ZGVlZDNjYzY2MyIsInJvbGUiOiJVc2VyIiwiaWF0IjoxNzY1MTYzNzEzLCJleHAiOjE3OTY2OTk3MTN9.euyr3uY00kXZ1togo0f7S-D2B3X1gTomeyn8txiW_LM' \
+--data '{
+    "itemType": "User",
+    "itemId": "693642bd0579d6deed3cc655",
+    "booking_date": "2025-01-25",
+    "slotId": "693642c00579d6deed3cc65f",
+    "payment_method": "COD"
+}'

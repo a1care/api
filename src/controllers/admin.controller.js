@@ -309,6 +309,204 @@ exports.deleteService = async (req, res) => {
 };
 
 /**
+ * @route POST /api/admin/services/:id/sub-services
+ * @description Create a new SubService
+ */
+exports.createSubService = async (req, res) => {
+    try {
+        const { id } = req.params; // Service ID
+        const { name, description, image_url } = req.body;
+
+        const subService = await SubService.create({
+            serviceId: id,
+            name,
+            description,
+            image_url,
+            is_active: true
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'SubService created successfully',
+            subService
+        });
+    } catch (error) {
+        console.error('Create sub-service error:', error);
+        res.status(500).json({ message: 'Error creating sub-service' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/sub-services/:id
+ * @description Update a SubService
+ */
+exports.updateSubService = async (req, res) => {
+    try {
+        const subService = await SubService.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+
+        if (!subService) {
+            return res.status(404).json({ message: 'SubService not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'SubService updated successfully',
+            subService
+        });
+    } catch (error) {
+        console.error('Update sub-service error:', error);
+        res.status(500).json({ message: 'Error updating sub-service' });
+    }
+};
+
+/**
+ * @route DELETE /api/admin/sub-services/:id
+ * @description Delete a SubService
+ */
+exports.deleteSubService = async (req, res) => {
+    try {
+        const subService = await SubService.findByIdAndDelete(req.params.id);
+
+        if (!subService) {
+            return res.status(404).json({ message: 'SubService not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'SubService deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete sub-service error:', error);
+        res.status(500).json({ message: 'Error deleting sub-service' });
+    }
+};
+
+/**
+ * @route POST /api/admin/sub-services/:id/child-services
+ * @description Create a new ChildService
+ */
+exports.createChildService = async (req, res) => {
+    try {
+        const { id } = req.params; // SubService ID
+        const { name, description, image_url, price, service_type } = req.body;
+
+        const childService = await ChildService.create({
+            subServiceId: id,
+            name,
+            description,
+            image_url,
+            price: price || 0,
+            service_type: service_type || 'OPD',
+            is_active: true
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'ChildService created successfully',
+            childService
+        });
+    } catch (error) {
+        console.error('Create child-service error:', error);
+        res.status(500).json({ message: 'Error creating child-service' });
+    }
+};
+
+/**
+ * @route PUT /api/admin/child-services/:id
+ * @description Update a ChildService
+ */
+exports.updateChildService = async (req, res) => {
+    try {
+        const childService = await ChildService.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+
+        if (!childService) {
+            return res.status(404).json({ message: 'ChildService not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'ChildService updated successfully',
+            childService
+        });
+    } catch (error) {
+        console.error('Update child-service error:', error);
+        res.status(500).json({ message: 'Error updating child-service' });
+    }
+};
+
+/**
+ * @route DELETE /api/admin/child-services/:id
+ * @description Delete a ChildService
+ */
+exports.deleteChildService = async (req, res) => {
+    try {
+        const childService = await ChildService.findByIdAndDelete(req.params.id);
+
+        if (!childService) {
+            return res.status(404).json({ message: 'ChildService not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'ChildService deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete child-service error:', error);
+        res.status(500).json({ message: 'Error deleting child-service' });
+    }
+};
+
+/**
+ * @route GET /api/admin/services/hierarchy
+ * @description Get full service hierarchy (Service -> SubService -> ChildService)
+ */
+exports.getServiceHierarchy = async (req, res) => {
+    try {
+        // Fetch all services
+        const services = await Service.find({}).lean();
+
+        // Fetch all sub-services
+        const subServices = await SubService.find({}).lean();
+
+        // Fetch all child-services
+        const childServices = await ChildService.find({}).lean();
+
+        // Build Hierarchy in Memory (More efficient than aggressive population loop)
+        const hierarchy = services.map(service => {
+            // Find subs for this service
+            const serviceSubs = subServices.filter(sub =>
+                sub.serviceId.toString() === service._id.toString()
+            ).map(sub => {
+                // Find children for this sub
+                const subChildren = childServices.filter(child =>
+                    child.subServiceId.toString() === sub._id.toString()
+                );
+                return { ...sub, childServices: subChildren };
+            });
+
+            return { ...service, subServices: serviceSubs };
+        });
+
+        res.status(200).json({
+            success: true,
+            services: hierarchy
+        });
+
+    } catch (error) {
+        console.error('Get hierarchy error:', error);
+        res.status(500).json({ message: 'Error fetching hierarchy' });
+    }
+};
+
+/**
  * @route GET /api/admin/doctors/:id/profile
  * @description Get complete doctor profile with documents
  */

@@ -20,6 +20,17 @@ router.post('/services', adminController.createService);
 router.put('/services/:id', adminController.updateService);
 router.delete('/services/:id', adminController.deleteService);
 
+// Hierarchy Management (Matches Frontend)
+router.get('/services/hierarchy', adminController.getServiceHierarchy);
+
+router.post('/services/:id/sub-services', adminController.createSubService);
+router.put('/services/sub-services/:id', adminController.updateSubService);
+router.delete('/services/sub-services/:id', adminController.deleteSubService);
+
+router.post('/services/sub-services/:id/child-services', adminController.createChildService);
+router.put('/services/child-services/:id', adminController.updateChildService);
+router.delete('/services/child-services/:id', adminController.deleteChildService);
+
 // Doctor Profile & Document Verification
 router.get('/doctors/:id/profile', adminController.getDoctorProfile);
 router.put('/doctors/:id/verify-document', adminController.verifyDoctorDocument);
