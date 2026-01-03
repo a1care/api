@@ -20,6 +20,7 @@
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
     "multer-s3": "^3.0.1",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "twilio": "^5.11.1"
   }
 }
