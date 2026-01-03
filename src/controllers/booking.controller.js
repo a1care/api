@@ -28,6 +28,11 @@ exports.getServices = async (req, res) => {
     }
 };
 
+// exports.createBookingNew = asyncHandler((req , res)=>{
+//     const {item , itemType , slotId, booking_date , } = req.body
+    
+// })
+
 /**
  * @route GET /api/booking/services/:serviceId/sub-services
  * @description Fetch SubServices for a specific Service
@@ -287,6 +292,7 @@ exports.getDoctorDetails = async (req, res) => {
 };
 
 const DoctorSlot = require('../models/doctorSlot.model');
+const asyncHandler = require('../utils/asyncHandler');
 
 /**
  * @route GET /api/booking/doctors/:doctorId/slots
@@ -344,6 +350,7 @@ exports.getAvailableSlots = async (req, res) => {
     */
 exports.createBooking = async (req, res) => {
     const userId = req.userId.id;
+    console.log("this is request body..", req.body)
     let {
         itemType, // 'User' (for Doctor), 'ServiceItem' (for Lab, Equipment, Ambulance)
         itemId,   // ID of the Doctor or ServiceItem
@@ -379,77 +386,77 @@ exports.createBooking = async (req, res) => {
         }
 
         // 2. Fetch Price & Validate Slot
-        if (itemType === 'User') {
-            consultationFee = 600; // Mock default
+        // if (itemType === 'User') {
+        //     consultationFee = 600; // Mock default
 
             // Validate and Mark Slot if provided
-            if (slotId) {
-                // slotId passed from frontend getAvailableSlots is the DoctorSlot._id
-                const slotDoc = await DoctorSlot.findById(slotId);
-                if (!slotDoc) {
-                    return res.status(404).json({ message: 'Selected time slot not found.' });
-                }
-                if (slotDoc.is_booked) {
-                    return res.status(409).json({ message: 'This time slot is already taken.' });
-                }
+            // if (slotId) {
+            //     // slotId passed from frontend getAvailableSlots is the DoctorSlot._id
+            //     const slotDoc = await DoctorSlot.findById(slotId);
+            //     if (!slotDoc) {
+            //         return res.status(404).json({ message: 'Selected time slot not found.' });
+            //     }
+            //     if (slotDoc.is_booked) {
+            //         return res.status(409).json({ message: 'This time slot is already taken.' });
+            //     }
 
-                // Temporarily mark as booked (Ideal: use transaction, but keeping simple per context)
-                slotDoc.is_booked = true;
-                // We will save this AFTER we successfully save the booking? 
-                // Or save now and revert if booking fails? 
-                // Let's assign it here but save both later or just save slot now.
-                // Saving now is safer against race conditions without transaction.
-                await slotDoc.save();
+            //     // Temporarily mark as booked (Ideal: use transaction, but keeping simple per context)
+            //     slotDoc.is_booked = true;
+            //     // We will save this AFTER we successfully save the booking? 
+            //     // Or save now and revert if booking fails? 
+            //     // Let's assign it here but save both later or just save slot now.
+            //     // Saving now is safer against race conditions without transaction.
+            //     await slotDoc.save();
 
-                // Override times with exact slot times to ensure consistency
-                slotStartTime = slotDoc.slot_start_time;
-                slotEndTime = slotDoc.slot_end_time;
-            }
+            //     // Override times with exact slot times to ensure consistency
+            //     slotStartTime = slotDoc.slot_start_time;
+            //     slotEndTime = slotDoc.slot_end_time;
+            // }
 
-        } else if (itemType === 'ServiceItem') {
-            const serviceItem = await ServiceItem.findById(itemId);
-            if (!serviceItem) {
-                return res.status(404).json({ message: 'Service Item not found.' });
-            }
-            itemPrice = serviceItem.price || 0;
-        } else if (itemType === 'ChildService') {
-            const childService = await ChildService.findById(itemId);
-            if (!childService) {
-                return res.status(404).json({ message: 'Child Service not found.' });
-            }
-            itemPrice = childService.price || 0;
-        } else if (itemType === 'SubService') {
-            const subService = await SubService.findById(itemId);
-            if (!subService) {
-                return res.status(404).json({ message: 'Sub Service not found.' });
-            }
-            // SubServices might not have a price, assume 0 or check model
-            itemPrice = 0;
-        } else {
-            return res.status(400).json({ message: 'Invalid item type.' });
-        }
+        // } else if (itemType === 'ServiceItem') {
+        //     const serviceItem = await ServiceItem.findById(itemId);
+        //     if (!serviceItem) {
+        //         return res.status(404).json({ message: 'Service Item not found.' });
+        //     }
+        //     itemPrice = serviceItem.price || 0;
+        // } else if (itemType === 'ChildService') {
+        //     const childService = await ChildService.findById(itemId);
+        //     if (!childService) {
+        //         return res.status(404).json({ message: 'Child Service not found.' });
+        //     }
+        //     itemPrice = childService.price || 0;
+        // } else if (itemType === 'SubService') {
+        //     const subService = await SubService.findById(itemId);
+        //     if (!subService) {
+        //         return res.status(404).json({ message: 'Sub Service not found.' });
+        //     }
+        //     // SubServices might not have a price, assume 0 or check model
+        //     itemPrice = 0;
+        // } else {
+        //     return res.status(400).json({ message: 'Invalid item type.' });
+        // }
 
         const PLATFORM_FEE_RATE = 0.10;
         const PLATFORM_FEE = parseFloat(((consultationFee + itemPrice) * PLATFORM_FEE_RATE).toFixed(2));
         const TOTAL_AMOUNT = consultationFee + itemPrice + PLATFORM_FEE;
 
         // Helper to combine date and time string to Date object
-        const combineDateAndTime = (dateStr, timeStr) => {
-            if (!dateStr || !timeStr) return null;
-            // dateStr: YYYY-MM-DD, timeStr: HH:mm
-            return new Date(`${dateStr}T${timeStr}:00`);
-        };
+        // const combineDateAndTime = (dateStr, timeStr) => {
+        //     if (!dateStr || !timeStr) return null;
+        //     // dateStr: YYYY-MM-DD, timeStr: HH:mm
+        //     return new Date(`${dateStr}T${timeStr}:00`);
+        // };
 
         // If not a Doctor (User) booking, we might need to construct the date objects
         // for slotStartTime/slotEndTime if they are simple time strings (e.g. "10:00")
-        if (itemType !== 'User') {
-            if (typeof slotStartTime === 'string' && slotStartTime.includes(':')) {
-                slotStartTime = combineDateAndTime(booking_date, slotStartTime);
-            }
-            if (typeof slotEndTime === 'string' && slotEndTime.includes(':')) {
-                slotEndTime = combineDateAndTime(booking_date, slotEndTime);
-            }
-        }
+        // if (itemType !== 'User') {
+        //     if (typeof slotStartTime === 'string' && slotStartTime.includes(':')) {
+        //         slotStartTime = combineDateAndTime(booking_date, slotStartTime);
+        //     }
+        //     if (typeof slotEndTime === 'string' && slotEndTime.includes(':')) {
+        //         slotEndTime = combineDateAndTime(booking_date, slotEndTime);
+        //     }
+        // }
 
         // 3. Create the new booking document
         const isCOD = payment_method === 'COD';
@@ -482,9 +489,9 @@ exports.createBooking = async (req, res) => {
         await newBooking.save();
 
         // 4. Update Slot with Booking ID if applicable
-        if (itemType === 'User' && slotId) {
-            await DoctorSlot.findByIdAndUpdate(slotId, { bookingId: newBooking._id });
-        }
+        // if (itemType === 'User' && slotId) {
+        //     await DoctorSlot.findByIdAndUpdate(slotId, { bookingId: newBooking._id });
+        // }
 
         // 5. Return response
         if (isCOD) {
@@ -541,48 +548,48 @@ exports.getUserBookings = async (req, res) => {
             .sort({ booking_date: -1, 'slot.start_time': -1 });
 
         // Grouping the results
-        const groupedBookings = bookings.reduce((acc, booking) => {
-            const statusKey = booking.status.toLowerCase().replace(/\s/g, '');
+        // const groupedBookings = bookings.reduce((acc, booking) => {
+        //     const statusKey = booking.status.toLowerCase().replace(/\s/g, '');
 
-            let itemName = 'N/A';
-            if (booking.itemId) {
-                // Handle different item structures
-                if (booking.itemType === 'User') {
-                    itemName = booking.itemId.name; // Doctor
-                } else if (booking.itemType === 'ServiceItem') {
-                    itemName = booking.itemId.name; // Generic Service Item
-                    // If it's an ambulance and has vehicle number, maybe append it?
-                    if (booking.itemId.vehicle_number) {
-                        itemName += ` (${booking.itemId.vehicle_number})`;
-                    }
-                } else {
-                    // Fallback for old data if any
-                    itemName = booking.itemId.name || booking.itemId.vehicle_number || 'Unknown Item';
-                }
-            }
+        //     let itemName = 'N/A';
+        //     if (booking.itemId) {
+        //         // Handle different item structures
+        //         if (booking.itemType === 'User') {
+        //             itemName = booking.itemId.name; // Doctor
+        //         } else if (booking.itemType === 'ServiceItem') {
+        //             itemName = booking.itemId.name; // Generic Service Item
+        //             // If it's an ambulance and has vehicle number, maybe append it?
+        //             if (booking.itemId.vehicle_number) {
+        //                 itemName += ` (${booking.itemId.vehicle_number})`;
+        //             }
+        //         } else {
+        //             // Fallback for old data if any
+        //             itemName = booking.itemId.name || booking.itemId.vehicle_number || 'Unknown Item';
+        //         }
+        //     }
 
-            const bookingDetail = {
-                id: booking._id,
-                status: booking.status,
-                total_amount: booking.total_amount,
-                date: booking.booking_date,
-                time: booking.slot && booking.slot.start_time ?
-                    `${new Date(booking.slot.start_time).toLocaleTimeString()} - ${new Date(booking.slot.end_time).toLocaleTimeString()}` : 'N/A',
-                item_name: itemName,
-                item_type: booking.itemType,
-                service_title: booking.serviceId ? booking.serviceId.title : booking.itemType,
-            };
+        //     const bookingDetail = {
+        //         id: booking._id,
+        //         status: booking.status,
+        //         total_amount: booking.total_amount,
+        //         date: booking.booking_date,
+        //         time: booking.slot && booking.slot.start_time ?
+        //             `${new Date(booking.slot.start_time).toLocaleTimeString()} - ${new Date(booking.slot.end_time).toLocaleTimeString()}` : 'N/A',
+        //         item_name: itemName,
+        //         item_type: booking.itemType,
+        //         service_title: booking.serviceId ? booking.serviceId.title : booking.itemType,
+        //     };
 
-            if (acc[statusKey]) {
-                acc[statusKey].push(bookingDetail);
-            } else {
-                acc[statusKey] = [bookingDetail];
-            }
-            return acc;
-        }, { upcoming: [], completed: [], cancelled: [], pendingpayment: [] });
+        //     if (acc[statusKey]) {
+        //         acc[statusKey].push(bookingDetail);
+        //     } else {
+        //         acc[statusKey] = [bookingDetail];
+        //     }
+        //     return acc;
+        // }, { upcoming: [], completed: [], cancelled: [], pendingpayment: [] });
 
 
-        res.status(200).json({ success: true, bookings: groupedBookings });
+        res.status(200).json({ success: true, bookings });
     } catch (error) {
         console.error('Fetch user bookings error:', error);
         res.status(500).json({ message: 'Server error fetching user bookings.' });

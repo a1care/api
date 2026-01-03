@@ -24,14 +24,15 @@ const BookingSchema = new Schema({
         enum: ['User', 'ServiceItem', 'SubService', 'ChildService'], // 'User' for Doctor, 'ServiceItem' for legacy, others for new flow
         default: 'User'
     },
+    
     // Service Category (e.g., OPD, Lab, etc.) - Optional if implied by itemType
     serviceId: {
         type: Schema.Types.ObjectId,
         ref: 'Service'
     },
     slot: {
-        start_time: { type: Date }, // Optional for non-slot based bookings
-        end_time: { type: Date },
+        start_time: { type: String }, // Optional for non-slot based bookings
+        end_time: { type: String },
         slot_id: { type: String }
     },
     booking_date: { type: Date, required: true },

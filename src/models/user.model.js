@@ -5,18 +5,24 @@ const UserSchema = new Schema({
     mobile_number: {
         type: String,
         required: true,
-        unique: true,
     },
     role: {
         type: String,
-        required: true,
-        enum: ['User', 'Doctor', 'Admin']
+        enum: ['User', 'Doctor', 'Admin'] , 
+        default: 'User'
     },
     name: { type: String },
     email: { type: String },
     profile_image: { type: String },
     latitude: { type: Number },
     longitude: { type: Number },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other']
+    },
+    date_of_birth: {
+        type: Date
+    },
     fcm_token: {
         type: String,
 
@@ -25,6 +31,10 @@ const UserSchema = new Schema({
     created_at: {
         type: Date,
         default: Date.now
+    } , 
+    isRegistered: {
+        type: Boolean,
+        default: false
     }
 });
 

@@ -24,12 +24,12 @@ exports.protect = async (req, res, next) => {
     try {
         // 2. Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
         // 3. Find user by ID and ONLY select the required fields:
         //    _id, role, mobile_number, latitude, longitude
         const user = await User.findById(decoded.id)
-            .select('role mobile_number latitude longitude'); 
-            // NOTE: We MUST include latitude/longitude for the "nearest doctor" logic in the booking controller.
+        .select('role mobile_number latitude longitude'); 
+        // NOTE: We MUST include latitude/longitude for the "nearest doctor" logic in the booking controller.
+        console.log('Decoded JWT:', user);
 
         if (!user) {
             // 401: Unauthorized - credentials (token) are valid, but user no longer exists

@@ -4,7 +4,9 @@ const cors = require('cors');
 const connectDB = require('./src/config/db');
 const mainRoutes = require('./src/routes/mainroutes');
 const path = require('path');
-
+const PatientAuth = require('./src/routes/Patient/authentication.routes');
+const ApiError = require('./src/utils/ApiError');
+const AddressRoutes = require("./src/routes/Patient/address.routes")
 // Load env vars
 dotenv.config();
 
@@ -29,6 +31,26 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- 1. API Routes (Specific) ---
 app.use('/api', mainRoutes);
+
+// patient authentication routes 
+app.use('/api/patient/auth', PatientAuth);
+
+//patient address routes 
+app.use('/api/patient/address' , AddressRoutes)
+// capture the error from controllers and send JSON response
+app.use((err, req, res, next) => {
+
+    if(err instanceof ApiError) {
+        console.error(`API Error: ${err.message}`);
+    } else {
+        console.error(`Unexpected Error: ${err.message}`);
+    }
+    console.error(err);
+    res.status(err.statusCode || 500).json({
+        success: false,
+        message: err.message
+    });
+});
 
 // --- 2. Root Route (Specific) ---
 app.get('/', (req, res) => {

@@ -103,3 +103,8 @@ exports.uploadServiceImage = multer({
     fileFilter: fileFilter, // Can reuse the same file filter
     storage: serviceImageStorage
 }).single('serviceImage'); // <-- Uses a single field name 'serviceImage'
+
+exports.uploadProfile = multer({
+    fileFilter:fileFilter , 
+    storage:serviceImageStorage , 
+}).single("profile")
