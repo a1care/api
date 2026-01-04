@@ -76,7 +76,7 @@ app.get('/', (req, res) => {
             </style>
         </head>
         <body>
-            <div class="msg">🚀 A1Care 24×7 API is up and running! 💙✨</div>
+            <div class="msg">🚀 A1Care 24×7 API'S is up and running! 💙✨</div>
         </body>
         </html>
     `);
