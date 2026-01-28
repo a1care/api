@@ -31,7 +31,7 @@ export const createService = asyncHandler(async (req, res) => {
 
 //get all service 
 export const getServices = asyncHandler(async (req , res)=>{
-  const services = await Service.find()
+  const services = await Service.find().sort({ createdAt: 'desc' }).exec()
   res.status(200).json(new ApiResponse(200 , "Services fetched" , services))
 })
 

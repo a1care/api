@@ -9,4 +9,4 @@ const router = express.Router()
 router.get('/:serviceId' , getServicesByServiceId)
 router.post('/create/:serviceId' , uploadServiceImage , attachFileUrl , createSubService)
 router.delete('/:id' , deleteService)
-export default router
+export default router 

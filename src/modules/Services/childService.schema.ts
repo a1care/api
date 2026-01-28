@@ -8,7 +8,7 @@ export const childServiceValidation = z.object({
     price:z.number() , 
     bookingType:z.enum(["SELECT" , "ASSIGN"]), 
     isActive:z.boolean().default(false) , 
-    allowedRoleIds:z.array(z.string()), 
+    allowedRoleIds:z.array(z.string()).optional(), 
     imageUrl:z.url().optional() , 
     fulfillmentMode: z.enum(["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL"])
 })
