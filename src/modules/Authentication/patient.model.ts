@@ -13,7 +13,7 @@ export interface PatientDocument extends Document {
   dateOfBirth: Date;
   fcmToken: string;
   isRegistered: boolean;
-  primaryAddressId:mongoose.Schema.Types.ObjectId
+  primaryAddressId: mongoose.Types.ObjectId
 }
 
 const PatientSchema = new Schema<PatientDocument>(
@@ -64,10 +64,10 @@ const PatientSchema = new Schema<PatientDocument>(
     isRegistered: {
       type: Boolean,
       default: false
-    }, 
-    primaryAddressId:{
-      type:mongoose.Schema.Types.ObjectId , 
-      ref:"patient_addresses"
+    },
+    primaryAddressId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "patient_addresses"
     }
   },
   {

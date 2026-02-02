@@ -40,7 +40,7 @@ export const getUserAddresses = asyncHandler(async (req, res) => {
 
     const allAddress = address.map(item=>({
         ...item.toObject() , 
-        isPrimary:item._id.equals(patient?.primaryAddressId)
+        isPrimary: item._id.toString() === patient?.primaryAddressId?.toString()
     }))
 
     return res.json(new ApiResponse(200, "addresses fetched", allAddress))
