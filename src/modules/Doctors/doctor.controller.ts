@@ -91,3 +91,5 @@ export const getStaffDetials = asyncHandler(async (req , res)=>{
     const staffDetails = await doctorModel.findById(staffId)
     return res.status(200).json(new ApiResponse(200 , "Staff details"  , staffDetails ))
 })
+
+// otp status check 
