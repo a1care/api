@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-DOMAIN="a1carehospital.in"
+DOMAIN="api.a1carehospital.in"
 EMAIL="admin@a1carehospital.in"
 
 # 1. Create dummy certificates to allow Nginx to start
