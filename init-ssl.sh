@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Configuration
-DOMAIN="api.a1carehospital.com"
-EMAIL="admin@a1carehospital.com" # Update this to your email
+DOMAIN="a1carehospital.in"
+EMAIL="admin@a1carehospital.in"
 
 # 1. Create dummy certificates to allow Nginx to start
 mkdir -p ./certbot/conf/live/$DOMAIN
@@ -16,17 +16,17 @@ curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/c
 curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > ./certbot/conf/ssl-dhparams.pem
 
 # 3. Start Nginx
-docker compose up -d nginx
+cd ~/api-main && docker compose up -d nginx
 
 # 4. Delete dummy certificates
 rm -rf ./certbot/conf/live/$DOMAIN
 
 # 5. Request real certificates
-docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
+cd ~/api-main && docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
     --email $EMAIL --agree-tos --no-eff-email \
     -d $DOMAIN
 
 # 6. Reload Nginx
-docker compose exec nginx nginx -s reload
+cd ~/api-main && docker compose exec nginx nginx -s reload
 
 echo "SSL Bootstrapping complete for $DOMAIN"

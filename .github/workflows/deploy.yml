@@ -7,6 +7,7 @@ on:
     paths:
       - 'a1care backend/**'
       - 'docker-compose.yml'
+      - 'nginx/**'
 
 jobs:
   deploy:
@@ -32,5 +33,15 @@ jobs:
             # Build and restart containers using Docker Compose
             docker compose up -d --build
             
-            # Prune unused images to save space
-            docker image prune -f
+            # --- RAM & DISK SAVING OPS ---
+            # Remove stopped containers, unused networks, and dangling images
+            docker system prune -f
+            
+            # Specifically remove all unused images (not just dangling ones) to save more space
+            # This is safe because 'docker compose up' just created/started the needed ones
+            docker image prune -a -f
+            
+            # Optional: Clear build cache to save disk space
+            docker builder prune -f
+            
+            echo "Deployment complete and cleanup finished."
