@@ -1,0 +1,18 @@
+node_modules
+dist
+.env
+*.log
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+.github
+README.md
+PROJECT_OVERVIEW.md
+project_analysis
+admin pannel
+user app
+partner app
+src
+package-lock.json
+tsconfig.json

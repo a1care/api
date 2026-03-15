@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "A1Care 24/7",
+    "slug": "a1care-user",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "newArchEnabled": false,
+    "userInterfaceStyle": "light",
+    "scheme": "a1care",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2F80ED"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.a1care.user",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "A1Care needs your location to show nearby services and providers.",
+        "NSCameraUsageDescription": "A1Care needs camera access to upload your profile photo.",
+        "NSPhotoLibraryUsageDescription": "A1Care needs photo library access to upload your profile photo."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2F80ED"
+      },
+      "package": "com.a1care.user",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o"
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
+      "edgeToEdgeEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#2F80ED"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "A1Care needs your location to show nearby services."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

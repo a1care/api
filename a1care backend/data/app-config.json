@@ -1,0 +1,72 @@
+{
+  "user_app": {
+    "appKey": "user_app",
+    "env": {
+      "apiBaseUrl": "http://192.168.1.70:3000/api",
+      "websiteBaseUrl": "https://a1care247.com",
+      "cmsBaseUrl": "",
+      "assetsBaseUrl": ""
+    },
+    "branding": {
+      "appName": "A1Care 24/7",
+      "logoUrl": "https://a1care247.com/logo.png",
+      "splashImageUrl": "https://a1care247.com/splash.png",
+      "primaryColor": "#1d4ed8",
+      "secondaryColor": "#0f172a",
+      "accentColor": "#22c55e"
+    },
+    "contact": {
+      "supportEmail": "support@a1care247.com",
+      "supportPhone": "+91 90000 00000",
+      "whatsappNumber": "+91 90000 00000",
+      "address": "A1Care HQ, Medical Street, Hyderabad, India",
+      "website": "https://a1care247.com",
+      "faq": "Q: How do I book a service?\nA: Select the desired category (Doctor, Nurse, etc.), choose a provider, and confirm your time slot.\n\nQ: Are the providers verified?\nA: Yes, all A1Care partners undergo a rigorous verification process including background checks and medical registration audits.\n\nQ: How do I pay?\nA: You can pay through the A1Care wallet, integrated UPI, or Credit/Debit cards.\n\nQ: What if a provider doesn't show up?\nA: Please raise a support ticket or call our 24/7 helpline for a quick resolution and refund if applicable.",
+      "privacyPolicy": "At A1Care 24/7, we prioritize your privacy. We collect personal information (name, contact, location) and health-related data to facilitate medical services. Your data is encrypted and shared only with authorized healthcare providers participating in your care. We do not sell your personal data to third parties. For a full detailed policy, visit our website or contact support@a1care247.com.",
+      "termsAndConditions": "1. A1Care 24/7 is a platform connecting users with independent healthcare providers.\n2. Not for Emergencies: If you are experiencing a life-threatening emergency, call 108 or your local emergency number immediately.\n3. Payments: Fees are determined by providers and platform surcharges.\n4. Cancellations: Bookings cancelled within 1 hour may incur a convenience fee.\n5. Liability: A1Care is not liable for the clinical decisions made by independent providers."
+    },
+    "landing": {
+      "headline": "Healthcare at your doorstep",
+      "subHeadline": "Connect with top doctors, nurses, and medical services 24/7",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.a1care.user",
+      "appStoreUrl": "https://apps.apple.com/app/a1care-user",
+      "festivalBanners": []
+    },
+    "updatedAt": "2026-02-21T18:00:00.000Z"
+  },
+  "provider_app": {
+    "appKey": "provider_app",
+    "env": {
+      "apiBaseUrl": "http://192.168.1.70:3000/api",
+      "websiteBaseUrl": "https://a1care247.com",
+      "cmsBaseUrl": "",
+      "assetsBaseUrl": ""
+    },
+    "branding": {
+      "appName": "A1Care Partner",
+      "logoUrl": "https://a1care247.com/logo-partner.png",
+      "splashImageUrl": "https://a1care247.com/splash-partner.png",
+      "primaryColor": "#15803D",
+      "secondaryColor": "#0f172a",
+      "accentColor": "#9EBB58"
+    },
+    "contact": {
+      "supportEmail": "partners@a1care247.com",
+      "supportPhone": "+91 90000 11111",
+      "whatsappNumber": "+91 90000 11111",
+      "address": "A1Care HQ, Medical Street, Hyderabad, India",
+      "website": "https://a1care247.com/partners",
+      "faq": "Q: How do I get verified?\nA: Complete your profile and upload all required documents in the registration section. Our team will review them within 24-48 hours.\n\nQ: When do I get paid?\nA: Payouts are processed weekly directly to your registered bank account for all completed and approved bookings.\n\nQ: Can I set my own hours?\nA: Yes, you have full control over your availability via the 'My Slots' section in the app.\n\nQ: What if I need to cancel a booking?\nA: Frequent cancellations may affect your provider rating. Please use the support section to request a cancellation if absolutely necessary.",
+      "privacyPolicy": "A1Care 24/7 values the trust of its partners. We collect professional credentials, location data, and payout details to facilitate your services on the platform. Your professional data is visible to users searching for services. We implement strict security measures to protect your account and earnings data. For more details, consult the Partner Agreement or contact partners@a1care247.com.",
+      "termsAndConditions": "1. Partner Agreement: By using this app, you agree to provide services in accordance with medical standards.\n2. Professionalism: Partners must maintain valid certifications and professional conduct at all times.\n3. Platform Fee: A1Care deducts a service fee from total booking values as agreed in the partner contract.\n4. Liability: Partners are solely responsible for the medical advice and services rendered to users.\n5. Termination: A1Care reserves the right to suspend accounts for violations of platform guidelines."
+    },
+    "landing": {
+      "headline": "Grow your healthcare practice",
+      "subHeadline": "Join the A1Care 24/7 network and provide care on your own terms",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.a1care.partner",
+      "appStoreUrl": "https://apps.apple.com/app/a1care-partner",
+      "festivalBanners": []
+    },
+    "updatedAt": "2026-02-21T18:00:00.000Z"
+  }
+}
