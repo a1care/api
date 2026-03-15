@@ -33,6 +33,10 @@ app.use((req, res, next) => {
 });
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
 //routes
 //authentication
 app.use('/api/patient/auth', PatientAuth);
