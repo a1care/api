@@ -6,29 +6,30 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install all dependencies (including dev)
 RUN npm install
 
-# Copy source code
+# Copy source code and config
 COPY . .
 
 # Build the application
 RUN npm run build
+
+# Prune dev dependencies for production
+RUN npm prune --omit=dev
 
 # Production stage
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files (for runtime reference)
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm install --omit=dev
-
-# Copy built assets from builder
+# Copy PRE-PRUNED node_modules and built assets from builder
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-# Copy any other necessary files (like assets if they're not in dist)
+# Copy specific config directory if required
 COPY --from=builder /app/src/modules/Admin/config ./src/modules/Admin/config
 
 # Expose the application port
