@@ -29,8 +29,6 @@ COPY package*.json ./
 # Copy PRE-PRUNED node_modules and built assets from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-# Copy specific config directory if required
-COPY --from=builder /app/src/modules/Admin/config ./src/modules/Admin/config
 
 # Expose the application port
 EXPOSE 3000
