@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ~/api-main
 
 # Configuration
 DOMAIN="api.a1carehospital.in"
