@@ -37,6 +37,15 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", uptime: process.uptime() });
 });
 
+app.get("/api/docs", (req, res) => {
+    res.status(200).json({ 
+        message: "A1Care API Documentation",
+        version: "1.0.0",
+        endpoint: "https://api.a1carehospital.in/api",
+        status: "Online"
+    });
+});
+
 //routes
 //authentication
 app.use('/api/patient/auth', PatientAuth);
