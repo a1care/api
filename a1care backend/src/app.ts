@@ -34,7 +34,12 @@ app.use((req, res, next) => {
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/api/health", (req, res) => {
-    res.status(200).json({ status: "ok", uptime: process.uptime() });
+    res.status(200).json({ 
+        status: "ok", 
+        version: "1.0.1", 
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.get("/api/docs", (req, res) => {
