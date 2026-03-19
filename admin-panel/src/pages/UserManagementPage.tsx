@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import {
     Users, Search, Filter, Plus,
     ChevronLeft, ChevronRight, Phone, Mail,
@@ -519,10 +520,11 @@ export function UserManagementPage({ category }: { category: string }) {
                                                         </div>
                                                         <button
                                                             className="text-[9px] font-black text-indigo-400 hover:text-white uppercase tracking-widest px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 transition-all shrink-0"
-                                                            onClick={() => window.open(doc.url, "_blank")}
+                                                            onClick={() => setViewingDocument(doc)}
                                                         >
-                                                            View
+                                                            Inspect
                                                         </button>
+
                                                     </div>
                                                 ))
                                             ) : (
@@ -592,29 +594,60 @@ export function UserManagementPage({ category }: { category: string }) {
 
             {/* Document Viewer Modal */}
             {viewingDocument && (
-                <div className="modal-overlay fixed inset-0 z-[200] flex items-center justify-center p-12 bg-slate-900/60 backdrop-blur-md" onClick={() => setViewingDocument(null)}>
-                    <div className="modal-content bg-[var(--card-bg)] w-full max-w-2xl p-10 flex-col gap-8 shadow-2xl relative" onClick={e => e.stopPropagation()} style={{ borderRadius: '48px' }}>
-                        <button className="absolute right-8 top-8 icon-button" onClick={() => setViewingDocument(null)}><X size={32} /></button>
-
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Secure Viewer Cluster</p>
-                            <h2 className="brand-name" style={{ fontSize: '1.75rem' }}>{viewingDocument}</h2>
-                            <p className="text-xs muted font-bold">Verifying authenticity with cryptographic signatures...</p>
-                        </div>
-
-                        <div className="doc-previewer">
-                            <div className="doc-placeholder">
-                                <div className="flex-col items-center gap-4 opacity-10">
-                                    <ShieldCheck size={120} />
-                                    <p className="font-black text-2xl uppercase tracking-widest">Encrypted Document Content</p>
+                <div className="modal-overlay fixed inset-0 z-[200] flex items-center justify-center p-12 bg-slate-900/80 backdrop-blur-xl" onClick={() => setViewingDocument(null)}>
+                    <div className="modal-content !bg-slate-950/90 border border-white/10 w-full max-w-4xl max-h-[90vh] p-0 flex flex-col shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()} style={{ borderRadius: '48px' }}>
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center">
+                                    <ShieldCheck size={28} />
+                                </div>
+                                <div>
+                                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Document Registry Trace</h4>
+                                    <h2 className="text-white text-2xl font-black tracking-tight">{viewingDocument.type}</h2>
                                 </div>
                             </div>
-                            <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mt-4">Manual override required to view classified assets.</p>
+                            <button className="icon-button !text-white/20 hover:!text-white" onClick={() => setViewingDocument(null)}><X size={32} /></button>
                         </div>
 
-                        <div className="flex gap-4">
-                            <button className="button primary h-14 flex-1 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-200">Verify & Approve Doc</button>
-                            <button className="button secondary h-14 w-14 rounded-2xl flex items-center justify-center"><Download size={22} /></button>
+                        <div className="flex-1 overflow-y-auto p-8 bg-black/20">
+                            {viewingDocument.url.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                                <img src={viewingDocument.url} alt={viewingDocument.type} className="w-full h-auto rounded-[32px] shadow-2xl border border-white/5" />
+                            ) : viewingDocument.url.match(/\.pdf$/i) ? (
+                                <iframe src={viewingDocument.url} title="PDF Viewer" className="w-full h-[60vh] rounded-[32px] border border-white/5" />
+                            ) : (
+                                <div className="py-40 text-center flex flex-col items-center gap-6">
+                                    <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center text-white/20">
+                                        <FileText size={64} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-white font-black text-xl">Encoded Asset Vector</p>
+                                        <p className="text-white/30 text-sm font-medium">This asset type requires an external viewer or download.</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => window.open(viewingDocument.url, "_blank")}
+                                        className="button primary h-14 px-10 rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-indigo-500/20"
+                                    >
+                                        Open External Stream
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-8 border-t border-white/5 bg-white/5 flex gap-4 justify-end">
+                            <button 
+                                className="button secondary !bg-white/5 !text-white/50 h-14 px-12 rounded-2xl font-black uppercase tracking-widest"
+                                onClick={() => setViewingDocument(null)}
+                            >
+                                Close Trace
+                            </button>
+                            <a 
+                                href={viewingDocument.url} 
+                                download 
+                                className="button primary h-14 px-14 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3"
+                            >
+                                <Download size={20} />
+                                Download Asset
+                            </a>
                         </div>
                     </div>
                 </div>
