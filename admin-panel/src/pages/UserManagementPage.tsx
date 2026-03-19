@@ -25,7 +25,12 @@ export function UserManagementPage({ category }: { category: string }) {
     const [statusFilter, setStatusFilter] = useState<string>("All");
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [viewingDocument, setViewingDocument] = useState<string | null>(null);
+    const [viewingDocument, setViewingDocument] = useState<any | null>(null);
+
+    // Add User Form State
+    const [newName, setNewName] = useState("");
+    const [newMobile, setNewMobile] = useState("");
+    const [newEmail, setNewEmail] = useState("");
 
     const isAnyModalOpen = !!selectedUser || isAddModalOpen || !!viewingDocument;
 
@@ -68,6 +73,31 @@ export function UserManagementPage({ category }: { category: string }) {
             }
         }
     });
+
+    const createMutation = useMutation({
+        mutationFn: async (data: any) => {
+            const res = await api.post(`/admin/users/${category}/create`, data);
+            return res.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["category_users", category] });
+            queryClient.invalidateQueries({ queryKey: ["category_stats", category] });
+            setIsAddModalOpen(false);
+            setNewName("");
+            setNewMobile("");
+            setNewEmail("");
+            toast.success(`${category} record created successfully.`);
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || `Failed to create ${category}.`);
+        }
+    });
+
+    const handleAddUser = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newName || !newMobile) return toast.error("Required fields missing.");
+        createMutation.mutate({ name: newName, mobileNumber: newMobile, email: newEmail });
+    };
 
     const filteredUsers = useMemo(() => {
         if (!users) return [];
@@ -510,26 +540,50 @@ export function UserManagementPage({ category }: { category: string }) {
             {/* Add User Placeholder Modal */}
             {isAddModalOpen && (
                 <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6" onClick={() => setIsAddModalOpen(false)}>
-                    <div className="modal-content bg-[var(--card-bg)] w-full max-w-lg p-10 flex-col items-center text-center gap-6" onClick={e => e.stopPropagation()} style={{ borderRadius: '40px' }}>
-                        <div className="w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <div className="modal-content !bg-slate-950/90 backdrop-blur-3xl border border-white/10 w-full max-w-lg p-10 flex-col items-center text-center gap-6" onClick={e => e.stopPropagation()} style={{ borderRadius: '40px' }}>
+                        <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                             <UserPlus size={40} />
                         </div>
                         <div className="space-y-2">
-                            <h2 className="brand-name" style={{ fontSize: '1.5rem' }}>Create New {category}</h2>
-                            <p className="text-sm muted font-medium">Inject a new member directly into the production registry.</p>
+                            <h2 className="text-white text-2xl font-black">Create New {category}</h2>
+                            <p className="text-sm text-white/30 font-medium">Inject a new member directly into the production registry.</p>
                         </div>
-                        <form className="w-full space-y-4" onSubmit={e => { e.preventDefault(); setIsAddModalOpen(false); }}>
+                        <form className="w-full space-y-4" onSubmit={handleAddUser}>
                             <div className="input-group text-left">
-                                <label>Member Full Name</label>
-                                <input placeholder="Legal name of the individual..." className="w-full bg-[var(--bg-main)] h-12 px-5 rounded-2xl border-none font-bold" />
+                                <label className="!text-white/40">Member Full Name</label>
+                                <input 
+                                    placeholder="Legal name..." 
+                                    className="w-full !bg-white/5 h-12 px-5 rounded-2xl border-white/5 !text-white font-bold" 
+                                    value={newName}
+                                    onChange={e => setNewName(e.target.value)}
+                                    required
+                                />
                             </div>
                             <div className="input-group text-left">
-                                <label>Mobile Identity (Primary Phone)</label>
-                                <input placeholder="+91 000 000 0000" className="w-full bg-[var(--bg-main)] h-12 px-5 rounded-2xl border-none font-bold" />
+                                <label className="!text-white/40">Mobile Identity (Primary Phone)</label>
+                                <input 
+                                    placeholder="+91 000 000 0000" 
+                                    className="w-full !bg-white/5 h-12 px-5 rounded-2xl border-white/5 !text-white font-bold" 
+                                    value={newMobile}
+                                    onChange={e => setNewMobile(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="input-group text-left">
+                                <label className="!text-white/40">Email Protocol (Optional)</label>
+                                <input 
+                                    type="email"
+                                    placeholder="email@example.com" 
+                                    className="w-full !bg-white/5 h-12 px-5 rounded-2xl border-white/5 !text-white font-bold" 
+                                    value={newEmail}
+                                    onChange={e => setNewEmail(e.target.value)}
+                                />
                             </div>
                             <div className="pt-4 flex gap-4">
-                                <button type="button" className="button secondary flex-1 h-14 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddModalOpen(false)}>Abort</button>
-                                <button type="submit" className="button primary flex-1 h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-200">Finalize Registry</button>
+                                <button type="button" className="button secondary !bg-white/5 !text-white/50 h-14 flex-1 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddModalOpen(false)}>Abort</button>
+                                <button type="submit" disabled={createMutation.isPending} className="button primary flex-1 h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20">
+                                    {createMutation.isPending ? "Syncing..." : "Finalize Registry"}
+                                </button>
                             </div>
                         </form>
                     </div>
