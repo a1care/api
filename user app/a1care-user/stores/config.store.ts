@@ -36,7 +36,7 @@ interface ConfigState {
     getMapsKey: () => string;
 }
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.a1carehospital.in/api';
 const FALLBACK_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o';
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
@@ -47,14 +47,20 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     fetchConfig: async () => {
         set({ isLoading: true });
         try {
-            const response = await axios.get(`${API_URL}/common/config/user`);
-            if (response.data.success) {
+            const response = await axios.get(`${API_URL}/common/config/user`, { timeout: 10000 });
+            // Support both success: true and statusCode: 200 formats
+            if (response.data.success || response.data.statusCode === 200) {
                 set({ config: response.data.data, isLoading: false, error: null });
             } else {
-                set({ error: 'Failed to fetch config', isLoading: false });
+                set({ error: response.data.message || 'Failed to fetch config', isLoading: false });
             }
         } catch (err: any) {
-            console.error('[ConfigStore] fetch error:', err.message);
+            console.error('[ConfigStore] fetch error details:', {
+                message: err.message,
+                code: err.code,
+                url: `${API_URL}/common/config/user`,
+                status: err.response?.status
+            });
             set({ error: err.message, isLoading: false });
         }
     },

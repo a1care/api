@@ -36,7 +36,7 @@ interface ConfigState {
     getMapsKey: () => string;
 }
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.a1carehospital.in/api';
 const FALLBACK_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o';
 
 export const useConfigStore = create<ConfigState>((set, get) => ({

@@ -4,8 +4,8 @@ import { Platform } from "react-native";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ??
     (Platform.OS === 'web'
-        ? "http://localhost:3000/api"
-        : "http://10.176.172.163:3000/api");
+        ? "https://api.a1carehospital.in/api"
+        : "https://api.a1carehospital.in/api");
 
 export const api = axios.create({
     baseURL: BASE_URL,
