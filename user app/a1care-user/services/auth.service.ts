@@ -12,10 +12,10 @@ export const authService = {
         return res.data;
     },
 
-    verifyOtp: async (mobileNumber: string, otp: string) => {
+    verifyOtp: async (mobileNumber: string, otp: string, idToken?: string) => {
         const res = await api.post<ApiResponse<{ token: string }>>(
             Endpoints.VERIFY_OTP,
-            { mobileNumber, otp }
+            { mobileNumber, otp, idToken }
         );
         const { token } = res.data.data;
         await tokenStorage.setItem('auth_token', token);

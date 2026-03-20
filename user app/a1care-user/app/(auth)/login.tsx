@@ -14,12 +14,27 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { authService } from '@/services/auth.service';
+// Firebase Imports
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { PhoneAuthProvider } from 'firebase/auth';
+import { auth } from '@/utils/firebase';
+
+const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+};
 
 export default function LoginScreen() {
     const router = useRouter();
     const [mobile, setMobile] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // Reference for the hidden ReCaptcha popup
+    const recaptchaVerifier = React.useRef(null);
 
     const handleSendOtp = async () => {
         const cleaned = mobile.replace(/\D/g, '');
@@ -29,10 +44,19 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            await authService.sendOtp(cleaned);
-            router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned } });
+            // Firebase expects phone numbers in standard international format starting with +
+            const e164PhoneNumber = `+91${cleaned}`;
+            
+            const phoneProvider = new PhoneAuthProvider(auth);
+            const verificationId = await phoneProvider.verifyPhoneNumber(
+              e164PhoneNumber,
+              recaptchaVerifier.current as any
+            );
+            
+            router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, verificationId } });
         } catch (err: any) {
-            Alert.alert('Error', err?.response?.data?.message ?? 'Failed to send OTP. Please try again.');
+            console.error(err);
+            Alert.alert('Error', err?.message ?? 'Failed to send OTP. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -44,6 +68,12 @@ export default function LoginScreen() {
             <LinearGradient colors={["#C8E6F9", "#EBF5FB", "#FFFFFF"]} style={StyleSheet.absoluteFill} />
 
             <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 28 }}>
+                {/* Invisible ReCaptcha necessary for Firebase SMS limits */}
+                <FirebaseRecaptchaVerifierModal
+                    ref={recaptchaVerifier}
+                    firebaseConfig={firebaseConfig}
+                />
+
                 {/* Back */}
                 {router.canGoBack() && (
                     <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 20 }}>

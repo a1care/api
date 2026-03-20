@@ -17,11 +17,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 
+// Firebase specific imports
+import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from '@/utils/firebase';
+
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
     const router = useRouter();
-    const { mobile } = useLocalSearchParams<{ mobile: string }>();
+    const { mobile, verificationId } = useLocalSearchParams<{ mobile: string, verificationId: string }>();
     const { setToken, setUser } = useAuthStore();
 
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -57,7 +61,18 @@ export default function OtpScreen() {
         }
         setLoading(true);
         try {
-            const res = await authService.verifyOtp(mobile, code);
+            // 1. Google verifies the SMS code secretly here on the phone
+            let idToken = undefined;
+            if (verificationId) {
+                const credential = PhoneAuthProvider.credential(verificationId, code);
+                const userCredential = await signInWithCredential(auth, credential);
+                
+                // 2. Google gives us a heavily encrypted Token of Trust
+                idToken = await userCredential.user.getIdToken(true);
+            }
+            
+            // 3. We show our backend the Token!
+            const res = await authService.verifyOtp(mobile, code, idToken);
             const token = res.data.token;
             setToken(token);
             const user = await authService.getProfile();
@@ -75,13 +90,9 @@ export default function OtpScreen() {
     };
 
     const handleResend = async () => {
-        try {
-            await authService.sendOtp(mobile);
-            setResendTimer(30);
-            setOtp(Array(OTP_LENGTH).fill(''));
-        } catch {
-            Alert.alert('Error', 'Failed to resend OTP.');
-        }
+        // Since Firebase requires ReCaptcha protection, resending forces the user back
+        Alert.alert('Notice', 'For security reasons, please go back to the previous screen to request a new OTP.');
+        router.back();
     };
 
     return (

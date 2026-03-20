@@ -27,72 +27,57 @@ export const getPatientDetailsById = asyncHandler(async (req, res) => {
 })
 
 export const sentOtpForPatient = asyncHandler(async (req, res) => {
-  const { mobileNumber } = req.body;
-  if (!mobileNumber) {
-    throw new ApiError(400, "Mobile number is required");
-  }
-
-  console.log(`[PATIENT_OTP] Request for ${mobileNumber}`);
-
-  // rate limiting and otp logic
-  //random otp
-  const otp = generateOtp()
-
-  // Safety check for Twilio
-  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-    await sendMessage(mobileNumber, otp);
-  } else {
-    console.log(`[DEV] Twilio not configured. OTP for ${mobileNumber} is: ${otp} (Bypass: 123123)`);
-  }
-
-  // Safety check for Redis
-  if (RedisClient) {
-    await RedisClient.setEx(`otp:${mobileNumber}`, 300, JSON.stringify(otp))
-  } else {
-    console.log(`[DEV] Redis not configured. Skipping OTP persistence.`);
-  }
-
-  return res.json(new ApiResponse(201, "OTP sent successfully (Dev Mode)", { mobileNumber }))
+  // With Firebase, the frontend requests the OTP directly from Google!
+  // We no longer need the backend to send Twilio messages.
+  return res.json(new ApiResponse(200, "Please request OTP directly from Firebase in the App", {}));
 })
 
 // verify otp 
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
-  const { mobileNumber, otp } = req.body
+  const { idToken, mobileNumber } = req.body
 
-  if (!mobileNumber || !otp) {
-    throw new ApiError(401, "Validation failed!")
+  if (!idToken) {
+    // Fallback for dev bypass if idToken is not provided
+    if (req.body.otp == 123123) {
+      let isExists = await Patient.findOne({ mobileNumber })
+
+      if (!isExists) {
+        const newPatient = new Patient({ mobileNumber })
+        await newPatient.save()
+        isExists = newPatient
+      }
+
+      const token = jwt.sign({ mobileNumber, userId: isExists._id }, process.env.JWT_SECRET as string)
+      return res.status(201).json(new ApiResponse(201, "Verification successful (Development Bypass)", { token }))
+    }
+    throw new ApiError(400, "Firebase ID token is required!")
   }
 
-  let redisOtp = null;
-  if (RedisClient) {
-    redisOtp = await RedisClient.get(`otp:${mobileNumber}`)
-    console.log("this is redis otp", redisOtp)
-  } else {
-    console.log("[DEV] Redis not configured. Skipping OTP lookup.");
-  }
+  try {
+    // 1. Verify the secure Firebase Token
+    const admin = (await import('../../configs/firebaseAdmin.js')).default;
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    
+    // 2. Extract the verified phone number from Google (e.g. +919876543210)
+    const firebasePhone = decodedToken.phone_number || mobileNumber;
 
-  if (mongoose.connection.readyState !== 1) {
-    throw new ApiError(503, "Database unavailable");
-  }
-
-  if (Number(otp) === 123123) {
-    let isExists = await Patient.findOne({ mobileNumber })
+    // 3. Find or create the user in your database
+    let isExists = await Patient.findOne({ mobileNumber: firebasePhone })
 
     if (!isExists) {
-      const newPatient = new Patient({
-        mobileNumber
-      })
-
+      const newPatient = new Patient({ mobileNumber: firebasePhone })
       await newPatient.save()
       isExists = newPatient
     }
 
-    const token = jwt.sign({ mobileNumber, userId: isExists._id }, process.env.JWT_SECRET as string)
-    console.log("token is generated...", token)
+    // 4. Generate your own custom original JWT Token so the rest of your app works perfectly!
+    const token = jwt.sign({ mobileNumber: firebasePhone, userId: isExists._id }, process.env.JWT_SECRET as string)
+    
+    return res.status(200).json(new ApiResponse(200, "Firebase Verification successful", { token }))
 
-    return res.status(201).json(new ApiResponse(201, "verification successfull (Dev Bypass)", { token }))
-  } else {
-    throw new ApiError(404, "Invalid OTP!")
+  } catch (error) {
+    console.error("Firebase Token Error:", error);
+    throw new ApiError(401, "Invalid or expired Firebase Token!")
   }
 })
 
