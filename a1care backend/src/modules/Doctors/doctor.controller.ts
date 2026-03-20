@@ -54,100 +54,50 @@ export const getStaffByRoleId = asyncHandler(async (req, res) => {
 
 // send otp for staff 
 export const sendOtpForStaff = asyncHandler(async (req, res) => {
-  const { mobileNumber } = req.body;
-
-  if (!mobileNumber) {
-    throw new ApiError(400, "Mobile number is required");
-  }
-
-  const normalizedMobile = String(mobileNumber).trim();
-  const otp = generateOtp();
-  const otpHash = hmacHash(otp.toString());
-  const mobileHash = hmacHash(normalizedMobile);
-
-  console.log(`[OTP] Request for ${normalizedMobile}. SMS Dispatch sequence starting...`);
-  await sendMessage(Number(normalizedMobile), otp);
-
-  const otpSessionId = uuidv4();
-  await RedisClient.setEx(
-    `otp:${otpSessionId}`,
-    300,
-    JSON.stringify({
-      otpHash,
-      mobileHash,
-      attempts: 0,
-      expiresAt: Date.now() + 300_000
-    })
-  );
-
-
+  // With Firebase, the frontend requests the OTP directly from Google!
+  // We no longer need the backend to send Twilio messages.
   return res.status(200).json(
-    new ApiResponse(
-      200,
-      "OTP sent to your mobile number",
-      { otpSessionId, otp }
-    )
+    new ApiResponse(200, "Please request OTP directly from Firebase in the App", {})
   );
 });
 
-
 //verify otp for staff 
 export const verifyOtp = asyncHandler(async (req, res) => {
-  const { otpSessionId, otp, mobileNumber } = req.body;
+  const { idToken, mobileNumber } = req.body;
 
-  if (!otpSessionId || !otp || !mobileNumber) {
-    throw new ApiError(400, "otpSessionId, mobile number and OTP are required");
+  if (!idToken) {
+    throw new ApiError(400, "Firebase ID token is required!");
   }
 
-  const redisData = await RedisClient.get(`otp:${otpSessionId}`);
-  if (!redisData) {
-    throw new ApiError(401, "OTP expired or invalid session");
-  }
+  try {
+    // 1. Verify the secure Firebase Token
+    const admin = (await import('../../configs/firebaseAdmin.js')).default;
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    
+    // 2. Extract the verified phone number from Google
+    const firebasePhone = decodedToken.phone_number || mobileNumber;
 
-  const { otpHash, mobileHash, attempts } = JSON.parse(redisData);
+    // 3. Find or create the staff in the database
+    let staff = await doctorModel.findOne({ mobileNumber: firebasePhone });
+    if (!staff) {
+      staff = await doctorModel.create({ mobileNumber: firebasePhone });
+    }
 
-  if (attempts >= 5) {
-    await RedisClient.del(`otp:${otpSessionId}`);
-    throw new ApiError(429, "Too many invalid attempts");
-  }
-
-  const normalizedMobile = mobileNumber.trim();
-  const inputOtpHash = hmacHash(otp.toString());
-  const inputMobileHash = hmacHash(normalizedMobile);
-
-  if (inputMobileHash !== mobileHash) {
-    throw new ApiError(401, "Mobile number mismatch");
-  }
-
-  if (inputOtpHash !== otpHash) {
-    await RedisClient.setEx(
-      `otp:${otpSessionId}`,
-      300,
-      JSON.stringify({
-        otpHash,
-        mobileHash,
-        attempts: attempts + 1
-      })
+    // 4. Generate the JWT Token for the rest of the app
+    const token = jwt.sign(
+      { staffId: staff._id },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
     );
-    throw new ApiError(401, "Invalid OTP");
+
+    return res.status(200).json(
+      new ApiResponse(200, "Firebase Verification successful", { token })
+    );
+
+  } catch (error) {
+    console.error("Firebase Token Error:", error);
+    throw new ApiError(401, "Invalid or expired Firebase Token!");
   }
-
-  await RedisClient.del(`otp:${otpSessionId}`);
-
-  let staff = await doctorModel.findOne({ mobileNumber: normalizedMobile });
-  if (!staff) {
-    staff = await doctorModel.create({ mobileNumber: normalizedMobile });
-  }
-
-  const token = jwt.sign(
-    { staffId: staff._id },
-    process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
-  );
-
-  return res.status(200).json(
-    new ApiResponse(200, "OTP verified successfully", { token })
-  );
 });
 
 
