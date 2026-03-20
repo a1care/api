@@ -26,7 +26,7 @@ const OTP_LENGTH = 6;
 export default function OtpScreen() {
     const router = useRouter();
     const { mobile, verificationId } = useLocalSearchParams<{ mobile: string, verificationId: string }>();
-    const { setToken, setUser } = useAuthStore();
+    const { setToken, setUser, confirmationResult } = useAuthStore();
 
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
     const [loading, setLoading] = useState(false);
@@ -63,12 +63,20 @@ export default function OtpScreen() {
         try {
             // 1. Google verifies the SMS code secretly here on the phone
             let idToken = undefined;
-            if (verificationId) {
+            
+            if (confirmationResult) {
+                const userCredential = await confirmationResult.confirm(code);
+                idToken = await userCredential.user.getIdToken(true);
+            } else if (verificationId) {
                 const credential = PhoneAuthProvider.credential(verificationId, code);
                 const userCredential = await signInWithCredential(auth, credential);
                 
                 // 2. Google gives us a heavily encrypted Token of Trust
                 idToken = await userCredential.user.getIdToken(true);
+            } else {
+                Alert.alert('Error', 'Session expired. Please request OTP again.');
+                router.back();
+                return;
             }
             
             // 3. We show our backend the Token!

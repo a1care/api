@@ -16,7 +16,8 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 // Firebase Imports
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { PhoneAuthProvider } from 'firebase/auth';
+import { signInWithPhoneNumber } from 'firebase/auth';
+import { useAuthStore } from '@/stores/auth.store';
 import { auth } from '@/utils/firebase';
 
 const firebaseConfig = {
@@ -32,6 +33,7 @@ export default function LoginScreen() {
     const router = useRouter();
     const [mobile, setMobile] = useState('');
     const [loading, setLoading] = useState(false);
+    const { setConfirmationResult } = useAuthStore();
     
     // Reference for the hidden ReCaptcha popup
     const recaptchaVerifier = React.useRef(null);
@@ -47,13 +49,14 @@ export default function LoginScreen() {
             // Firebase expects phone numbers in standard international format starting with +
             const e164PhoneNumber = `+91${cleaned}`;
             
-            const phoneProvider = new PhoneAuthProvider(auth);
-            const verificationId = await phoneProvider.verifyPhoneNumber(
+            const confirmation = await signInWithPhoneNumber(
+              auth,
               e164PhoneNumber,
               recaptchaVerifier.current as any
             );
             
-            router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, verificationId } });
+            setConfirmationResult(confirmation);
+            router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, verificationId: confirmation.verificationId } });
         } catch (err: any) {
             console.error(err);
             Alert.alert('Error', err?.message ?? 'Failed to send OTP. Please try again.');

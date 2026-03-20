@@ -7,9 +7,11 @@ interface AuthState {
     user: Patient | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    confirmationResult: any | null;
 
     setToken: (token: string) => void;
     setUser: (user: Patient) => void;
+    setConfirmationResult: (result: any) => void;
     initialize: () => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -19,10 +21,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    confirmationResult: null,
 
     setToken: (token) => set({ token, isAuthenticated: true }),
-
     setUser: (user) => set({ user }),
+    setConfirmationResult: (result) => set({ confirmationResult: result }),
 
     initialize: async () => {
         set({ isLoading: true });
