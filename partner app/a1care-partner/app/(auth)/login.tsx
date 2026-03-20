@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
@@ -9,6 +9,19 @@ import { Toast } from "../../components/CustomToast";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
 
+import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
+import { signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "../../utils/firebase";
+
+const firebaseConfig = {
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+};
+
 const roleLabels: Record<string, string> = {
     doctor: "Doctor", nurse: "Nurse", ambulance: "Ambulance", rental: "Medical Rental",
 };
@@ -16,15 +29,17 @@ const roleLabels: Record<string, string> = {
 export default function LoginScreen() {
     const router = useRouter();
     const { role } = useLocalSearchParams<{ role: string }>();
-    const { setAuth } = useAuthStore();
+    const { setAuth, setConfirmationResult, confirmationResult } = useAuthStore();
     const [mobile, setMobile] = useState("");
     const [otp, setOtp] = useState("");
     const [otpSessionId, setOtpSessionId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
+    const recaptchaVerifier = React.useRef(null);
 
     const handleSendOtp = async () => {
-        if (mobile.length < 10) {
+        const cleaned = mobile.replace(/\D/g, '');
+        if (cleaned.length < 10) {
             Toast.show({
                 type: 'error',
                 text1: 'Invalid Mobile',
@@ -34,26 +49,26 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            // All staff roles use the same /doctor/auth/send-otp endpoint
-            const res = await api.post("/doctor/auth/send-otp", { mobileNumber: mobile });
-            const { otpSessionId: sessionId, otp: debugOtp } = res.data.data;
-            setOtpSessionId(sessionId);
-
-            // For development purposes, if the backend returns the OTP
-            if (debugOtp) {
-                console.log("DEBUG: OTP is", debugOtp);
-            }
+            const e164PhoneNumber = `+91${cleaned}`;
+            const confirmation = await signInWithPhoneNumber(
+                auth,
+                e164PhoneNumber,
+                recaptchaVerifier.current as any
+            );
+            setConfirmationResult(confirmation);
+            setOtpSessionId(confirmation.verificationId);
 
             Toast.show({
                 type: 'success',
                 text1: 'OTP Sent',
-                text2: 'A verification code has been sent to your mobile.'
+                text2: 'A verification code has been sent via Firebase.'
             });
         } catch (err: any) {
+            console.error(err);
             Toast.show({
                 type: 'error',
                 text1: 'Error',
-                text2: err?.response?.data?.message || "Failed to send OTP. Please try again."
+                text2: err?.message || "Failed to send OTP. Please try again."
             });
         } finally {
             setLoading(false);
@@ -61,25 +76,36 @@ export default function LoginScreen() {
     };
 
     const handleVerifyOtp = async () => {
-        if (otp.length < 4) {
+        if (otp.length < 6) {
             Toast.show({
                 type: 'error',
                 text1: 'Invalid OTP',
-                text2: 'Please enter the 4-digit code'
+                text2: 'Please enter the complete OTP'
             });
             return;
         }
         setVerifying(true);
         try {
+            let idToken = undefined;
+            if (confirmationResult) {
+                const userCredential = await confirmationResult.confirm(otp);
+                idToken = await userCredential.user.getIdToken(true);
+            } else {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Session expired. Please request OTP again.'
+                });
+                return;
+            }
+
+            // Backend verification using idToken
             const res = await api.post("/doctor/auth/verify-otp", {
-                otpSessionId,
-                otp,
+                idToken,
                 mobileNumber: mobile
             });
             const { token } = res.data.data;
 
-            // After verification, we need to check if the staff is registered
-            // If not, redirect to registration. If yes, go to home.
             api.defaults.headers.Authorization = `Bearer ${token}`;
             const detailsRes = await api.get("/doctor/auth/details");
             const staff = detailsRes.data.data;
@@ -104,10 +130,11 @@ export default function LoginScreen() {
                 router.replace("/(tabs)/home");
             }
         } catch (err: any) {
+            console.error(err);
             Toast.show({
                 type: 'error',
                 text1: 'Verification Failed',
-                text2: err?.response?.data?.message || "Invalid OTP"
+                text2: err?.response?.data?.message || err?.message || "Invalid OTP"
             });
         } finally {
             setVerifying(false);
@@ -119,6 +146,10 @@ export default function LoginScreen() {
             <LinearGradient colors={["#C8E6F9", "#EBF5FB", "#FFFFFF"]} style={StyleSheet.absoluteFill} />
 
             <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 28 }}>
+                <FirebaseRecaptchaVerifierModal
+                    ref={recaptchaVerifier}
+                    firebaseConfig={firebaseConfig}
+                />
                 {/* Back */}
                 <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 20 }}>
                     <Text style={styles.back}>← Back</Text>

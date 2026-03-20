@@ -18,6 +18,8 @@ interface AuthState {
     token: string | null;
     user: PartnerUser | null;
     isLoading: boolean;
+    confirmationResult: any | null;
+    setConfirmationResult: (result: any) => void;
     setAuth: (token: string, user: PartnerUser) => Promise<void>;
     setUser: (user: PartnerUser) => Promise<void>;
     logout: () => Promise<void>;
@@ -28,10 +30,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     user: null,
     isLoading: true,
+    confirmationResult: null,
+    setConfirmationResult: (result: any) => set({ confirmationResult: result }),
     setAuth: async (token, user) => {
         await AsyncStorage.setItem("partner_token", token);
         await AsyncStorage.setItem("partner_user", JSON.stringify(user));
-        set({ token, user });
+        set({ token, user, confirmationResult: null });
     },
     setUser: async (user) => {
         await AsyncStorage.setItem("partner_user", JSON.stringify(user));
@@ -40,7 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: async () => {
         await AsyncStorage.removeItem("partner_token");
         await AsyncStorage.removeItem("partner_user");
-        set({ token: null, user: null });
+        set({ token: null, user: null, confirmationResult: null });
     },
     loadFromStorage: async () => {
         const token = await AsyncStorage.getItem("partner_token");
