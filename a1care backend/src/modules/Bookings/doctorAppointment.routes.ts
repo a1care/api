@@ -3,7 +3,7 @@ import { createDoctorAppointment, getAppointmentsByPatientId, getPendingAppointm
 import { getProviderUnifiedFeed } from './unifiedBooking.controller.js'
 import { protect } from '../../middlewares/protect.js'
 import { updateLocation, getLocation } from './location.controller.js';
-import { getMessagesByTarget, sendMessage } from '../Tickets/message.controller.js';
+import { getMessagesByTicket, sendMessage } from '../Tickets/message.controller.js';
 
 const router = express.Router()
 
@@ -19,7 +19,7 @@ router.post('/location/update', protect, updateLocation);
 router.get('/location/:userId', protect, getLocation);
 
 // Booking Chat
-router.get('/messages', protect, getMessagesByTarget);
+router.get('/messages', protect, getMessagesByTicket);
 router.post('/messages/send', protect, sendMessage);
 
 export default router
