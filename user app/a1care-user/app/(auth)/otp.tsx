@@ -18,8 +18,7 @@ import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 
 // Firebase specific imports
-import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
-import { auth } from '@/utils/firebase';
+import auth from '@react-native-firebase/auth';
 
 const OTP_LENGTH = 6;
 
@@ -61,17 +60,10 @@ export default function OtpScreen() {
         }
         setLoading(true);
         try {
-            // 1. Google verifies the SMS code secretly here on the phone
             let idToken = undefined;
             
             if (confirmationResult) {
                 const userCredential = await confirmationResult.confirm(code);
-                idToken = await userCredential.user.getIdToken(true);
-            } else if (verificationId) {
-                const credential = PhoneAuthProvider.credential(verificationId, code);
-                const userCredential = await signInWithCredential(auth, credential);
-                
-                // 2. Google gives us a heavily encrypted Token of Trust
                 idToken = await userCredential.user.getIdToken(true);
             } else {
                 Alert.alert('Error', 'Session expired. Please request OTP again.');
@@ -91,6 +83,7 @@ export default function OtpScreen() {
                 router.replace('/(auth)/profile-setup');
             }
         } catch (err: any) {
+            console.error(err);
             Alert.alert('Invalid OTP', err?.response?.data?.message ?? 'Please check the code and try again.');
         } finally {
             setLoading(false);
@@ -98,8 +91,7 @@ export default function OtpScreen() {
     };
 
     const handleResend = async () => {
-        // Since Firebase requires ReCaptcha protection, resending forces the user back
-        Alert.alert('Notice', 'For security reasons, please go back to the previous screen to request a new OTP.');
+        Alert.alert('Notice', 'Please go back to the previous screen to request a new OTP.');
         router.back();
     };
 

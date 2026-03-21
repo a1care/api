@@ -6,6 +6,7 @@ import {
   Users,
   CalendarCheck,
   Bell,
+  MessageSquare,
   Search,
   ChevronDown,
   ChevronRight,
@@ -25,7 +26,9 @@ import {
   UserSquare2,
   BarChart3,
   Command,
-  Flame
+  Flame,
+  Banknote,
+  Receipt
 } from "lucide-react";
 
 const mainNav = [
@@ -33,6 +36,9 @@ const mainNav = [
   { to: "/bookings", label: "Main Bookings", icon: CalendarCheck },
   { to: "/op-bookings", label: "OP Bookings", icon: ClipboardList },
   { to: "/partner-revenue-model", label: "Partner Revenue", icon: BarChart3 },
+  { to: "/payouts", label: "Payouts", icon: Banknote },
+  { to: "/kyc-verification", label: "KYC Verification", icon: ShieldCheck },
+  { to: "/reviews", label: "User Reviews", icon: MessageSquare },
   { to: "/support-tickets", label: "Tickets", icon: Ticket },
 ];
 
@@ -177,6 +183,11 @@ export function AppLayout() {
             <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
               <NavLink to="/manage-customer-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">User Apps</NavLink>
               <NavLink to="/manage-provider-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Provider Apps</NavLink>
+              <NavLink to="/audit-health-vault" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Health Vault Audit</NavLink>
+              <NavLink to="/payment-logs" className="flex items-center gap-2 py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                <Receipt size={13} />
+                Payment Logs
+              </NavLink>
               <NavLink
                 to="/manage-system-config"
                 className={({ isActive }) =>

@@ -32,4 +32,20 @@ export const walletService = {
         );
         return res.data.data;
     },
+
+    initiatePayment: async (amount: number) => {
+        const res = await api.post<ApiResponse<{ orderId: string; amount: number; currency: string }>>(
+            '/wallet/initiate',
+            { amount }
+        );
+        return res.data.data;
+    },
+
+    verifyPayment: async (data: any) => {
+        const res = await api.post<ApiResponse<Wallet>>(
+            '/wallet/response',
+            data
+        );
+        return res.data.data;
+    },
 };

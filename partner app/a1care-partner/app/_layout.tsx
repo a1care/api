@@ -22,7 +22,7 @@ const queryClient = new QueryClient();
 
 function AuthGuard() {
     const { token, isLoading, loadFromStorage } = useAuthStore();
-    const { fetchConfig } = useConfigStore();
+    const { fetchConfig, config } = useConfigStore();
     const segments = useSegments();
     const router = useRouter();
 
@@ -33,6 +33,18 @@ function AuthGuard() {
 
     useEffect(() => {
         if (isLoading) return;
+
+        const isMaintenance = (segments as string[])[0] === 'maintenance';
+        if (config?.maintenanceMode) {
+            if (!isMaintenance) {
+                router.replace('/maintenance' as any);
+            }
+            return;
+        } else if (isMaintenance) {
+            router.replace('/(tabs)/home' as any);
+            return;
+        }
+
         const inAuth = segments[0] === "(auth)";
         const inOnboarding = segments[0] === "onboarding";
 
@@ -41,7 +53,7 @@ function AuthGuard() {
         } else if (token && (inAuth || inOnboarding)) {
             router.replace("/(tabs)/home");
         }
-    }, [token, isLoading, segments]);
+    }, [token, isLoading, segments, config?.maintenanceMode]);
 
     return <Slot />;
 }

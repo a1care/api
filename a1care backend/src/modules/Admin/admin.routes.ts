@@ -31,10 +31,15 @@ import {
   updateSystemConfig,
   getAdminDashboardOverview,
   getAdminDoctorPerformance,
-  getAdminRecentActivity
+  getAdminRecentActivity,
+  getAdminPayouts,
+  updateAdminPayoutStatus,
+  getHealthVaultAudit
 } from "./admin.controller.js";
-import { adminBroadcastNotification, adminListNotifications } from "../Notifications/notification.controller.js";
+import { adminListNotifications, adminBroadcastNotification } from "../Notifications/notification.controller.js";
+import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
+import { adminListOrders, adminGetLogsForTxn } from "../Payments/payment.controller.js";
 
 const adminRoutes = Router();
 const appAssetUploadDir = path.join(process.cwd(), "uploads", "app-management");
@@ -88,6 +93,7 @@ adminRoutes.put("/bookings/services/:id/status", protectAdmin, requireAdminRole(
 adminRoutes.get("/bookings/hospital", protectAdmin, requireAdminRole(["admin", "super_admin"]), getHospitalBookings);
 
 adminRoutes.get("/audit/logs", protectAdmin, requireAdminRole(["super_admin"]), listAuditLogs);
+adminRoutes.get("/audit/health-vault", protectAdmin, requireAdminRole(["admin", "super_admin"]), getHealthVaultAudit);
 adminRoutes.get("/app-management/:appKey", protectAdmin, requireAdminRole(["super_admin"]), getAppManagementConfig);
 adminRoutes.put("/app-management/:appKey", protectAdmin, requireAdminRole(["super_admin"]), updateAppManagementConfig);
 adminRoutes.post(
@@ -105,5 +111,17 @@ adminRoutes.put("/system-config", protectAdmin, updateSystemConfig);
 // Notification Management
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
 adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);
+
+// Payout Management
+adminRoutes.get("/payouts", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminPayouts);
+adminRoutes.put("/payouts/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateAdminPayoutStatus);
+
+// Review Management
+adminRoutes.get("/reviews", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAllReviews);
+adminRoutes.put("/reviews/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateReviewStatus);
+
+// Payment / Transaction Audit
+adminRoutes.get("/payments/orders", protectAdmin, requireAdminRole(["admin", "super_admin"]), adminListOrders);
+adminRoutes.get("/payments/logs/:txnId", protectAdmin, requireAdminRole(["admin", "super_admin"]), adminGetLogsForTxn);
 
 export default adminRoutes;

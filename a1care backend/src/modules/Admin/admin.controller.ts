@@ -28,6 +28,7 @@ import serviceAcceptanceModal from "../Bookings/service/serviceAcceptance.model.
 import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
 import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
+import Payout from "../Earnings/payout.model.js";
 
 const ENV_ADMIN_ID = "env-super-admin";
 const APP_KEYS = ["user_app", "provider_app"] as const;
@@ -60,6 +61,7 @@ type SystemConfig = {
   // Mobile clients
   clients: MobileFirebaseClient[];
   googleMapsApiKey: string;
+  maintenanceMode: boolean; // Added
   // Dynamic Settings
   easebuzz: {
     merchantKey: string;
@@ -141,6 +143,7 @@ const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
     }
   ],
   googleMapsApiKey: "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o",
+  maintenanceMode: false,
   easebuzz: {
     merchantKey: "NQOKGR29D",
     salt: "DZJLI6TFN",
@@ -716,7 +719,8 @@ export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
     completedAppts,
     completedServices,
     newPatientsThisMonth,
-    newPatientsPrevMonth
+    newPatientsPrevMonth,
+    pendingPayouts
   ] = await Promise.all([
     Patient.countDocuments(),
     Doctor.countDocuments(),
@@ -738,7 +742,8 @@ export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
         $gte: startOfPreviousMonth, 
         $lt: startOfMonth 
       } 
-    })
+    }),
+    Payout.countDocuments({ status: "PENDING" })
   ]);
 
   const totalRevenue = (completedAppts[0]?.total || 0) + (completedServices[0]?.total || 0);
@@ -764,6 +769,7 @@ export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
       appointments,
       serviceBookings,
       pendingVerifications: pendingStaff,
+      pendingPayouts,
       totalRevenue,
       onboardingTrend: onboardingTrend >= 0 ? `+${onboardingTrend}%` : `${onboardingTrend}%`,
       systemStatus: {
@@ -1165,6 +1171,7 @@ export const updateSystemConfig = asyncHandler(async (req, res) => {
     storageBucket: normalizeStr(body.storageBucket, current.storageBucket),
     clients: mergedClients,
     googleMapsApiKey: normalizeStr(body.googleMapsApiKey, current.googleMapsApiKey),
+    maintenanceMode: Boolean(body.maintenanceMode ?? current.maintenanceMode), // Added
     easebuzz: { ...current.easebuzz, ...body.easebuzz },
     email: { ...current.email, ...body.email },
     twilio: { ...current.twilio, ...body.twilio },
@@ -1192,18 +1199,19 @@ export const getPublicAppConfig = asyncHandler(async (req, res) => {
   const store = await readConfigStore();
 
   const key = appKey === "partner" ? "provider_app" : "user_app";
-  const appConfig = store[key as AppKey];
-  const system = store.system ?? DEFAULT_SYSTEM_CONFIG;
+  const appConfig = (store as any)[key];
+  const system = (store as any).system ?? DEFAULT_SYSTEM_CONFIG;
 
   const response = {
     branding: appConfig.branding,
     contact: appConfig.contact,
     landing: {
-      festivalBanners: appConfig.landing.festivalBanners.filter(b => b.active),
+      festivalBanners: appConfig.landing.festivalBanners.filter((b: any) => b.active),
       playStoreUrl: appConfig.landing.playStoreUrl,
       appStoreUrl: appConfig.landing.appStoreUrl,
     },
     googleMapsApiKey: system.googleMapsApiKey,
+    maintenanceMode: system.maintenanceMode || false,
     updatedAt: appConfig.updatedAt
   };
 
@@ -1392,4 +1400,57 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
 
   return res.status(200).json(new ApiResponse(200, "Recent activity fetched", combined));
+});
+
+export const getAdminPayouts = asyncHandler(async (req, res) => {
+  const payouts = await Payout.find().populate("staffId", "name mobileNumber bankDetails").sort({ createdAt: -1 });
+  return res.status(200).json(new ApiResponse(200, "Payout requests fetched", payouts));
+});
+
+export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, adminNote } = req.body;
+  
+  if (!status) throw new ApiError(400, "Status is required");
+
+  const payout = await Payout.findByIdAndUpdate(id, { status, adminNote }, { new: true });
+  if (!payout) throw new ApiError(404, "Payout not found");
+
+  return res.status(200).json(new ApiResponse(200, "Payout status updated", payout));
+});
+
+export const getHealthVaultAudit = asyncHandler(async (req, res) => {
+  const totalRecords = await MedicalRecord.countDocuments();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const newToday = await MedicalRecord.countDocuments({ createdAt: { $gte: today } });
+
+  const recordStats = await MedicalRecord.aggregate([
+    {
+      $project: {
+        prescriptionsSize: { $size: { $ifNull: ["$prescriptions", []] } },
+        labReportsSize: { $size: { $ifNull: ["$labReports", []] } }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalPrescriptions: { $sum: "$prescriptionsSize" },
+        totalLabReports: { $sum: "$labReportsSize" }
+      }
+    }
+  ]);
+
+  const recentRecords = await MedicalRecord.find()
+    .populate("patientId", "name mobileNumber")
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  return res.status(200).json(new ApiResponse(200, "Health Vault Audit fetched", {
+    totalRecords,
+    newToday,
+    stats: recordStats[0] || { totalPrescriptions: 0, totalLabReports: 0 },
+    recentRecords
+  }));
 });

@@ -28,4 +28,19 @@ export const ticketsService = {
         );
         return res.data.data;
     },
+
+    getMessages: async (ticketId: string) => {
+        const res = await api.get<ApiResponse<any[]>>(
+            `/tickets/messages/${ticketId}`
+        );
+        return res.data.data;
+    },
+
+    sendChatMessage: async (ticketId: string, message: string) => {
+        const res = await api.post<ApiResponse<any>>(
+            `/tickets/messages/send`,
+            { ticketId, message }
+        );
+        return res.data.data;
+    },
 };

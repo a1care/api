@@ -26,6 +26,7 @@ interface AppConfig {
         appStoreUrl: string;
     };
     googleMapsApiKey: string;
+    maintenanceMode: boolean;
 }
 
 interface ConfigState {

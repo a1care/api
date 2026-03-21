@@ -15,37 +15,38 @@ function extractFileUrls(files: any, fieldName: string): string[] {
 }
 
 export const createMedicalRecord = asyncHandler(async (req, res) => {
-  const staffId = req.user?.id;
-  if (!staffId) throw new ApiError(401, "Unauthorized");
-
-  const staff = await Doctor.findById(staffId);
-  if (!staff) throw new ApiError(403, "Only providers can create medical records");
+  const requesterId = req.user?.id;
+  const role = req.user?.role;
+  if (!requesterId) throw new ApiError(401, "Unauthorized");
 
   const { appointmentId, clinicalNotes = "", diagnosis = "" } = req.body;
-  if (!appointmentId) throw new ApiError(400, "appointmentId is required");
+  
+  let patientId: string = requesterId;
+  let doctorId: string | null = null;
 
-  const appointment = await doctorAppointmentModel.findById(appointmentId);
-  if (!appointment) throw new ApiError(404, "Appointment not found");
-
-  if (appointment.doctorId.toString() !== staffId.toString()) {
-    throw new ApiError(403, "You are not allowed to write records for this appointment");
+  if (role === "Staff") {
+    if (!appointmentId) throw new ApiError(400, "appointmentId is required for provider records");
+    const appointment = await doctorAppointmentModel.findById(appointmentId);
+    if (!appointment) throw new ApiError(404, "Appointment not found");
+    if (appointment.doctorId.toString() !== requesterId.toString()) {
+      throw new ApiError(403, "Not allowed for this appointment");
+    }
+    patientId = appointment.patientId.toString();
+    doctorId = requesterId;
+  } else {
+    // Patient flow: manual upload
+    patientId = requesterId;
+    doctorId = req.body.doctorId || null;
   }
-
-  if (appointment.status !== "Completed") {
-    throw new ApiError(400, "Medical record can be created only after appointment completion");
-  }
-
-  const existing = await MedicalRecord.findOne({ appointmentId });
-  if (existing) throw new ApiError(409, "Medical record already exists for this appointment");
 
   const files = req.files as any;
   const prescriptions = extractFileUrls(files, "prescriptions");
   const labReports = extractFileUrls(files, "labReports");
 
   const record = await MedicalRecord.create({
-    appointmentId,
-    patientId: appointment.patientId,
-    doctorId: appointment.doctorId,
+    appointmentId: appointmentId || null,
+    patientId,
+    doctorId,
     clinicalNotes,
     diagnosis,
     prescriptions,

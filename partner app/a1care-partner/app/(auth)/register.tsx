@@ -84,7 +84,7 @@ export default function RegisterScreen() {
                 ])
             ).start();
 
-            let timer: NodeJS.Timeout;
+            let timer: any;
             const runSequence = (index: number) => {
                 if (index >= phrases.length) return;
                 setPhraseIndex(index);
@@ -401,7 +401,7 @@ export default function RegisterScreen() {
 
                 <View style={styles.disclaimer}>
                     <Text style={styles.disclaimerText}>
-                        Your data is secured. A1Care verifies all partners to ensure patient safety and quality of care.
+                        Your data is secured. By registering, you agree to our <Text onPress={() => router.push('/terms')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text onPress={() => router.push('/privacy')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>.
                     </Text>
                 </View>
             </ScrollView>

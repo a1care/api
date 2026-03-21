@@ -117,6 +117,39 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            {staffData?.status === "Pending" && (
+                <View style={styles.kycOverlay}>
+                    <LinearGradient colors={["rgba(255,255,255,0.9)", "#F8FAFC"]} style={styles.kycContent}>
+                        <View style={styles.kyclIconBox}>
+                            <MaterialCommunityIcons name="shield-search" size={64} color="#6366F1" />
+                        </View>
+                        <Text style={styles.kycTitle}>Reviewing Documents</Text>
+                        <Text style={styles.kycDesc}>
+                            Our admin team is currently verifying your profile and credentials. 
+                            This usually takes 24-48 hours.
+                        </Text>
+                        <View style={styles.stepBox}>
+                            <View style={styles.step}>
+                                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                                <Text style={styles.stepText}>Documents Uploaded</Text>
+                            </View>
+                            <View style={styles.step}>
+                                <ActivityIndicator size="small" color="#6366F1" style={{ marginRight: 8 }} />
+                                <Text style={[styles.stepText, { color: "#6366F1" }]}>Admin Verification</Text>
+                            </View>
+                            <View style={styles.step}>
+                                <Ionicons name="ellipse-outline" size={20} color="#CBD5E1" />
+                                <Text style={[styles.stepText, { color: "#94A3B8" }]}>Go Live</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity style={styles.refreshBadge} onPress={onRefresh}>
+                            <Ionicons name="refresh" size={16} color="#475569" />
+                            <Text style={styles.refreshBadgeText}>Check Status</Text>
+                        </TouchableOpacity>
+                    </LinearGradient>
+                </View>
+            )}
+
             <ScrollView
                 refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={primaryColor} />}
                 showsVerticalScrollIndicator={false}
@@ -505,6 +538,82 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
         marginTop: 5,
         textAlign: 'center',
+    },
+    // KYC Styles
+    kycOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 1000,
+        backgroundColor: "rgba(0,0,0,0.3)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+    },
+    kycContent: {
+        width: "100%",
+        borderRadius: 32,
+        padding: 32,
+        alignItems: "center",
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+    },
+    kyclIconBox: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "#EEF2FF",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 24,
+    },
+    kycTitle: {
+        fontSize: 22,
+        fontWeight: "900",
+        color: "#1E293B",
+        marginBottom: 12,
+        textAlign: "center",
+    },
+    kycDesc: {
+        fontSize: 14,
+        color: "#64748B",
+        lineHeight: 22,
+        textAlign: "center",
+        marginBottom: 24,
+    },
+    stepBox: {
+        width: "100%",
+        backgroundColor: "#FFF",
+        borderRadius: 20,
+        padding: 20,
+        gap: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: "#F1F5F9",
+    },
+    step: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    stepText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#475569",
+        marginLeft: 12,
+    },
+    refreshBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F1F5F9",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        gap: 8,
+    },
+    refreshBadgeText: {
+        fontSize: 13,
+        fontWeight: "800",
+        color: "#475569",
     },
 });
 

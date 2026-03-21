@@ -146,7 +146,10 @@ export function BookingOperationsPage() {
             : (hospitalBookings || []);
 
     const allCount = activeData.length;
-    const pendingCount = activeData.filter(b => b.status?.toUpperCase() === "PENDING" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN").length;
+    const pendingCount = activeData.filter(b => {
+        const s = b.status?.toUpperCase();
+        return s === "PENDING" || s === "BROADCASTED" || s === "RETURNED_TO_ADMIN";
+    }).length;
     const confirmedCount = activeData.filter(b => (b.status?.toUpperCase() === "CONFIRMED" || b.status?.toUpperCase() === "ACCEPTED")).length;
     const completedCount = activeData.filter(b => b.status?.toUpperCase() === "COMPLETED").length;
     const cancelledCount = activeData.filter(b => b.status?.toUpperCase() === "CANCELLED").length;
@@ -154,7 +157,7 @@ export function BookingOperationsPage() {
     const statsCards = [
         { label: "All", count: allCount, value: "All" },
         { label: "Pending", count: pendingCount, value: "PENDING" },
-        { label: "Accepted", count: confirmedCount, value: "CONFIRMED" },
+        { label: "Assigned", count: confirmedCount, value: "CONFIRMED" },
         { label: "Completed", count: completedCount, value: "COMPLETED" },
         { label: "Cancelled", count: cancelledCount, value: "CANCELLED" },
     ];
@@ -163,7 +166,7 @@ export function BookingOperationsPage() {
         const matchesSearch = b.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             b.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             b._id.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === "All" || b.status?.toUpperCase() === statusFilter || (statusFilter === "CONFIRMED" && b.status?.toUpperCase() === "ACCEPTED");
+        const matchesStatus = statusFilter === "All" || b.status?.toUpperCase() === statusFilter || (statusFilter === "CONFIRMED" && (b.status?.toUpperCase() === "ACCEPTED" || b.status?.toUpperCase() === "IN_PROGRESS")) || (statusFilter === "PENDING" && (b.status?.toUpperCase() === "BROADCASTED" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN"));
 
         const bDate = new Date(b.createdAt).getTime();
         const matchesDateFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();

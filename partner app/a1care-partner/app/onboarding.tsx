@@ -149,7 +149,7 @@ export default function OnboardingScreen() {
                         }),
                     }
                 ]}>
-                    <Text style={styles.skipText}>{slides[currentIndex]?.cta}</Text>
+                    <Text style={styles.buttonText}>{slides[currentIndex]?.cta}</Text>
                 </Animated.View>
             </TouchableOpacity>
         </View>
@@ -177,10 +177,10 @@ const styles = StyleSheet.create({
         right: 20,
     },
     nextButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 22,
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
-        borderRadius: 25,
+        paddingVertical: 14,
+        paddingHorizontal: 28,
+        backgroundColor: "#1A7FD4", // Blue background
+        borderRadius: 30,
         shadowColor: "#1A7FD4", // Blue glowing color
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.8,
@@ -191,5 +191,10 @@ const styles = StyleSheet.create({
         color: "#1A7FD4",
         fontWeight: "800",
         fontSize: 16,
+    },
+    buttonText: {
+        color: "#FFFFFF",
+        fontWeight: "800",
+        fontSize: 18,
     },
 });

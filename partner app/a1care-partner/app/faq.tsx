@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SearchBar } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -27,8 +27,11 @@ const FAQS = [
     }
 ];
 
+import { useConfigStore } from "../stores/config.store";
+
 export default function FAQScreen() {
     const router = useRouter();
+    const { config } = useConfigStore();
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
     return (
@@ -47,28 +50,34 @@ export default function FAQScreen() {
                     <Text style={styles.infoSub}>Search through our frequently asked questions below.</Text>
                 </View>
 
-                {FAQS.map((faq, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={styles.faqItem}
-                        activeOpacity={0.7}
-                        onPress={() => setExpandedIndex(expandedIndex === index ? null : index)}
-                    >
-                        <View style={styles.questionRow}>
-                            <Text style={styles.questionText}>{faq.question}</Text>
-                            <Ionicons
-                                name={expandedIndex === index ? "chevron-up" : "chevron-down"}
-                                size={20}
-                                color="#64748B"
-                            />
-                        </View>
-                        {expandedIndex === index && (
-                            <View style={styles.answerBox}>
-                                <Text style={styles.answerText}>{faq.answer}</Text>
+                {config?.contact.faq ? (
+                    <View style={styles.faqItem}>
+                        <Text style={styles.answerText}>{config.contact.faq}</Text>
+                    </View>
+                ) : (
+                    FAQS.map((faq, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={styles.faqItem}
+                            activeOpacity={0.7}
+                            onPress={() => setExpandedIndex(expandedIndex === index ? null : index)}
+                        >
+                            <View style={styles.questionRow}>
+                                <Text style={styles.questionText}>{faq.question}</Text>
+                                <Ionicons
+                                    name={expandedIndex === index ? "chevron-up" : "chevron-down"}
+                                    size={20}
+                                    color="#64748B"
+                                />
                             </View>
-                        )}
-                    </TouchableOpacity>
-                ))}
+                            {expandedIndex === index && (
+                                <View style={styles.answerBox}>
+                                    <Text style={styles.answerText}>{faq.answer}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    ))
+                )}
 
                 <View style={[styles.card, { marginTop: 20, alignItems: 'center' }]}>
                     <Text style={styles.stillHelp}>Still need help?</Text>

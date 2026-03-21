@@ -5,7 +5,8 @@ import type { FestivalBanner, ManagedAppConfig, ManagedAppKey } from "@/types";
 import {
   Globe, Palette, Phone, Layout, Image as ImageIcon,
   Save, AlertCircle, CheckCircle2, Upload, Trash2, Plus,
-  Monitor, Smartphone, Link, Shield, ChevronRight, Sparkles
+  Monitor, Smartphone, Link, Shield, ChevronRight, Sparkles,
+  Activity
 } from "lucide-react";
 
 const createDefaultConfig = (appKey: ManagedAppKey): ManagedAppConfig => {
@@ -63,7 +64,8 @@ const sections: Array<{ key: SectionKey; label: string; icon: any }> = [
   { key: "contact", label: "Contact", icon: Phone },
   { key: "landing", label: "Landing", icon: Layout },
   { key: "banners", label: "Banners", icon: ImageIcon },
-  { key: "legal", label: "Legal", icon: Shield }
+  { key: "legal", label: "Legal", icon: Shield },
+  { key: "system" as any, label: "System", icon: Monitor }
 ];
 
 type Props = {
@@ -386,6 +388,50 @@ export function AppManagementPage({ appKey }: Props) {
               </section>
             )}
 
+            {activeSection === "legal" && (
+              <section className="bg-[var(--card-bg)] rounded-[40px] p-10 lg:p-14 border border-[var(--border-color)] shadow-sm space-y-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center">
+                    <Shield size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-[var(--text-main)]">Legal Documents</h3>
+                    <p className="text-sm font-medium text-[var(--text-muted)]">Manage public FAQ, Privacy, and Terms text.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Frequently Asked Questions (HTML/Text)</label>
+                    <textarea 
+                      className="w-full h-40 bg-[var(--bg-main)] border-none rounded-2xl p-6 text-[var(--text-main)] font-medium focus:ring-2 focus:ring-blue-100 transition-all font-mono text-xs" 
+                      value={formState.contact.faq} 
+                      onChange={(e) => updatePath("contact.faq", e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Privacy Policy Protocol</label>
+                    <textarea 
+                      className="w-full h-40 bg-[var(--bg-main)] border-none rounded-2xl p-6 text-[var(--text-main)] font-medium focus:ring-2 focus:ring-blue-100 transition-all font-mono text-xs" 
+                      value={formState.contact.privacyPolicy} 
+                      onChange={(e) => updatePath("contact.privacyPolicy", e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Terms & Conditions Agreement</label>
+                    <textarea 
+                      className="w-full h-40 bg-[var(--bg-main)] border-none rounded-2xl p-6 text-[var(--text-main)] font-medium focus:ring-2 focus:ring-blue-100 transition-all font-mono text-xs" 
+                      value={formState.contact.termsAndConditions} 
+                      onChange={(e) => updatePath("contact.termsAndConditions", e.target.value)} 
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {(activeSection as string) === "system" && (
+              <SystemSettingsSection />
+            )}
             {/* Other sections would follow same premium pattern... */}
           </div>
         )}
@@ -425,5 +471,116 @@ export function AppManagementPage({ appKey }: Props) {
         </div>
       </footer>
     </div>
+  );
+}
+
+function SystemSettingsSection() {
+  const [status, setStatus] = useState<string>("");
+
+  const { data: system, refetch } = useQuery({
+    queryKey: ["system-config"],
+    queryFn: async () => {
+      const res = await api.get("/admin/system-config");
+      return res.data.data;
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await api.put("/admin/system-config", payload);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      setStatus("Global system state synchronized.");
+      refetch();
+      setTimeout(() => setStatus(""), 5000);
+    }
+  });
+
+  if (!system) return null;
+
+  return (
+    <section className="bg-[var(--card-bg)] rounded-[40px] p-10 lg:p-14 border border-[var(--border-color)] shadow-sm space-y-12 animate-in fade-in zoom-in-95">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-2xl flex items-center justify-center">
+            <Monitor size={24} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-[var(--text-main)]">System Control</h3>
+            <p className="text-sm font-medium text-[var(--text-muted)]">Global network override and maintenance protocols.</p>
+          </div>
+        </div>
+
+        {status && (
+          <div className="px-4 py-2 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-100 flex items-center gap-2">
+            <CheckCircle2 size={14} /> {status}
+          </div>
+        )}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-10">
+        <div className="p-10 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-slate-100 space-y-6">
+          <div className="space-y-2">
+             <h4 className="text-lg font-black text-slate-900 dark:text-white">Maintenance Command</h4>
+             <p className="text-sm text-slate-500 font-medium leading-relaxed">Activating this will block all patient and provider traffic, returning a 503 Maintenance response globally. Use for critical infrastructure updates.</p>
+          </div>
+
+          <div 
+            onClick={() => updateMutation.mutate({ maintenanceMode: !system.maintenanceMode })}
+            className={`h-24 px-8 rounded-3xl flex items-center justify-between cursor-pointer transition-all duration-500 border-2 ${system.maintenanceMode ? 'bg-red-600 border-red-500 shadow-xl shadow-red-200' : 'bg-white border-slate-200 hover:border-blue-400 shadow-sm'}`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${system.maintenanceMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                <AlertCircle size={22} />
+              </div>
+              <div>
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${system.maintenanceMode ? 'text-white/60' : 'text-slate-400'}`}>System Status</p>
+                <p className={`text-xl font-black ${system.maintenanceMode ? 'text-white' : 'text-slate-900'}`}>{system.maintenanceMode ? "OFFLINE / MAINTENANCE" : "OPERATIONAL"}</p>
+              </div>
+            </div>
+            
+            <div className={`w-14 h-7 rounded-full relative transition-colors ${system.maintenanceMode ? 'bg-white/20' : 'bg-slate-200'}`}>
+                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${system.maintenanceMode ? 'right-1' : 'left-1'}`}></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-10 bg-slate-950 rounded-[40px] text-white space-y-8 relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px]"></div>
+           <div className="flex items-center gap-3">
+             <Activity size={20} className="text-blue-400" />
+             <h4 className="font-black uppercase tracking-widest text-xs opacity-60">System Health Stream</h4>
+           </div>
+
+           <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Global Uptime</p>
+                <p className="text-2xl font-black">99.98%</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Avg Latency</p>
+                <p className="text-2xl font-black">12ms</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Active Threads</p>
+                <p className="text-2xl font-black">1024</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Auto Scale</p>
+                <p className="text-2xl font-black text-emerald-400 uppercase tracking-tighter">Enabled</p>
+              </div>
+           </div>
+
+           <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Connected to HK-Cluster-7</span>
+              </div>
+              <button onClick={() => refetch()} className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors">Hard Re-sync</button>
+           </div>
+        </div>
+      </div>
+    </section>
   );
 }

@@ -27,7 +27,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2F80ED"
       },
-      "package": "com.a1care.user",
+      "package": "com.a1care.customer",
+      "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o"
@@ -51,6 +52,8 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       [
         "expo-notifications",
         {

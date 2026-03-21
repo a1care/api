@@ -4,8 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { useConfigStore } from '@/stores/config.store';
+
 export default function TermsScreen() {
     const router = useRouter();
+    const { config } = useConfigStore();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -17,21 +20,24 @@ export default function TermsScreen() {
             </View>
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.title}>A1Care User Agreement</Text>
-
-                <Text style={styles.subtitle}>1. Medical Disclaimer</Text>
-                <Text style={styles.text}>
-                    A1Care facilitates the connection between patients and healthcare providers. We are not a medical institution. Any advice or services provided by doctors on our platform are the responsibility of the individual provider.
-                </Text>
-
-                <Text style={styles.subtitle}>2. Payments & Refunds</Text>
-                <Text style={styles.text}>
-                    All digital wallet top-ups are non-refundable unless a service is canceled 24 hours prior to the scheduled appointment. A1Care reserves the right to deduct platform fees prior to issuing refunds.
-                </Text>
-
-                <Text style={styles.subtitle}>3. Account Termination</Text>
-                <Text style={styles.text}>
-                    We reserve the right to suspend or terminate accounts that violate our community guidelines, exhibit abusive behavior towards support staff, or attempt fraudulent transactions.
-                </Text>
+                {config?.contact.termsAndConditions ? (
+                    <Text style={styles.text}>{config.contact.termsAndConditions}</Text>
+                ) : (
+                    <>
+                        <Text style={styles.subtitle}>1. Medical Disclaimer</Text>
+                        <Text style={styles.text}>
+                            A1Care facilitates the connection between patients and healthcare providers. We are not a medical institution. Any advice or services provided by doctors on our platform are the responsibility of the individual provider.
+                        </Text>
+                        <Text style={styles.subtitle}>2. Payments & Refunds</Text>
+                        <Text style={styles.text}>
+                            All digital wallet top-ups are non-refundable unless a service is canceled 24 hours prior to the scheduled appointment. A1Care reserves the right to deduct platform fees prior to issuing refunds.
+                        </Text>
+                        <Text style={styles.subtitle}>3. Account Termination</Text>
+                        <Text style={styles.text}>
+                            We reserve the right to suspend or terminate accounts that violate our community guidelines, exhibit abusive behavior towards support staff, or attempt fraudulent transactions.
+                        </Text>
+                    </>
+                )}
             </ScrollView>
         </SafeAreaView>
     );

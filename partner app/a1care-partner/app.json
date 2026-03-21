@@ -23,6 +23,7 @@
         "backgroundColor": "#EBF5FB"
       },
       "package": "com.a1care.partner",
+      "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o"
@@ -48,7 +49,9 @@
         {
           "locationWhenInUsePermission": "A1Care Partner needs your location to match you with nearby service requests."
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true

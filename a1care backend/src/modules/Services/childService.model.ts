@@ -12,6 +12,8 @@ export interface ChildServiceDocument extends Document {
   imageUrl: string;
   /** Optional hospital/partner who gets first notification (10s window) before broadcast to all */
   hospitalProviderId?: Schema.Types.ObjectId;
+  rating: number;
+  completed: number;
 }
 
 const childServiceSchema = new Schema<ChildServiceDocument>(
@@ -68,6 +70,17 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
       type: Schema.Types.ObjectId,
       ref: "staff",
       default: null,
+    },
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    completed: {
+      type: Number,
+      default: 0,
+      min: 0
     },
   },
   {

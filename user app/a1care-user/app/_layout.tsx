@@ -28,7 +28,7 @@ const queryClient = new QueryClient({
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
     const { isAuthenticated, isLoading, user, initialize } = useAuthStore();
-    const { fetchConfig } = useConfigStore();
+    const { fetchConfig, config } = useConfigStore();
     const router = useRouter();
     const segments = useSegments();
 
@@ -39,8 +39,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        console.log('[AuthGuard] State Changed:', { isAuthenticated, isLoading, segments });
+        console.log('[AuthGuard] State Changed:', { isAuthenticated, isLoading, segments, maintenance: config?.maintenanceMode });
         if (isLoading) return;
+
+        const isMaintenancePage = (segments as string[])[0] === 'maintenance';
+        if (config?.maintenanceMode) {
+            if (!isMaintenancePage) {
+                console.log('[AuthGuard] Redirecting to maintenance');
+                router.replace('/maintenance' as any);
+            }
+            return;
+        } else if (isMaintenancePage) {
+            router.replace('/' as any);
+            return;
+        }
 
         const inAuthGroup = (segments as string[])[0] === '(auth)';
         const isAtRoot = !segments.length || (segments as string[])[0] === 'index';
@@ -58,7 +70,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
                 router.replace('/(auth)/profile-setup');
             }
         }
-    }, [isAuthenticated, isLoading, user, segments]);
+    }, [isAuthenticated, isLoading, user, segments, config?.maintenanceMode]);
 
     if (isLoading) {
         console.log('[AuthGuard] Rendering Loading State');
@@ -102,6 +114,17 @@ export default function RootLayout() {
                         <Stack.Screen name="service/[id]" />
                         <Stack.Screen name="doctor/[id]" />
                         <Stack.Screen name="booking/[id]" />
+                        <Stack.Screen name="booking/chat" />
+                        <Stack.Screen name="booking/track" />
+                        <Stack.Screen name="doctor/appointment" />
+                        <Stack.Screen name="wallet/index" />
+                        <Stack.Screen name="checkout/easebuzz" />
+                        <Stack.Screen name="support/chat" />
+                        <Stack.Screen name="profile/health-vault" />
+                        <Stack.Screen name="faq" />
+                        <Stack.Screen name="privacy" />
+                        <Stack.Screen name="terms" />
+                        <Stack.Screen name="maintenance" />
                     </Stack>
                 </AuthGuard>
             </QueryClientProvider>

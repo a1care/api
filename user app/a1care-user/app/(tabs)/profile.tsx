@@ -169,6 +169,17 @@ export default function ProfileScreen() {
                     </LinearGradient>
                 </TouchableOpacity>
 
+                <Text style={styles.sectionTitle}>Medical & Health</Text>
+                <View style={[styles.menuContainer, styles.elevated]}>
+                    <MenuLink
+                        icon={<Ionicons name="shield-checkmark" size={20} color="#0D9488" />}
+                        bgColor="#F0FDFA"
+                        title="Health Vault"
+                        subtitle="Upload & manage medical reports"
+                        onPress={() => router.push("/profile/health-vault")}
+                    />
+                </View>
+
                 {/* Account & Settings */}
                 <Text style={styles.sectionTitle}>Account & Settings</Text>
                 <View style={[styles.menuContainer, styles.elevated]}>

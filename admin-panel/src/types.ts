@@ -157,6 +157,7 @@ export interface DashboardOverview {
     openTickets: number;
     failedPayments: number;
   };
+  pendingPayouts: number;
 }
 
 export interface DoctorPerformance {

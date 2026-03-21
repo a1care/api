@@ -37,5 +37,12 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
 /android
+/ios
+
+# Build artifacts & logs
+*log.txt
+*.bat
+.env
+.env.staging
+.env.production

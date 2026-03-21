@@ -82,7 +82,15 @@ export default function SupportDashboardScreen() {
                     </View>
                 ) : (
                     (tickets ?? []).map((t) => (
-                        <View key={t._id} style={styles.ticketCard}>
+                        <TouchableOpacity 
+                            key={t._id} 
+                            style={styles.ticketCard} 
+                            activeOpacity={0.8}
+                            onPress={() => router.push({
+                                pathname: '/support/chat',
+                                params: { ticketId: t._id, subject: t.subject }
+                            })}
+                        >
                             <View style={styles.ticketTopRow}>
                                 <Text style={styles.ticketSubject} numberOfLines={1}>{t.subject}</Text>
                                 <View style={[styles.statusBadge, { borderColor: getStatusColor(t.status) }]}>
@@ -98,7 +106,7 @@ export default function SupportDashboardScreen() {
                                     Priority: {t.priority}
                                 </Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     ))
                 )}
 

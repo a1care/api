@@ -12,10 +12,11 @@ import {
     TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { walletService } from '@/services/wallet.service';
+import { paymentService } from '@/services/payment.service';
 import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { ErrorState } from '@/components/ui/EmptyState';
@@ -23,6 +24,7 @@ import { formatCurrency } from '@/utils/formatters';
 
 export default function WalletScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const qc = useQueryClient();
     const [isAddModalVisible, setIsAddModalVisible] = React.useState(false);
     const [amountInput, setAmountInput] = React.useState('');
@@ -39,10 +41,26 @@ export default function WalletScreen() {
     });
 
     const addMoneyMutation = useMutation({
-        mutationFn: (amount: number) => walletService.addMoney(amount, 'Simulated Top-up'),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['wallet'] });
-            Alert.alert("Success", "Money added to your wallet successfully!");
+        mutationFn: async (amount: number) => {
+            // STEP 1: Create Order in Backend (Pending state)
+            const order = await paymentService.createOrder({
+                amount,
+                type: "WALLET_TOPUP"
+            });
+
+            // STEP 2: Initiate with Gateway (Get Hash and Params)
+            const params = await paymentService.initiatePayment(order._id);
+
+            // STEP 3: Navigate to Payment Checkout Screen
+            router.push({
+                pathname: "/checkout/easebuzz" as any,
+                params: { ...params }
+            });
+            
+            return order;
+        },
+        onError: (err: any) => {
+             Alert.alert("Payment Error", "Unable to start payment. Please try again.");
         }
     });
 
@@ -62,7 +80,7 @@ export default function WalletScreen() {
     return (
         <SafeAreaView style={styles.root} edges={['top']}>
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 14) }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Text style={styles.backText}>←</Text>
                 </TouchableOpacity>

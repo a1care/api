@@ -3,8 +3,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { useConfigStore } from "../stores/config.store";
+
 export default function TermsConditionsScreen() {
     const router = useRouter();
+    const { config } = useConfigStore();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -21,30 +24,36 @@ export default function TermsConditionsScreen() {
 
                     <Text style={styles.intro}>By joining the A1Care Partner Program, you agree to the following professional terms and conditions.</Text>
 
-                    <Text style={styles.sectionTitle}>1. Professional Responsibility</Text>
-                    <Text style={styles.paragraph}>
-                        All partners must maintain valid required medical licenses at all times. You agree to provide services with the highest standard of professional care and ethics.
-                    </Text>
+                    {config?.contact.termsAndConditions ? (
+                        <Text style={styles.paragraph}>{config.contact.termsAndConditions}</Text>
+                    ) : (
+                        <>
+                            <Text style={styles.sectionTitle}>1. Professional Responsibility</Text>
+                            <Text style={styles.paragraph}>
+                                All partners must maintain valid required medical licenses at all times. You agree to provide services with the highest standard of professional care and ethics.
+                            </Text>
 
-                    <Text style={styles.sectionTitle}>2. Service Fulfillment</Text>
-                    <Text style={styles.paragraph}>
-                        Accepting a booking creates a binding agreement to provide services. Failure to show up without valid notice may result in account suspension and service penalty fees.
-                    </Text>
+                            <Text style={styles.sectionTitle}>2. Service Fulfillment</Text>
+                            <Text style={styles.paragraph}>
+                                Accepting a booking creates a binding agreement to provide services. Failure to show up without valid notice may result in account suspension and service penalty fees.
+                            </Text>
 
-                    <Text style={styles.sectionTitle}>3. Payments & Commission</Text>
-                    <Text style={styles.paragraph}>
-                        A1Care charges a service fee for every successful booking. Net earnings (after commission) will be credited to your wallet. Payouts are processed to the bank account provided in your profile.
-                    </Text>
+                            <Text style={styles.sectionTitle}>3. Payments & Commission</Text>
+                            <Text style={styles.paragraph}>
+                                A1Care charges a service fee for every successful booking. Net earnings (after commission) will be credited to your wallet. Payouts are processed to the bank account provided in your profile.
+                            </Text>
 
-                    <Text style={styles.sectionTitle}>4. Code of Conduct</Text>
-                    <Text style={styles.paragraph}>
-                        Respectful behavior towards patients is mandatory. A1Care has a zero-tolerance policy for harassment, overcharging patients, or providing unauthorized medical advice.
-                    </Text>
+                            <Text style={styles.sectionTitle}>4. Code of Conduct</Text>
+                            <Text style={styles.paragraph}>
+                                Respectful behavior towards patients is mandatory. A1Care has a zero-tolerance policy for harassment, overcharging patients, or providing unauthorized medical advice.
+                            </Text>
 
-                    <Text style={styles.sectionTitle}>5. Account Termination</Text>
-                    <Text style={styles.paragraph}>
-                        A1Care reserves the right to suspend or terminate accounts that fail to meet verification standards, receive multiple negative ratings, or violate these terms.
-                    </Text>
+                            <Text style={styles.sectionTitle}>5. Account Termination</Text>
+                            <Text style={styles.paragraph}>
+                                A1Care reserves the right to suspend or terminate accounts that fail to meet verification standards, receive multiple negative ratings, or violate these terms.
+                            </Text>
+                        </>
+                    )}
 
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>By continuing to use the app, you accept these terms in full.</Text>

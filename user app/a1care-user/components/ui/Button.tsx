@@ -4,6 +4,7 @@ import {
     Text,
     ActivityIndicator,
     StyleSheet,
+    View,
     ViewStyle,
     TextStyle,
 } from 'react-native';
@@ -23,7 +24,7 @@ interface ButtonProps {
     fullWidth?: boolean;
     style?: ViewStyle;
     textStyle?: TextStyle;
-    icon?: string; // emoji icon prefix
+    icon?: string | React.ReactNode; 
 }
 
 export function Button({
@@ -60,9 +61,20 @@ export function Button({
                     size="small"
                 />
             ) : (
-                <Text style={[styles.text, styles[`text_${variant}`], styles[`textSize_${size}`], textStyle]}>
-                    {icon ? `${icon}  ` : ''}{label}
-                </Text>
+                <>
+                    {typeof icon === 'string' ? (
+                        <Text style={[styles.text, styles[`text_${variant}`], styles[`textSize_${size}`], textStyle]}>
+                            {icon ? `${icon}  ` : ''}{label}
+                        </Text>
+                    ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            {icon}
+                            <Text style={[styles.text, styles[`text_${variant}`], styles[`textSize_${size}`], textStyle]}>
+                                {label}
+                            </Text>
+                        </View>
+                    )}
+                </>
             )}
         </TouchableOpacity>
     );

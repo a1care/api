@@ -1,184 +1,205 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { useMemo } from "react";
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../lib/api';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+
+const StatCard = ({ title, amount, icon, color }: any) => (
+    <View style={styles.statCard}>
+        <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+            <MaterialCommunityIcons name={icon} size={24} color={color} />
+        </View>
+        <Text style={styles.statTitle}>{title}</Text>
+        <Text style={[styles.statAmount, { color: color }]}>₹{amount}</Text>
+    </View>
+);
 
 export default function EarningsScreen() {
-    const { data: bookings = [], isLoading, refetch, isRefetching } = useQuery({
-        queryKey: ["earnings"],
+    const queryClient = useQueryClient();
+    const [refreshing, setRefreshing] = useState(false);
+
+    const { data: summary, isLoading, refetch } = useQuery({
+        queryKey: ['staff_earnings'],
         queryFn: async () => {
-            const res = await api.get("/appointment/patient/appointments/pending");
-            return res.data.data || [];
+            const res = await api.get('/doctor/earnings/summary');
+            return res.data.data;
         }
     });
 
-    const { total, fees, net, transactions, weekData } = useMemo(() => {
-        const completed = bookings.filter((b: any) => b.status === "Completed");
-        const totalAmount = completed.reduce((s: number, b: any) => s + (b.totalAmount || 0), 0);
-        const platformFees = totalAmount * 0.1; // 10% commission
-        const netAmount = totalAmount - platformFees;
-
-        const txs = completed.map((b: any) => ({
-            id: b._id,
-            patient: b.patientName || "Guest Patient",
-            service: b.serviceType || "Service",
-            date: new Date(b.updatedAt).toLocaleDateString(),
-            amount: b.totalAmount || 0,
-            type: "credit"
-        }));
-
-        // Add commission as a debit transaction
-        if (platformFees > 0) {
-            txs.push({
-                id: "commission",
-                patient: "A1Care Platform",
-                service: "Platform Commission (10%)",
-                date: "Today",
-                amount: platformFees,
-                type: "debit"
-            });
+    const { data: payouts } = useQuery({
+        queryKey: ['staff_payouts'],
+        queryFn: async () => {
+            const res = await api.get('/doctor/earnings/payouts');
+            return res.data.data;
         }
+    });
 
-        // Generate simple week data
-        const days = ["S", "M", "T", "W", "T", "F", "S"];
-        const weekly = days.map((day, i) => {
-            const dayAmount = completed
-                .filter((b: any) => new Date(b.updatedAt).getDay() === i)
-                .reduce((s: number, b: any) => s + (b.totalAmount || 0), 0);
-            return { day, amount: dayAmount };
-        });
+    const withdrawMutation = useMutation({
+        mutationFn: async (amount: number) => {
+            return await api.post('/doctor/earnings/withdraw', { amount });
+        },
+        onSuccess: () => {
+            Alert.alert("Success", "Withdrawal request submitted successfully.");
+            queryClient.invalidateQueries({ queryKey: ['staff_earnings'] });
+            queryClient.invalidateQueries({ queryKey: ['staff_payouts'] });
+        },
+        onError: (err: any) => {
+            Alert.alert("Extraction Failed", err?.response?.data?.message || "Something went wrong");
+        }
+    });
 
-        return { total: totalAmount, fees: platformFees, net: netAmount, transactions: txs, weekData: weekly };
-    }, [bookings]);
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await refetch();
+        setRefreshing(false);
+    };
 
-    const maxAmount = Math.max(...weekData.map(d => d.amount), 1);
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2D935C" />
+            </View>
+        );
+    }
+
+    const { stats, balance } = summary || { stats: {}, balance: 0 };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#EBF1F5" }}>
-            <ScrollView
-                contentContainerStyle={{ paddingBottom: 24 }}
-                refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
-            >
-                {/* Hero Card */}
-                <LinearGradient colors={["#2D935C", "#1E8449"]} style={styles.hero}>
-                    <Text style={styles.heroLabel}>Total Earnings</Text>
-                    <Text style={styles.heroAmount}>₹{net.toLocaleString()}</Text>
-                    <View style={styles.heroRow}>
-                        <View>
-                            <Text style={styles.heroSub}>Gross</Text>
-                            <Text style={styles.heroVal}>₹{total.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.divider} />
-                        <View>
-                            <Text style={styles.heroSub}>Fee (10%)</Text>
-                            <Text style={[styles.heroVal, { color: "#FFB3B3" }]}>-₹{fees.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.divider} />
-                        <View>
-                            <Text style={styles.heroSub}>Net Payout</Text>
-                            <Text style={[styles.heroVal, { color: "#A8F5C4" }]}>₹{net.toLocaleString()}</Text>
-                        </View>
-                    </View>
-                </LinearGradient>
+        <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Financial Overview</Text>
+                <TouchableOpacity onPress={onRefresh}>
+                    <Ionicons name="refresh" size={20} color="#64748B" />
+                </TouchableOpacity>
+            </View>
 
-                {/* Bar Chart */}
-                <View style={styles.chartCard}>
-                    <Text style={styles.sectionTitle}>Performance</Text>
-                    <View style={styles.bars}>
-                        {weekData.map((d, i) => (
-                            <View key={i} style={styles.barCol}>
-                                <View style={styles.barTrack}>
-                                    <LinearGradient
-                                        colors={d.amount > 0 ? ["#2D935C", "#34D399"] : ["#E2E8F0", "#E2E8F0"]}
-                                        style={[styles.bar, { height: `${(d.amount / maxAmount) * 100}%` || "5%" }]}
-                                    />
-                                </View>
-                                <Text style={styles.barLabel}>{d.day}</Text>
-                            </View>
-                        ))}
+            <ScrollView 
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+                {/* Balance Section */}
+                <View style={styles.balanceCard}>
+                    <View>
+                        <Text style={styles.balanceLabel}>Withdrawable Balance</Text>
+                        <Text style={styles.balanceAmount}>₹{balance}</Text>
                     </View>
+                    <TouchableOpacity 
+                        style={[styles.withdrawBtn, balance < 500 && { opacity: 0.5 }]} 
+                        onPress={() => {
+                            if (balance < 500) {
+                                Alert.alert("Minimum Withdrawal", "You need at least ₹500 to request a payout.");
+                                return;
+                            }
+                            withdrawMutation.mutate(balance);
+                        }}
+                    >
+                        <Text style={styles.withdrawBtnText}>Withdraw All</Text>
+                    </TouchableOpacity>
                 </View>
 
-                {/* Transactions */}
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 20, marginTop: 20 }]}>Recent History</Text>
-                <View style={{ paddingHorizontal: 20, gap: 12 }}>
-                    {isLoading ? (
-                        <ActivityIndicator color="#2D935C" />
-                    ) : transactions.length === 0 ? (
-                        <Text style={{ textAlign: "center", color: "#6B8A9E" }}>No transactions yet</Text>
-                    ) : (
-                        transactions.map((t: any) => (
-                            <View key={t.id} style={styles.txCard}>
-                                <View style={[styles.txIcon, { backgroundColor: t.type === "credit" ? "#E8F8EF" : "#FDECEA" }]}>
-                                    <Text style={{ fontSize: 16 }}>{t.type === "credit" ? "💰" : "📤"}</Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.txTitle}>{t.patient}</Text>
-                                    <Text style={styles.txSub}>{t.service} · {t.date}</Text>
-                                </View>
-                                <Text style={[styles.txAmount, { color: t.type === "credit" ? "#27AE60" : "#E74C3C" }]}>
-                                    {t.type === "credit" ? "+" : "-"}₹{t.amount}
+                {/* Grid Stats */}
+                <View style={styles.statsGrid}>
+                    <StatCard title="Total Earnings" amount={stats.totalEarnings || 0} icon="cash-multiple" color="#2D935C" />
+                    <StatCard title="Today's Sales" amount={stats.today || 0} icon="trending-up" color="#6366F1" />
+                    <StatCard title="This Week" amount={stats.thisWeek || 0} icon="calendar-week" color="#F59E0B" />
+                    <StatCard title="Withdrawn" amount={stats.withdrawn || 0} icon="bank-transfer-out" color="#EC4899" />
+                </View>
+
+                <View style={styles.historyHeader}>
+                    <Text style={styles.historyTitle}>Payout History</Text>
+                </View>
+
+                {/* History List */}
+                {payouts?.length > 0 ? (
+                    payouts.map((p: any) => (
+                        <View key={p._id} style={styles.payoutItem}>
+                            <View style={styles.payoutIcon}>
+                                <Ionicons name="wallet-outline" size={20} color="#64748B" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.payoutAmount}>₹{p.amount}</Text>
+                                <Text style={styles.payoutDate}>{new Date(p.createdAt).toLocaleDateString()}</Text>
+                            </View>
+                            <View style={[
+                                styles.statusBadge, 
+                                { backgroundColor: p.status === 'COMPLETED' ? '#ECFDF5' : p.status === 'PENDING' ? '#FFFBEB' : '#FEF2F2' }
+                            ]}>
+                                <Text style={[
+                                    styles.statusText, 
+                                    { color: p.status === 'COMPLETED' ? '#10B981' : p.status === 'PENDING' ? '#D97706' : '#EF4444' }
+                                ]}>
+                                    {p.status}
                                 </Text>
                             </View>
-                        ))
-                    )}
-                </View>
-
-                {/* Payout Button */}
-                <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
-                    <TouchableOpacity activeOpacity={0.85}>
-                        <LinearGradient
-                            colors={["#2D935C", "#1E8449"]}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            style={styles.payoutBtn}
-                        >
-                            <Text style={styles.payoutText}>💳  Request Payout</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                    <Text style={styles.payoutNote}>Next payout cycle: Monday, 9:00 AM</Text>
-                </View>
+                        </View>
+                    ))
+                ) : (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
+                        <Text style={styles.emptyText}>No payout history found yet.</Text>
+                    </View>
+                )}
             </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    hero: {
-        margin: 20, borderRadius: 28, padding: 24,
-        shadowColor: "#2D935C", shadowOpacity: 0.3, shadowRadius: 16, elevation: 10,
+    container: { flex: 1, backgroundColor: "#F8FAFC" },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFF' },
+    headerTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
+    scrollContent: { padding: 16 },
+    balanceCard: {
+        backgroundColor: '#1E293B',
+        borderRadius: 24,
+        padding: 24,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
     },
-    heroLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "700", marginBottom: 4 },
-    heroAmount: { fontSize: 36, fontWeight: "900", color: "#FFFFFF", marginBottom: 16 },
-    heroRow: { flexDirection: "row", justifyContent: "space-around" },
-    heroSub: { fontSize: 11, color: "rgba(255,255,255,0.6)", textAlign: "center" },
-    heroVal: { fontSize: 15, fontWeight: "800", color: "#FFFFFF", textAlign: "center", marginTop: 2 },
-    divider: { width: 1, backgroundColor: "rgba(255,255,255,0.2)" },
-    chartCard: {
-        marginHorizontal: 20, backgroundColor: "#FFFFFF", borderRadius: 24, padding: 20,
-        shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, elevation: 4,
+    balanceLabel: { color: '#94A3B8', fontSize: 13, fontWeight: '600', marginBottom: 4 },
+    balanceAmount: { color: '#FFF', fontSize: 28, fontWeight: '900' },
+    withdrawBtn: { backgroundColor: '#2D935C', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+    withdrawBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+    statCard: {
+        width: '48%',
+        backgroundColor: '#FFF',
+        borderRadius: 20,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        elevation: 2,
     },
-    sectionTitle: { fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 16 },
-    bars: { flexDirection: "row", gap: 8, height: 100, alignItems: "flex-end" },
-    barCol: { flex: 1, alignItems: "center", gap: 6 },
-    barTrack: { flex: 1, width: "100%", justifyContent: "flex-end" },
-    bar: { width: "100%", borderRadius: 8, minHeight: 4 },
-    barLabel: { fontSize: 11, fontWeight: "700", color: "#64748B" },
-    txCard: {
-        flexDirection: "row", alignItems: "center", gap: 14,
-        backgroundColor: "#FFFFFF", borderRadius: 18, padding: 14,
-        shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    iconContainer: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    statTitle: { fontSize: 12, color: '#64748B', fontWeight: '700', marginBottom: 4 },
+    statAmount: { fontSize: 18, fontWeight: '900' },
+    historyHeader: { marginVertical: 16 },
+    historyTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+    payoutItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 10,
+        gap: 12,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
-    txIcon: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-    txTitle: { fontSize: 14, fontWeight: "700", color: "#1E293B" },
-    txSub: { fontSize: 11, color: "#64748B", marginTop: 2 },
-    txAmount: { fontSize: 16, fontWeight: "900" },
-    payoutBtn: {
-        height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center",
-        shadowColor: "#2D935C", shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
-    },
-    payoutText: { fontSize: 17, fontWeight: "800", color: "#fff" },
-    payoutNote: { fontSize: 12, color: "#64748B", textAlign: "center", marginTop: 10 },
+    payoutIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' },
+    payoutAmount: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
+    payoutDate: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    statusText: { fontSize: 10, fontWeight: '800' },
+    emptyState: { alignItems: 'center', marginTop: 40 },
+    emptyText: { color: '#94A3B8', marginTop: 12, fontWeight: '600' }
 });
-

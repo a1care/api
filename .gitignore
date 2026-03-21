@@ -11,3 +11,8 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 Thumbs.db
+
+# Private build artifacts & scripts
+*.bat
+*android.json
+*log.txt

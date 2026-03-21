@@ -5,6 +5,7 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import generateOtp from "../../utils/generateOtp.js";
 import doctorModel from "./doctor.model.js";
 import doctorValidation from "./doctor.schema.js";
+import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
 import jwt from 'jsonwebtoken'
 import { v1 as uuidv4 } from "uuid";
 import { hmacHash } from "../../utils/Hmac.js";
@@ -153,6 +154,24 @@ export const registerStaff = asyncHandler(async (req, res) => {
   });
 
   console.log("DEBUG: Final updateData:", JSON.stringify(updateData, null, 2));
+
+  // If trying to go Active, check KYC and Subscription
+  if (updateData.status === "Active") {
+    // 1. KYC Check
+    if (findStaff.status === "Pending") {
+      throw new ApiError(403, "Authentication pending. Please wait for admin to verify your documents.");
+    }
+
+    // 2. Subscription Check (Optional: Allow for now but warn/restrict later)
+    const activeSub = await PartnerSubscription.findOne({
+      partnerId: staffId,
+      status: "Active",
+      endDate: { $gte: new Date() }
+    });
+    
+    // IF we want to strictly enforce it:
+    // if (!activeSub) throw new ApiError(403, "Active subscription required to go online.");
+  }
 
   // Handle specific overrides if necessary
   if (req.body.isRegistered !== undefined) {

@@ -4,9 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { useConfigStore } from '@/stores/config.store';
+
 export default function FAQScreen() {
     const router = useRouter();
-    const faqs = [
+    const { config } = useConfigStore();
+    const defaultFaqs = [
         { q: "How do I book a service?", a: "You can book a service by browsing through the categories on the Home screen and selecting the service or doctor of your choice." },
         { q: "What are your payment methods?", a: "We accept payments via A1Care Wallet, UPI, Credit/Debit cards, and NetBanking." },
         { q: "How do I cancel my request?", a: "You can cancel any pending request from your 'My Bookings' section. Cancellation fees may apply if the provider is already en route." },
@@ -22,12 +25,18 @@ export default function FAQScreen() {
                 <Text style={styles.headerTitle}>Frequently Asked Qs</Text>
             </View>
             <ScrollView contentContainerStyle={styles.content}>
-                {faqs.map((faq, i) => (
-                    <View key={i} style={styles.card}>
-                        <Text style={styles.question}>{faq.q}</Text>
-                        <Text style={styles.answer}>{faq.a}</Text>
+                {config?.contact.faq ? (
+                    <View style={styles.card}>
+                        <Text style={styles.answer}>{config.contact.faq}</Text>
                     </View>
-                ))}
+                ) : (
+                    defaultFaqs.map((faq, i) => (
+                        <View key={i} style={styles.card}>
+                            <Text style={styles.question}>{faq.q}</Text>
+                            <Text style={styles.answer}>{faq.a}</Text>
+                        </View>
+                    ))
+                )}
             </ScrollView>
         </SafeAreaView>
     );

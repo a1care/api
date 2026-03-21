@@ -15,19 +15,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 // Firebase Imports
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { signInWithPhoneNumber } from 'firebase/auth';
+import auth from '@react-native-firebase/auth';
 import { useAuthStore } from '@/stores/auth.store';
-import { auth } from '@/utils/firebase';
-
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-};
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -35,9 +24,6 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
     const { setConfirmationResult } = useAuthStore();
     
-    // Reference for the hidden ReCaptcha popup
-    const recaptchaVerifier = React.useRef(null);
-
     const handleSendOtp = async () => {
         const cleaned = mobile.replace(/\D/g, '');
         if (cleaned.length < 10) {
@@ -49,11 +35,8 @@ export default function LoginScreen() {
             // Firebase expects phone numbers in standard international format starting with +
             const e164PhoneNumber = `+91${cleaned}`;
             
-            const confirmation = await signInWithPhoneNumber(
-              auth,
-              e164PhoneNumber,
-              recaptchaVerifier.current as any
-            );
+            // Native Firebase auth will handle reCAPTCHA automatically
+            const confirmation = await auth().signInWithPhoneNumber(e164PhoneNumber);
             
             setConfirmationResult(confirmation);
             router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, verificationId: confirmation.verificationId } });
@@ -71,12 +54,6 @@ export default function LoginScreen() {
             <LinearGradient colors={["#C8E6F9", "#EBF5FB", "#FFFFFF"]} style={StyleSheet.absoluteFill} />
 
             <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 28 }}>
-                {/* Invisible ReCaptcha necessary for Firebase SMS limits */}
-                <FirebaseRecaptchaVerifierModal
-                    ref={recaptchaVerifier}
-                    firebaseConfig={firebaseConfig}
-                />
-
                 {/* Back */}
                 {router.canGoBack() && (
                     <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 20 }}>
@@ -122,7 +99,7 @@ export default function LoginScreen() {
                     </TouchableOpacity>
 
                     <Text style={styles.disclaimer}>
-                        By continuing, you agree to our <Text style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>
+                        By continuing, you agree to our <Text onPress={() => router.push('/terms')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text onPress={() => router.push('/privacy')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>
                     </Text>
                 </View>
 

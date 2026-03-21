@@ -241,7 +241,11 @@ export default function BookingsScreen() {
                     ) : (
                         <>
                             {filteredAppts.map((a) => (
-                                <AppointmentCard key={a._id} appt={a} onPress={() => Alert.alert('Appointment Details', `Date: ${a.date}\nTime: ${a.timeSlot ?? '—'}\nStatus: ${a.status ?? 'Pending'}\n\nDetailed tracking coming in V2.`)} />
+                                <AppointmentCard 
+                                    key={a._id} 
+                                    appt={a} 
+                                    onPress={() => router.push({ pathname: '/doctor/appointment/[id]', params: { id: a._id } })} 
+                                />
                             ))}
                             {filteredServiceBookings.map((b) => (
                                 <ServiceCard

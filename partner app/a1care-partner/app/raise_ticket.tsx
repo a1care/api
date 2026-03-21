@@ -127,7 +127,14 @@ export default function RaiseTicketScreen() {
                     <ActivityIndicator color="#2D935C" />
                 ) : tickets.length > 0 ? (
                     tickets.map((t: any) => (
-                        <View key={t._id} style={styles.ticketCard}>
+                        <TouchableOpacity 
+                            key={t._id} 
+                            style={styles.ticketCard}
+                            onPress={() => router.push({
+                                pathname: "/support_chat",
+                                params: { ticketId: t._id, subject: t.subject }
+                            })}
+                        >
                             <View style={styles.ticketHeader}>
                                 <Text style={styles.ticketSubject} numberOfLines={1}>{t.subject}</Text>
                                 <View style={[styles.statusTag, { backgroundColor: t.status === "Open" ? "#FEF3C7" : "#DCFCE7" }]}>
@@ -136,7 +143,7 @@ export default function RaiseTicketScreen() {
                             </View>
                             <Text style={styles.ticketDesc} numberOfLines={2}>{t.description}</Text>
                             <Text style={styles.ticketDate}>{new Date(t.createdAt).toLocaleDateString()}</Text>
-                        </View>
+                        </TouchableOpacity>
                     ))
                 ) : (
                     <View style={styles.emptyTickets}>

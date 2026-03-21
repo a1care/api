@@ -23,6 +23,13 @@ export const bookingsService = {
         return res.data.data;
     },
 
+    getAppointmentById: async (id: string) => {
+        const res = await api.get<ApiResponse<DoctorAppointment>>(
+            `/appointment/${id}`
+        );
+        return res.data.data;
+    },
+
     // Service bookings
     createServiceBooking: async (data: {
         childServiceId: string;
@@ -72,5 +79,31 @@ export const bookingsService = {
             Endpoints.SERVICE_BOOKING_BY_ID(id)
         );
         return res.data.data;
+    },
+
+    // Live Tracking & Chat
+    getProviderLocation: async (providerId: string) => {
+        const res = await api.get<ApiResponse<{ latitude: number, longitude: number, heading: number }>>(
+            `/appointment/location/${providerId}`
+        );
+        return res.data.data;
+    },
+
+    getBookingMessages: async (bookingId: string) => {
+        const res = await api.get<ApiResponse<any[]>>(
+            `/chat/${bookingId}`
+        );
+        return res.data.data;
+    },
+
+    sendBookingMessage: async (bookingId: string, message: string) => {
+        // Logic similar to partner app: actual persistence in socket
+        return {
+            _id: Math.random().toString(),
+            bookingId,
+            message,
+            senderType: 'User',
+            createdAt: new Date().toISOString()
+        };
     },
 };

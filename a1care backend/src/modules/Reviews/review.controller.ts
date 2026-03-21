@@ -87,3 +87,25 @@ export const getServiceReviews = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Reviews fetched", reviews));
 });
+
+export const getAllReviews = asyncHandler(async (req, res) => {
+    const reviews = await ReviewModel.find()
+        .populate("userId", "name mobileNumber")
+        .sort({ createdAt: -1 });
+
+    return res.status(200).json(new ApiResponse(200, "All reviews fetched", reviews));
+});
+
+export const updateReviewStatus = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["Active", "Hidden", "Pending"].includes(status)) {
+        throw new ApiError(400, "Invalid status");
+    }
+
+    const review = await ReviewModel.findByIdAndUpdate(id, { status }, { new: true });
+    if (!review) throw new ApiError(404, "Review not found");
+
+    return res.status(200).json(new ApiResponse(200, "Review status updated", review));
+});

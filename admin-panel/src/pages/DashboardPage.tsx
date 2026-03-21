@@ -268,7 +268,7 @@ export function DashboardPage() {
                icon={ShieldCheck} 
                description="Providers awaiting security clearance."
                color="amber"
-               link="/users/doctors"
+               link="/kyc-verification"
              />
              <AlertItem 
                title="Support Intervention" 
@@ -284,6 +284,14 @@ export function DashboardPage() {
                icon={XCircle} 
                description="Payment reconciliation required."
                color="red"
+             />
+             <AlertItem 
+               title="Payout Requests" 
+               count={overview?.pendingPayouts || 0} 
+               icon={CreditCard} 
+               description="Partner withdrawal requests."
+               color="blue"
+               link="/payouts"
              />
            </div>
 

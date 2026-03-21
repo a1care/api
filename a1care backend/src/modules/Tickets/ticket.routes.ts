@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect } from '../../middlewares/protect.js';
 import { createTicket, getAllTickets, getMyTickets, updateTicketStatus, createPatientTicket, getMyPatientTickets } from './ticket.controller.js';
+import { getMessagesByTicket, sendMessage } from './message.controller.js';
 
 const router = express.Router();
 
@@ -11,6 +12,10 @@ router.get('/my', protect, getMyTickets);
 // patient routes
 router.post('/patient/create', protect, createPatientTicket);
 router.get('/patient/my', protect, getMyPatientTickets);
+
+// chat routes
+router.get('/messages/:ticketId', protect, getMessagesByTicket);
+router.post('/messages/send', protect, sendMessage);
 
 // admin routes
 router.get('/all', getAllTickets); // would ideally protect admin 

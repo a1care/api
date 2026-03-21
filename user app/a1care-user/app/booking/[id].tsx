@@ -17,6 +17,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/EmptyState';
 import { formatDateTime } from '@/utils/formatters';
+import { MapPin, MessageSquare, XCircle } from 'lucide-react-native';
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_STEPS: Array<{ status: string; label: string; icon: string; desc: string }> = [
@@ -187,16 +188,48 @@ export default function BookingDetailScreen() {
                         <Text style={styles.pollingText}>🔄 Status auto-updates every 12 seconds</Text>
                     </View>
 
+                    {/* Live Support / Tracking */}
+                    {booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS' ? (
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>Live Support</Text>
+                            <View style={styles.actionGrid}>
+                                <TouchableOpacity 
+                                    style={styles.actionBtn}
+                                    onPress={() => router.push({
+                                        pathname: '/booking/track' as any,
+                                        params: { id: booking._id, providerId: (booking as any).assignedProviderId?._id || (booking as any).assignedProviderId }
+                                    })}
+                                >
+                                    <View style={[styles.actionIcon, { backgroundColor: '#E0F2FE' }]}>
+                                        <MapPin size={22} color="#0369A1" />
+                                    </View>
+                                    <Text style={styles.actionLabel}>Track Live</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={styles.actionBtn}
+                                    onPress={() => router.push({
+                                        pathname: '/booking/chat' as any,
+                                        params: { id: booking._id, name: (booking as any).assignedProviderId?.name || 'Provider' }
+                                    })}
+                                >
+                                    <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}>
+                                        <MessageSquare size={22} color="#15803D" />
+                                    </View>
+                                    <Text style={styles.actionLabel}>Chat</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : null}
+
                     {/* Actions */}
                     {booking.status === 'PENDING' || booking.status === 'BROADCASTED' ? (
                         <View style={styles.card}>
                             <Text style={styles.cardTitle}>Actions</Text>
                             <Button
                                 label="Cancel Booking"
-                                onPress={() => {
-                                    // TODO: Implement cancel booking API when backend supports it
-                                    alert('Cancel booking API not yet available in V1');
-                                }}
+                                icon={<XCircle size={18} color="#fff" />}
+                                onPress={() => alert('Cancel booking API not yet available in V1')}
                                 variant="danger"
                                 size="md"
                                 fullWidth
@@ -338,4 +371,8 @@ const styles = StyleSheet.create({
     pollingText: { fontSize: FontSize.xs, color: Colors.muted },
 
     codReminderText: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    actionGrid: { flexDirection: 'row', gap: 12 },
+    actionBtn: { flex: 1, alignItems: 'center', gap: 8 },
+    actionIcon: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+    actionLabel: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.textPrimary },
 });
