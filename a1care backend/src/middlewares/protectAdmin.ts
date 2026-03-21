@@ -36,8 +36,7 @@ export const protectAdmin = asyncHandler(async (req: Request, _res: Response, ne
   if (decoded.adminId === ENV_ADMIN_ID && decoded.role === "super_admin" && hasEnvSuperAdmin()) {
     req.user = {
       id: ENV_ADMIN_ID,
-      role: "super_admin",
-      type: "admin"
+      role: "super_admin"
     };
     next();
     return;
@@ -54,8 +53,7 @@ export const protectAdmin = asyncHandler(async (req: Request, _res: Response, ne
 
   req.user = {
     id: String(admin._id),
-    role: admin.role,
-    type: "admin"
+    role: admin.role
   };
 
   next();
@@ -65,7 +63,7 @@ export const requireAdminRole =
   (allowedRoles: Array<"admin" | "super_admin">) =>
     (req: Request, _res: Response, next: NextFunction) => {
       const role = req.user?.role;
-      if (!role || !allowedRoles.includes(role)) {
+      if (!role || !allowedRoles.includes(role as any)) {
         throw new ApiError(403, "Forbidden: insufficient permissions");
       }
       next();

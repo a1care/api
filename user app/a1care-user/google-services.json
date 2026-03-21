@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "742774308338",
-    "project_id": "a1carewebsite",
-    "storage_bucket": "a1carewebsite.firebasestorage.app"
+    "project_number": "426082561306",
+    "project_id": "a1-care-hospitals",
+    "storage_bucket": "a1-care-hospitals.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:742774308338:android:8d9bed5df8563aded57f6b",
+        "mobilesdk_app_id": "1:426082561306:android:cfa55ebd9c9ec8a62550a3",
         "android_client_info": {
           "package_name": "com.a1care.customer"
         }
@@ -15,7 +15,26 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBMiouUypgK29NCCIWb7ImaPedjiC4BuDA"
+          "current_key": "AIzaSyDaM3RJJDE-2GcGKZeJRIAQ35MNihdtiII"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426082561306:android:f69da65601be128d2550a3",
+        "android_client_info": {
+          "package_name": "com.a1care.partner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaM3RJJDE-2GcGKZeJRIAQ35MNihdtiII"
         }
       ],
       "services": {

@@ -3,12 +3,12 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import Message from "./message.model.js";
 import Ticket from "./ticket.model.js";
-import Appointment from "../Bookings/doctorAppointment.model.ts";
+import Appointment from "../Bookings/doctorAppointment.model.js";
 import { Patient } from "../Authentication/patient.model.js";
 import Doctor from "../Doctors/doctor.model.js";
 import { getMessaging } from "../../configs/fcmConfig.js";
 
-export const getMessagesByTarget = asyncHandler(async (req, res) => {
+export const getMessagesByTicket = asyncHandler(async (req, res) => {
     const { ticketId, bookingId } = req.query;
     const filter = ticketId ? { ticketId } : { bookingId };
     const messages = await Message.find(filter).sort({ createdAt: 1 });

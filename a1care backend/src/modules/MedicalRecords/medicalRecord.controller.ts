@@ -67,7 +67,7 @@ export const updateMedicalRecord = asyncHandler(async (req, res) => {
   const record = await MedicalRecord.findById(id);
   if (!record) throw new ApiError(404, "Medical record not found");
 
-  if (record.doctorId.toString() !== staffId.toString()) {
+  if (record.doctorId?.toString() !== staffId.toString()) {
     throw new ApiError(403, "You are not allowed to update this medical record");
   }
 
@@ -120,7 +120,7 @@ export const getMedicalRecordById = asyncHandler(async (req, res) => {
   ]);
 
   const isPatient = !!patient && record.patientId.toString() === requesterId.toString();
-  const isDoctor = !!staff && record.doctorId.toString() === requesterId.toString();
+  const isDoctor = !!staff && record.doctorId?.toString() === requesterId.toString();
 
   if (!isPatient && !isDoctor) throw new ApiError(403, "Access denied");
 
