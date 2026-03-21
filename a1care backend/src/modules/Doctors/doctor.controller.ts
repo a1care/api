@@ -71,6 +71,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 
 //verify otp for staff 
 export const verifyOtp = asyncHandler(async (req, res) => {
+  console.log("[Partner Verify] Request Body:", req.body);
   const { idToken, mobileNumber, otp } = req.body;
 
   // ─── DEV BYPASS CHECK ─────────────────────────────────────────────────────
