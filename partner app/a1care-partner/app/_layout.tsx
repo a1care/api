@@ -45,10 +45,12 @@ function AuthGuard() {
             return;
         }
 
-        const inAuth = segments[0] === "(auth)";
-        const inOnboarding = segments[0] === "onboarding";
+        const currentSegment = segments[0] as string;
+        const inAuth = currentSegment === "(auth)";
+        const inOnboarding = currentSegment === "onboarding";
+        const isPolicyPage = currentSegment === "privacy" || currentSegment === "terms";
 
-        if (!token && !inAuth && !inOnboarding) {
+        if (!token && !inAuth && !inOnboarding && !isPolicyPage) {
             router.replace("/onboarding");
         } else if (token && (inAuth || inOnboarding)) {
             router.replace("/(tabs)/home");

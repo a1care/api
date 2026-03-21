@@ -54,10 +54,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        const inAuthGroup = (segments as string[])[0] === '(auth)';
-        const isAtRoot = !segments.length || (segments as string[])[0] === 'index';
+        const currentSegment = (segments as string[])[0];
+        const isAtRoot = !segments.length || currentSegment === 'index';
+        const inAuthGroup = currentSegment === '(auth)';
+        const excludedSegments = ['(auth)', 'index', 'privacy', 'terms', 'faq'];
+        const isExcluded = excludedSegments.includes(currentSegment);
 
-        if (!isAuthenticated && !inAuthGroup && !isAtRoot) {
+        if (!isAuthenticated && !isExcluded) {
             console.log('[AuthGuard] Redirecting to login');
             router.replace('/(auth)/login');
         } else if (isAuthenticated && (inAuthGroup || isAtRoot)) {
