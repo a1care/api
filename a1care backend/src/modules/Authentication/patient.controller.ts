@@ -5,10 +5,14 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import { Patient } from "./patient.model.js";
 import { patientValidation } from "./patient.schema.js";
 import mongoose from 'mongoose';
-import RedisClient from '../../configs/redisConnect.js';
-import generateOtp from '../../utils/generateOtp.js';
-import sendMessage from '../../configs/twilioConfig.js';
 import { enqueueEmail } from "../../queues/communicationQueue.js";
+
+// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
+// Use these credentials to bypass Firebase OTP for testing the full app flow
+// Phone: 9701677607  |  OTP: 123123
+const DEV_BYPASS_MOBILE = "9701677607";
+const DEV_BYPASS_OTP = "123123";
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const getPatientDetailsById = asyncHandler(async (req, res) => {
   const patientId = req.user?.id
@@ -18,7 +22,6 @@ export const getPatientDetailsById = asyncHandler(async (req, res) => {
   }
 
   const userDetails = await Patient.findById(patientId).populate('primaryAddressId')
-
 
   if (userDetails) return res.status(200).json(new ApiResponse(200, "data fetched", userDetails))
   else {
@@ -34,22 +37,36 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
 
 // verify otp 
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
-  const { idToken, mobileNumber } = req.body
+  const { idToken, mobileNumber, otp } = req.body
+
+  // ─── DEV BYPASS CHECK ─────────────────────────────────────────────────────
+  // Strip country code if present — handles +91XXXXXXXXXX or plain XXXXXXXXXX
+  const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
+
+  if (cleanMobile === DEV_BYPASS_MOBILE && String(otp) === DEV_BYPASS_OTP) {
+    console.log(`[DEV BYPASS] ✅ Activated for mobile: ${cleanMobile}`);
+
+    // Find or create the patient in DB
+    let patient = await Patient.findOne({
+      mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+    });
+
+    if (!patient) {
+      patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
+      await patient.save();
+    }
+
+    const token = jwt.sign(
+      { mobileNumber: patient.mobileNumber, userId: patient._id },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json(new ApiResponse(200, "Verification successful (Dev Bypass)", { token }));
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (!idToken) {
-    // Fallback for dev bypass if idToken is not provided
-    if (req.body.otp == 123123) {
-      let isExists = await Patient.findOne({ mobileNumber })
-
-      if (!isExists) {
-        const newPatient = new Patient({ mobileNumber })
-        await newPatient.save()
-        isExists = newPatient
-      }
-
-      const token = jwt.sign({ mobileNumber, userId: isExists._id }, process.env.JWT_SECRET as string)
-      return res.status(201).json(new ApiResponse(201, "Verification successful (Development Bypass)", { token }))
-    }
     throw new ApiError(400, "Firebase ID token is required!")
   }
 
@@ -70,8 +87,12 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       isExists = newPatient
     }
 
-    // 4. Generate your own custom original JWT Token so the rest of your app works perfectly!
-    const token = jwt.sign({ mobileNumber: firebasePhone, userId: isExists._id }, process.env.JWT_SECRET as string)
+    // 4. Generate your own custom JWT Token
+    const token = jwt.sign(
+      { mobileNumber: firebasePhone, userId: isExists._id },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" }
+    )
     
     return res.status(200).json(new ApiResponse(200, "Firebase Verification successful", { token }))
 
@@ -103,7 +124,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
         name: parsed.data.name,
         email: parsed.data.email,
         profileImage: req.fileUrl,
-        // location: parsed.data.location,
         gender: parsed.data.gender,
         dateOfBirth: parsed.data.dateOfBirth,
         fcmToken: parsed.data.fcmToken || null,

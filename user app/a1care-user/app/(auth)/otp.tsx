@@ -20,6 +20,11 @@ import { useAuthStore } from '@/stores/auth.store';
 // Firebase specific imports
 import auth from '@react-native-firebase/auth';
 
+// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
+const DEV_BYPASS_MOBILE = '9701677607';
+const DEV_BYPASS_OTP = '123123';
+// ─────────────────────────────────────────────────────────────────────────────
+
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
@@ -61,17 +66,26 @@ export default function OtpScreen() {
         setLoading(true);
         try {
             let idToken = undefined;
-            
-            if (confirmationResult) {
+
+            // ─── DEV BYPASS ───────────────────────────────────────────────────
+            const isBypassMobile = mobile === DEV_BYPASS_MOBILE;
+            const isBypassOtp = code === DEV_BYPASS_OTP;
+
+            if (isBypassMobile && isBypassOtp) {
+                // Skip Firebase entirely — backend validates bypass directly
+                console.log('[DEV BYPASS] Skipping Firebase for bypass mobile');
+            } else if (confirmationResult) {
+                // Normal Firebase verification
                 const userCredential = await confirmationResult.confirm(code);
-                idToken = await userCredential.user.getIdToken(true);
+                idToken = await userCredential.user.getIdToken();
             } else {
                 Alert.alert('Error', 'Session expired. Please request OTP again.');
                 router.back();
                 return;
             }
-            
+            // ─────────────────────────────────────────────────────────────────
             // 3. We show our backend the Token!
+            console.log(`[OtpScreen] Verifying with backend: ${mobile}`);
             const res = await authService.verifyOtp(mobile, code, idToken);
             const token = res.data.token;
             setToken(token);
@@ -83,8 +97,21 @@ export default function OtpScreen() {
                 router.replace('/(auth)/profile-setup');
             }
         } catch (err: any) {
-            console.error(err);
-            Alert.alert('Invalid OTP', err?.response?.data?.message ?? 'Please check the code and try again.');
+            console.error('[OtpScreen] Verification Error:', {
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status,
+                url: err.config?.url
+            });
+            let msg = 'Please check the code and try again.';
+            if (err.message === 'Network Error') {
+                msg = 'Cannot reach A1Care server. Please check your internet connection.';
+            } else if (err.code === 'auth/session-expired') {
+                msg = 'OTP has expired. Please go back and resend.';
+            } else if (err.response?.data?.message) {
+                msg = err.response.data.message;
+            }
+            Alert.alert('Verification Failed', msg);
         } finally {
             setLoading(false);
         }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+    ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -9,7 +9,13 @@ import { Toast } from "../../components/CustomToast";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
 
-import auth from "@react-native-firebase/auth";
+// Modern Native Firebase Auth
+import auth from '@react-native-firebase/auth';
+
+// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
+const DEV_BYPASS_MOBILE = '9701677607';
+const DEV_BYPASS_OTP = '123123';
+// ─────────────────────────────────────────────────────────────────────────────
 
 const roleLabels: Record<string, string> = {
     doctor: "Doctor", nurse: "Nurse", ambulance: "Ambulance", rental: "Medical Rental",
@@ -28,33 +34,26 @@ export default function LoginScreen() {
     const handleSendOtp = async () => {
         const cleaned = mobile.replace(/\D/g, '');
         if (cleaned.length < 10) {
-            Toast.show({
-                type: 'error',
-                text1: 'Invalid Mobile',
-                text2: 'Please enter a valid 10-digit mobile number'
-            });
+            Toast.show({ type: 'error', text1: 'Invalid Mobile', text2: 'Please enter a valid 10-digit mobile number' });
             return;
         }
         setLoading(true);
         try {
+            // ─── DEV BYPASS: skip Firebase for test number ──────────────────────────
+            if (cleaned === DEV_BYPASS_MOBILE) {
+                Toast.show({ type: 'success', text1: 'Dev Bypass Active', text2: 'Enter OTP: 123123' });
+                setOtpSessionId('BYPASS');
+                setLoading(false);
+                return;
+            }
+            // ───────────────────────────────────────────────────────────────
             const e164PhoneNumber = `+91${cleaned}`;
-            // Native Firebase auth will handle reCAPTCHA automatically
             const confirmation = await auth().signInWithPhoneNumber(e164PhoneNumber);
             setConfirmationResult(confirmation);
             setOtpSessionId(confirmation.verificationId);
-
-            Toast.show({
-                type: 'success',
-                text1: 'OTP Sent',
-                text2: 'A verification code has been sent via Firebase.'
-            });
+            Toast.show({ type: 'success', text1: 'OTP Sent', text2: 'Enter the code you received.' });
         } catch (err: any) {
-            console.error(err);
-            Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: err?.message || "Failed to send OTP. Please try again."
-            });
+            Toast.show({ type: 'error', text1: 'Error', text2: err?.message || 'Failed to send OTP.' });
         } finally {
             setLoading(false);
         }
@@ -62,29 +61,29 @@ export default function LoginScreen() {
 
     const handleVerifyOtp = async () => {
         if (otp.length < 6) {
-            Toast.show({
-                type: 'error',
-                text1: 'Invalid OTP',
-                text2: 'Please enter the complete OTP'
-            });
+            Toast.show({ type: 'error', text1: 'Invalid OTP', text2: 'Please enter the complete OTP' });
             return;
         }
         setVerifying(true);
         try {
             let idToken = undefined;
-            if (confirmationResult) {
+            const cleaned = mobile.replace(/\D/g, '');
+
+            // ─── DEV BYPASS ───────────────────────────────────────────────────
+            if (cleaned === DEV_BYPASS_MOBILE && otp === DEV_BYPASS_OTP) {
+                console.log('[DEV BYPASS] Partner: skipping Firebase');
+                // idToken stays undefined — backend will match on otp alone
+            } else if (confirmationResult) {
                 const userCredential = await confirmationResult.confirm(otp);
                 idToken = await userCredential.user.getIdToken(true);
             } else {
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error',
-                    text2: 'Session expired. Please request OTP again.'
-                });
+                Toast.show({ type: 'error', text1: 'Error', text2: 'Session expired. Request OTP again.' });
                 return;
             }
+            // ───────────────────────────────────────────────────────────────
 
             // Backend verification using idToken
+            console.log(`[PartnerAuth] Verifying mobile: ${mobile}`);
             const res = await api.post("/doctor/auth/verify-otp", {
                 idToken,
                 mobileNumber: mobile
@@ -115,11 +114,18 @@ export default function LoginScreen() {
                 router.replace("/(tabs)/home");
             }
         } catch (err: any) {
-            console.error(err);
+             console.error('[PartnerAuth] Error details:', {
+                message: err.message,
+                response: err.response?.data,
+                url: err.config?.url
+            });
+            let msg = err?.response?.data?.message || err?.message || "Invalid OTP";
+            if (err.message === 'Network Error') msg = "Cannot reach server. Check internet.";
+
             Toast.show({
                 type: 'error',
                 text1: 'Verification Failed',
-                text2: err?.response?.data?.message || err?.message || "Invalid OTP"
+                text2: msg
             });
         } finally {
             setVerifying(false);

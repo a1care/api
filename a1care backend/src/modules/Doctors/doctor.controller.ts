@@ -12,6 +12,13 @@ import { hmacHash } from "../../utils/Hmac.js";
 import sendMessage from "../../configs/twilioConfig.js";
 import mongoose from "mongoose";
 
+// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
+// Use these credentials to bypass Firebase OTP for testing the full partner app
+// Phone: 9701677607  |  OTP: 123123
+const DEV_BYPASS_MOBILE = "9701677607";
+const DEV_BYPASS_OTP = "123123";
+// ─────────────────────────────────────────────────────────────────────────────
+
 //create doctor 
 export const createDoctor = asyncHandler(async (req, res) => {
   const payload = {
@@ -64,7 +71,31 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 
 //verify otp for staff 
 export const verifyOtp = asyncHandler(async (req, res) => {
-  const { idToken, mobileNumber } = req.body;
+  const { idToken, mobileNumber, otp } = req.body;
+
+  // ─── DEV BYPASS CHECK ─────────────────────────────────────────────────────
+  const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
+  if (cleanMobile === DEV_BYPASS_MOBILE && String(otp) === DEV_BYPASS_OTP) {
+    console.log(`[DEV BYPASS] ✅ Partner bypass activated for: ${cleanMobile}`);
+
+    let staff = await doctorModel.findOne({
+      mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+    });
+    if (!staff) {
+      staff = await doctorModel.create({ mobileNumber: `+91${cleanMobile}` });
+    }
+
+    const token = jwt.sign(
+      { staffId: staff._id },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json(
+      new ApiResponse(200, "Verification successful (Dev Bypass)", { token })
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (!idToken) {
     throw new ApiError(400, "Firebase ID token is required!");
