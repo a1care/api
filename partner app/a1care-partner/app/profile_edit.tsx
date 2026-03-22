@@ -121,7 +121,7 @@ export default function ProfileEditScreen() {
                 const resData = await response.json();
                 console.log("DEBUG: Fetch upload response:", resData);
 
-                if (resData.success && resData.data?.url) {
+                if ((resData.success || resData.statusCode === 200) && resData.data?.url) {
                     setFormData(prev => ({ ...prev, profileImage: resData.data.url }));
                     setPreviewImage(resData.data.url);
                     Toast.show({ type: "success", text1: "Image Uploaded", text2: "Now click Save Changes." });

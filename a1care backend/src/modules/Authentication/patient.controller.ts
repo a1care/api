@@ -39,8 +39,7 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
   const { idToken, mobileNumber, otp } = req.body
 
-  // ─── DEV BYPASS CHECK ─────────────────────────────────────────────────────
-  // Strip country code if present — handles +91XXXXXXXXXX or plain XXXXXXXXXX
+  /* ─── DEV BYPASS CHECK (Disabled for Production) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
 
   if (cleanMobile === DEV_BYPASS_MOBILE && String(otp) === DEV_BYPASS_OTP) {
@@ -64,7 +63,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Verification successful (Dev Bypass)", { token }));
   }
-  // ─────────────────────────────────────────────────────────────────────────────
+  ───────────────────────────────────────────────────────────────────────────── */
 
   if (!idToken) {
     throw new ApiError(400, "Firebase ID token is required!")

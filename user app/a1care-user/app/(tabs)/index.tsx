@@ -3,19 +3,21 @@ import {
     View,
     Text,
     ScrollView,
-    TouchableOpacity,
-    RefreshControl,
     StyleSheet,
-    Linking,
-    Platform,
-    Image,
+    RefreshControl,
+    ActivityIndicator,
+    TouchableOpacity,
     TextInput,
+    Linking,
     Dimensions,
-    Modal
+    Image,
+    Modal, // Re-added Modal as it's used in the component
+    Platform, // Kept Platform as it's a common utility and not explicitly removed
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { useQuery } from '@tanstack/react-query';
 import {
     Stethoscope,
@@ -47,18 +49,39 @@ import { FontSize } from '@/constants/spacing';
 import { DoctorCard } from '@/components/ui/DoctorCard';
 import { EmergencyFAB } from '@/components/ui/EmergencyFAB';
 
+import { useConfigStore } from '@/stores/config.store';
+
 const { width } = Dimensions.get('window');
 
-const QUICK_SERVICES = [
-    { id: '1', icon: Stethoscope, label: 'Doctor Visit', color: '#2F80ED', sub: '150+ Doctors', bgColor: '#EBF3FD' },
-    { id: '2', icon: Pill, label: 'Nursing', color: '#9B51E0', sub: '80+ Nurses', bgColor: '#F5EBFF' },
-    { id: '3', icon: FlaskConical, label: 'Diagnostics', color: '#27AE60', sub: '50+ Tests', bgColor: '#E9F7EF' },
-    { id: '4', icon: Ambulance, label: 'Ambulance', color: '#EB5757', sub: '24/7 Available', bgColor: '#FEEFEF' },
-    { id: '5', icon: HeartPulse, label: 'Home Care', color: '#D63384', sub: 'Elderly Care', bgColor: '#FFF0F5' },
-    { id: '6', icon: ShieldCheck, label: 'Equipment', color: '#F2994A', sub: 'Medical Devices', bgColor: '#FFF7ED' },
-    { id: '7', icon: Activity, label: 'Pharmacy', color: '#FFC107', sub: 'Door Delivery', bgColor: '#FFF9E6' },
-    { id: '8', icon: Star, label: 'Physio', color: '#607D8B', sub: 'Home Therapy', bgColor: '#ECEFF1' },
-];
+// ── Service Icon Mapping (Maps DB names to Lucide icons & colors) ──
+const SERVICE_THEMES: Record<string, { icon: any; color: string; bgColor: string }> = {
+    'doctor':      { icon: Stethoscope,  color: '#2F80ED', bgColor: '#EBF3FD' },
+    'nurse':       { icon: Pill,         color: '#9B51E0', bgColor: '#F5EBFF' },
+    'lab':         { icon: FlaskConical, color: '#27AE60', bgColor: '#E9F7EF' },
+    'diagnostics': { icon: FlaskConical, color: '#27AE60', bgColor: '#E9F7EF' },
+    'ambulance':   { icon: Ambulance,    color: '#EB5757', bgColor: '#FEEFEF' },
+    'emergency':   { icon: ShieldCheck,  color: '#EB5757', bgColor: '#FEEFEF' },
+    'home':        { icon: HeartPulse,   color: '#D63384', bgColor: '#FFF0F5' },
+    'care':        { icon: HeartPulse,   color: '#D63384', bgColor: '#FFF0F5' },
+    'equipment':   { icon: ShieldCheck,  color: '#F2994A', bgColor: '#FFF7ED' },
+    'pharmacy':    { icon: Pill,         color: '#FFC107', bgColor: '#FFF9E6' },
+    'physio':      { icon: Star,         color: '#607D8B', bgColor: '#ECEFF1' },
+    'default':     { icon: LayoutGrid,    color: '#64748B', bgColor: '#F1F5F9' },
+};
+
+const KNOWLEDGE_THEMES: Record<string, { icon: any; color: string; bgColor: string }> = {
+    'Activity':    { icon: Activity,     color: '#FF6B6B', bgColor: '#FFF5F5' },
+    'Flask':       { icon: FlaskConical, color: '#4DABF7', bgColor: '#E7F5FF' },
+    'Heart':       { icon: HeartPulse,   color: '#51CF66', bgColor: '#EBFBEE' },
+    'Mental':      { icon: ShieldCheck,  color: '#FCC419', bgColor: '#FFF9DB' },
+    'default':     { icon: BookOpen,     color: '#64748B', bgColor: '#F1F5F9' },
+};
+
+function getServiceTheme(name: string) {
+    const low = name.toLowerCase();
+    const key = Object.keys(SERVICE_THEMES).find(k => low.includes(k)) || 'default';
+    return SERVICE_THEMES[key];
+}
 
 const HERO_SLIDES = [
     {
@@ -206,35 +229,117 @@ export default function HomeScreen() {
     const [activeKB, setActiveKB] = useState(0);
     const [selectedKB, setSelectedKB] = useState<any>(null);
     const [isKBModalOpen, setIsKBModalOpen] = useState(false);
+    const { config, fetchConfig } = useConfigStore();
+    const [locCity, setLocCity] = useState('Detecting...');
+    const [locArea, setLocArea] = useState('');
+    const [locLoading, setLocLoading] = useState(false);
 
     const heroScrollRef = useRef<ScrollView>(null);
+    const popularScrollRef = useRef<ScrollView>(null);
     const kbScrollRef = useRef<ScrollView>(null);
+
+    // Computed dynamic components
+    const dynamicBanners = useMemo(() => {
+        const festival = config?.landing.festivalBanners || [];
+        const activeFestival = festival.filter(b => b.active);
+        
+        if (activeFestival.length > 0) {
+            return activeFestival.map((b: any) => ({
+                id: b.id,
+                tag: 'DEAL OF THE DAY',
+                title: b.title,
+                subtitle: 'Exclusive online-only offer',
+                cta: 'Grab Now',
+                colors: ['#2F80ED', '#EC4899'],
+                path: b.redirectUrl || '/(tabs)/services',
+                params: {},
+                secondaryIcon: HeartPulse,
+                isDynamic: true,
+                imageUrl: b.imageUrl
+            }));
+        }
+        return HERO_SLIDES;
+    }, [config?.landing.festivalBanners]);
+
+    const dynamicKB = useMemo(() => {
+        const cloudKB = config?.knowledgeBase || [];
+        if (cloudKB.length === 0) return KNOWLEDGE_BASE;
+        
+        return cloudKB.map((item: any) => ({
+            ...item,
+            id: item.id || Math.random().toString(),
+            icon: KNOWLEDGE_THEMES[item.refType]?.icon || Activity,
+            color: KNOWLEDGE_THEMES[item.refType]?.color || '#FF6B6B',
+            bgColor: KNOWLEDGE_THEMES[item.refType]?.bgColor || '#FFF5F5',
+        }));
+    }, [config?.knowledgeBase]);
+
+    // Location fetcher
+    const handleGetLocation = async () => {
+        setLocLoading(true);
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setLocCity('Permission Denied');
+                setLocArea('Enable location in settings');
+                setLocLoading(false);
+                return;
+            }
+            const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            const [geo] = await Location.reverseGeocodeAsync({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+            });
+            setLocCity(geo.city || geo.region || 'Your City');
+            setLocArea(geo.district || geo.subregion || geo.street || '');
+        } catch (e) {
+            setLocCity('Location Error');
+            setLocArea('Tap to retry');
+        } finally {
+            setLocLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        handleGetLocation();
+    }, []);
 
     // Auto-slide logic for Hero section
     useEffect(() => {
+        const slideCount = dynamicBanners.length;
+        if (slideCount <= 1) return;
+
         const timer = setInterval(() => {
-            let nextIndex = (activeHero + 1) % HERO_SLIDES.length;
+            let nextIndex = (activeHero + 1) % slideCount;
             setActiveHero(nextIndex);
             heroScrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
         }, 5000); // 5 second rotation
 
         return () => clearInterval(timer);
-    }, [activeHero]);
+    }, [activeHero, dynamicBanners.length]);
 
     // Auto-slide for Knowledge Base
     useEffect(() => {
+        const slideCount = dynamicKB.length;
+        if (slideCount <= 1) return;
+        
         const timer = setInterval(() => {
-            let nextIndex = (activeKB + 1) % KNOWLEDGE_BASE.length;
+            let nextIndex = (activeKB + 1) % slideCount;
             setActiveKB(nextIndex);
             kbScrollRef.current?.scrollTo({ x: nextIndex * (width - 40), animated: true });
         }, 7000); // 7 second rotation
 
         return () => clearInterval(timer);
-    }, [activeKB]);
+    }, [activeKB, dynamicKB.length]);
 
     const { data: services, refetch: refetchServices } = useQuery({
         queryKey: ['services'],
         queryFn: servicesService.getAll,
+    });
+
+    const { data: featured, refetch: refetchFeatured } = useQuery({
+        queryKey: ['services-featured'],
+        queryFn: servicesService.getFeatured,
     });
 
     const { data: ongoingBookings, refetch: refetchBookings } = useQuery({
@@ -264,9 +369,40 @@ export default function HomeScreen() {
         );
     }, [allDoctors, searchQuery]);
 
+    const matchedServices = useMemo(() => {
+        if (!services || !searchQuery.trim()) return [];
+        return services.filter(s => 
+            s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.title?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [services, searchQuery]);
+
+    const isSearching = searchQuery.trim().length > 0;
+
+    const dynamicQuickServices = useMemo(() => {
+        if (!services) return [];
+        return services.map((s) => {
+            const theme = getServiceTheme(s.name);
+            return {
+                id: s._id,
+                icon: theme.icon,
+                label: s.name,
+                color: theme.color,
+                sub: s.title || 'Professional care',
+                bgColor: theme.bgColor
+            };
+        }).slice(0, 8);
+    }, [services]);
+
     const onRefresh = async () => {
         setRefreshing(true);
-        await Promise.all([refetchServices(), refetchBookings(), refetchDoctors()]);
+        await Promise.all([
+            refetchServices(), 
+            refetchFeatured(),
+            refetchBookings(), 
+            refetchDoctors(), 
+            fetchConfig()
+        ]);
         setRefreshing(false);
     };
 
@@ -325,14 +461,17 @@ export default function HomeScreen() {
             {/* ── 1. Sticky Top Bar ── */}
             <View style={[styles.stickyHeader, { paddingTop: insets.top + 8 }]}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity style={styles.locationSelector}>
+                    <TouchableOpacity style={styles.locationSelector} onPress={handleGetLocation} disabled={locLoading}>
                         <View style={styles.locIconContainer}>
-                            <MapPin size={16} color={Colors.primary} />
+                            {locLoading
+                                ? <ActivityIndicator size="small" color={Colors.primary} />
+                                : <MapPin size={16} color={Colors.primary} />
+                            }
                         </View>
                         <View>
-                            <Text style={styles.locCity}>Hyderabad</Text>
+                            <Text style={styles.locCity} numberOfLines={1}>{locCity}</Text>
                             <View style={styles.locRow}>
-                                <Text style={styles.locSub}>City Center</Text>
+                                <Text style={styles.locSub} numberOfLines={1}>{locArea || 'Tap to update'}</Text>
                                 <ChevronDown size={12} color={Colors.textSecondary} />
                             </View>
                         </View>
@@ -345,7 +484,14 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
                             <View style={styles.avatarCircle}>
-                                <Text style={styles.avatarInitial}>{user?.name?.charAt(0) ?? 'U'}</Text>
+                                {user?.profileImage ? (
+                                    <Image 
+                                        source={{ uri: user.profileImage }} 
+                                        style={{ width: '100%', height: '100%', borderRadius: 100 }} 
+                                    />
+                                ) : (
+                                    <Text style={styles.avatarInitial}>{user?.name?.charAt(0) ?? 'U'}</Text>
+                                )}
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -377,60 +523,128 @@ export default function HomeScreen() {
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
                 }
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={{ paddingTop: insets.top + 148 }}
             >
-                {/* ── 2. Strong Hero Section ── */}
-                <View style={styles.heroContainer}>
-                    <ScrollView
-                        ref={heroScrollRef}
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        onScroll={(e) => {
-                            const slide = Math.round(e.nativeEvent.contentOffset.x / width);
-                            if (slide !== activeHero) setActiveHero(slide);
-                        }}
-                        scrollEventThrottle={16}
-                    >
-                        {HERO_SLIDES.map((slide) => (
+                {isSearching ? (
+                    <View style={styles.searchResultsContainer}>
+                        <View style={styles.searchHeader}>
+                            <Text style={styles.searchTitle}>Search Results</Text>
+                            <Text style={styles.searchCount}>{topDoctors.length + matchedServices.length} matches found</Text>
+                        </View>
+
+                        {/* Matched Services */}
+                        {matchedServices.length > 0 && (
+                            <View style={styles.searchSection}>
+                                <Text style={styles.searchSectionTitle}>Services & Categories</Text>
+                                {matchedServices.map(s => (
+                                    <TouchableOpacity 
+                                        key={s._id} 
+                                        style={styles.searchResultRow}
+                                        onPress={() => router.push({ pathname: '/(tabs)/services', params: { category: s.name, serviceId: s._id } })}
+                                    >
+                                        <View style={styles.searchResultIcon}>
+                                            <LayoutGrid size={18} color={Colors.primary} />
+                                        </View>
+                                        <Text style={styles.searchResultText}>{s.name}</Text>
+                                        <ArrowRight size={14} color={Colors.muted} />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+
+                        {/* Matched Doctors */}
+                        {topDoctors.length > 0 ? (
+                            <View style={styles.searchSection}>
+                                <Text style={styles.searchSectionTitle}>Doctors & Specialists</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+                                    {topDoctors.map(d => (
+                                        <DoctorCard
+                                            key={d._id}
+                                            name={d.name || "Doctor"}
+                                            specialization={d.specialization?.join(", ") || "Specialist"}
+                                            rating={d.rating || 4.8}
+                                            experience={formatExperience(d.startExperience ?? 0)}
+                                            price={d.consultationFee || 650}
+                                            onPress={() => router.push(`/doctor/${d._id}`)}
+                                        />
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        ) : !matchedServices.length && (
+                            <View style={styles.noResults}>
+                                <Search size={48} color={Colors.muted} style={{ marginBottom: 16, opacity: 0.5 }} />
+                                <Text style={styles.noResultsText}>No matches found for "{searchQuery}"</Text>
+                                <TouchableOpacity style={styles.resetBtn} onPress={() => setSearchQuery('')}>
+                                    <Text style={styles.resetBtnText}>Clear Search</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <View style={{ height: 200 }} />
+                    </View>
+                ) : (
+                    <>
+                        {/* ── 2. Strong Hero Section ── */}
+                        <View style={styles.heroContainer}>
+                            <ScrollView
+                                ref={heroScrollRef}
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                onScroll={(e) => {
+                                    const slide = Math.round(e.nativeEvent.contentOffset.x / width);
+                                    if (slide !== activeHero) setActiveHero(slide);
+                                }}
+                                scrollEventThrottle={16}
+                            >
+                        {dynamicBanners.map((slide) => (
                             <View key={slide.id} style={styles.heroCard}>
-                                <LinearGradient
-                                    colors={slide.colors as any}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.heroGradient}
+                                <TouchableOpacity 
+                                    activeOpacity={0.9} 
+                                    onPress={() => router.push({
+                                        pathname: (slide as any).path as any,
+                                        params: (slide as any).params
+                                    })}
+                                    style={{ flex: 1 }}
                                 >
-                                    <View style={styles.heroTextContent}>
-                                        <Text style={styles.heroTag}>{slide.tag}</Text>
-                                        <Text style={styles.heroTitle}>{slide.title}</Text>
-                                        <Text style={styles.heroSubtitle}>{slide.subtitle}</Text>
-
-                                        <TouchableOpacity
-                                            style={styles.heroCta}
-                                            onPress={() => router.push({
-                                                pathname: slide.path as any,
-                                                params: slide.params
-                                            })}
-                                        >
-                                            <Text style={styles.heroCtaText}>{slide.cta}</Text>
-                                            <ArrowRight size={16} color={Colors.primary} />
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity style={styles.heroLink} onPress={() => router.push('/(tabs)/services')}>
-                                            <Text style={styles.heroLinkText}>Explore Services</Text>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    {/* Subtle Background Icon Decoration */}
-                                    <View style={styles.heroDecorationContainer}>
-                                        <slide.secondaryIcon size={140} color="rgba(255,255,255,0.15)" strokeWidth={1.5} />
-                                    </View>
-                                </LinearGradient>
+                                    <LinearGradient
+                                        colors={slide.colors as any}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.heroGradient}
+                                    >
+                                        <View style={styles.heroTextContent}>
+                                            <Text style={styles.heroTag}>{slide.tag}</Text>
+                                            <Text style={styles.heroTitle}>{slide.title}</Text>
+                                            <Text style={styles.heroSubtitle}>{slide.subtitle}</Text>
+    
+                                            <View style={styles.heroCta}>
+                                                <Text style={styles.heroCtaText}>{slide.cta}</Text>
+                                                <ArrowRight size={16} color={Colors.primary} />
+                                            </View>
+    
+                                            <View style={styles.heroLink}>
+                                                <Text style={styles.heroLinkText}>Explore Services</Text>
+                                            </View>
+                                        </View>
+    
+                                        {/* Dynamic Image or decoration icon */}
+                                        <View style={styles.heroDecorationContainer}>
+                                            {(slide as any).imageUrl ? (
+                                                <Image 
+                                                    source={{ uri: (slide as any).imageUrl }} 
+                                                    style={{ width: 140, height: 140, borderRadius: 20, opacity: 0.8 }} 
+                                                />
+                                            ) : (
+                                                <slide.secondaryIcon size={140} color="rgba(255,255,255,0.15)" strokeWidth={1.5} />
+                                            )}
+                                        </View>
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </View>
                         ))}
                     </ScrollView>
                     <View style={styles.paginationDots}>
-                        {HERO_SLIDES.map((_, i) => (
+                        {dynamicBanners.map((_, i) => (
                             <View key={i} style={[styles.dot, activeHero === i && styles.dotActive]} />
                         ))}
                     </View>
@@ -445,22 +659,30 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.grid}>
-                        {QUICK_SERVICES.map((item) => (
-                            <TouchableOpacity
-                                key={item.id}
-                                style={styles.gridItem}
-                                onPress={() => router.push({
-                                    pathname: '/(tabs)/services',
-                                    params: { category: item.label }
-                                })}
-                            >
-                                <View style={[styles.iconBox, { backgroundColor: item.bgColor }]}>
-                                    <item.icon size={24} color={item.color} />
+                        {dynamicQuickServices.length > 0 ? (
+                            dynamicQuickServices.map((item) => (
+                                <TouchableOpacity
+                                    key={item.id}
+                                    style={styles.gridItem}
+                                    onPress={() => router.push({
+                                        pathname: '/(tabs)/services',
+                                        params: { category: item.label, serviceId: item.id }
+                                    })}
+                                >
+                                    <View style={[styles.iconBox, { backgroundColor: item.bgColor }]}>
+                                        <item.icon size={24} color={item.color} />
+                                    </View>
+                                    <Text style={styles.gridLabel} numberOfLines={1}>{item.label}</Text>
+                                    <Text style={styles.gridSubLabel} numberOfLines={1}>{item.sub}</Text>
+                                </TouchableOpacity>
+                            ))
+                        ) : (
+                            [1, 2, 3, 4].map(i => (
+                                <View key={i} style={styles.gridItem}>
+                                    <View style={[styles.iconBox, { backgroundColor: '#F1F5F9' }]} />
                                 </View>
-                                <Text style={styles.gridLabel}>{item.label}</Text>
-                                <Text style={styles.gridSubLabel}>{item.sub}</Text>
-                            </TouchableOpacity>
-                        ))}
+                            ))
+                        )}
                     </View>
                 </View>
 
@@ -496,6 +718,7 @@ export default function HomeScreen() {
                         <Text style={styles.sectionTitle}>Popular Near You</Text>
                     </View>
                     <ScrollView
+                        ref={popularScrollRef}
                         horizontal
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
@@ -504,49 +727,46 @@ export default function HomeScreen() {
                             if (slide !== activePopular) setActivePopular(slide);
                         }}
                         scrollEventThrottle={16}
-                        contentContainerStyle={styles.recommendationContainer}
                     >
-                        <TouchableOpacity style={styles.recommendCard} activeOpacity={0.9}>
-                            <View style={styles.recommendLeft}>
-                                <View style={[styles.badge, { backgroundColor: '#E9F7EF' }]}>
-                                    <Text style={[styles.badgeText, { color: Colors.health }]}>MOST BOOKED</Text>
-                                </View>
-                                <Text style={styles.recommendTitle}>Full Body Checkup</Text>
-                                <Text style={styles.recommendDesc}>Includes 60+ parameters with free pickup</Text>
-                                <View style={styles.recommendFooter}>
-                                    <Text style={styles.recommendPrice}>Starting ₹499</Text>
-                                    <View style={styles.bookBadge}>
-                                        <Text style={styles.bookBadgeText}>Book</Text>
-                                    </View>
-                                </View>
+                        {featured && featured.length > 0 ? (
+                            featured.slice(0, 3).map((item) => {
+                                const theme = getServiceTheme(item.name);
+                                const IconComp = theme.icon;
+                                return (
+                                    <TouchableOpacity 
+                                        key={item._id} 
+                                        style={styles.recommendCard} 
+                                        activeOpacity={0.9}
+                                        onPress={() => router.push(`/service/${item._id}`)}
+                                    >
+                                        <View style={styles.recommendLeft}>
+                                            <View style={[styles.badge, { backgroundColor: theme.bgColor }]}>
+                                                <Text style={[styles.badgeText, { color: theme.color }]}>RECOMMENDED</Text>
+                                            </View>
+                                            <Text style={styles.recommendTitle}>{item.name}</Text>
+                                            <Text style={styles.recommendDesc} numberOfLines={2}>{item.description}</Text>
+                                            <View style={styles.recommendFooter}>
+                                                <Text style={styles.recommendPrice}>₹{item.price}</Text>
+                                                <View style={styles.bookBadge}>
+                                                    <Text style={styles.bookBadgeText}>Book</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View style={styles.recommendRight}>
+                                            <IconComp size={40} color={theme.color} opacity={0.6} />
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })
+                        ) : (
+                            <View style={styles.recommendCard}>
+                                <Text style={styles.recommendTitle}>Loading top deals...</Text>
                             </View>
-                            <View style={styles.recommendRight}>
-                                <FlaskConical size={40} color={Colors.health} opacity={0.6} />
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.recommendCard} activeOpacity={0.9}>
-                            <View style={styles.recommendLeft}>
-                                <View style={[styles.badge, { backgroundColor: '#EBF3FD' }]}>
-                                    <Text style={[styles.badgeText, { color: Colors.primary }]}>FASTEST RESPONSE</Text>
-                                </View>
-                                <Text style={styles.recommendTitle}>Critical Care Nursing</Text>
-                                <Text style={styles.recommendDesc}>Certified nurses available in 30 mins</Text>
-                                <View style={styles.recommendFooter}>
-                                    <Text style={styles.recommendPrice}>From ₹800/shift</Text>
-                                    <View style={styles.bookBadge}>
-                                        <Text style={styles.bookBadgeText}>Book</Text>
-                                    </View>
-                                </View>
-                            </View>
-                            <View style={styles.recommendRight}>
-                                <ShieldCheck size={40} color={Colors.primary} opacity={0.6} />
-                            </View>
-                        </TouchableOpacity>
+                        )}
                     </ScrollView>
 
                     <View style={styles.miniPagination}>
-                        {[0, 1].map(i => (
+                        {(featured?.slice(0, 3) ?? [1, 2]).map((_, i) => (
                             <View key={i} style={[styles.miniDot, activePopular === i && styles.miniDotActive]} />
                         ))}
                     </View>
@@ -604,29 +824,36 @@ export default function HomeScreen() {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={{ paddingHorizontal: 20 }}
                     >
-                        <TouchableOpacity style={styles.offerCard}>
-                            <View style={styles.offerBadge}>
-                                <Text style={styles.offerBadgeText}>OFFER</Text>
-                            </View>
-                            <Text style={styles.offerTitle}>First Consult</Text>
-                            <Text style={styles.offerSubtitle}>Flat 50% OFF on your first home visit.</Text>
-                            <View style={styles.offerPriceRow}>
-                                <Text style={styles.offerPrice}>₹250</Text>
-                                <Text style={styles.offerOldPrice}>₹500</Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={[styles.offerCard, { backgroundColor: '#F0FDF4' }]}>
-                            <View style={[styles.offerBadge, { backgroundColor: '#86EFAC' }]}>
-                                <Text style={styles.offerBadgeText}>NEW</Text>
-                            </View>
-                            <Text style={styles.offerTitle}>Annual Care</Text>
-                            <Text style={styles.offerSubtitle}>Unlimited consults for your entire family.</Text>
-                            <View style={styles.offerPriceRow}>
-                                <Text style={styles.offerPrice}>₹4,999</Text>
-                                <Text style={styles.offerOldPrice}>₹12k</Text>
-                            </View>
-                        </TouchableOpacity>
+                        {featured && featured.length > 3 ? (
+                            featured.slice(3, 6).map((item) => (
+                                <TouchableOpacity 
+                                    key={item._id} 
+                                    style={[styles.offerCard, { backgroundColor: '#F0FDF4' }]}
+                                    onPress={() => router.push(`/service/${item._id}`)}
+                                >
+                                    <View style={[styles.offerBadge, { backgroundColor: '#86EFAC' }]}>
+                                        <Text style={styles.offerBadgeText}>PACKAGE</Text>
+                                    </View>
+                                    <Text style={styles.offerTitle}>{item.name}</Text>
+                                    <Text style={styles.offerSubtitle} numberOfLines={2}>{item.description}</Text>
+                                    <View style={styles.offerPriceRow}>
+                                        <Text style={styles.offerPrice}>₹{item.price}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        ) : (
+                            <TouchableOpacity style={styles.offerCard}>
+                                <View style={styles.offerBadge}>
+                                    <Text style={styles.offerBadgeText}>OFFER</Text>
+                                </View>
+                                <Text style={styles.offerTitle}>First Consult</Text>
+                                <Text style={styles.offerSubtitle}>Flat 50% OFF on your first home visit.</Text>
+                                <View style={styles.offerPriceRow}>
+                                    <Text style={styles.offerPrice}>₹250</Text>
+                                    <Text style={styles.offerOldPrice}>₹500</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
                     </ScrollView>
                 </View>
 
@@ -714,9 +941,8 @@ export default function HomeScreen() {
                                 if (slide !== activeKB) setActiveKB(slide);
                             }}
                             scrollEventThrottle={16}
-                            style={{ height: 180 }}
                         >
-                            {KNOWLEDGE_BASE.map((item) => (
+                            {dynamicKB.map((item: any) => (
                                 <TouchableOpacity
                                     key={item.id}
                                     style={[styles.kbItem, { width: width - 40, backgroundColor: item.bgColor }]}
@@ -744,7 +970,7 @@ export default function HomeScreen() {
 
                         {/* Slide Indicator Overlay */}
                         <View style={styles.kbIndicatorLine}>
-                            {KNOWLEDGE_BASE.map((_, i) => (
+                            {dynamicKB.map((_: any, i: number) => (
                                 <View key={i} style={[styles.kbMiniDot, activeKB === i && styles.kbMiniDotActive]} />
                             ))}
                         </View>
@@ -804,6 +1030,8 @@ export default function HomeScreen() {
                 </Modal>
 
                 <View style={{ height: 120 }} />
+                </>
+                )}
             </ScrollView>
 
             {/* ── 8. Emergency Floating Widget ── */}
@@ -814,7 +1042,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: Colors.background },
-    scrollContent: { paddingTop: 160 }, // Offset for sticky header
+    // scrollContent paddingTop is now set inline via insets.top + 148
 
     // 1. Sticky Top Bar
     stickyHeader: {
@@ -1493,6 +1721,89 @@ const styles = StyleSheet.create({
         color: Colors.white,
         fontSize: 16,
         fontWeight: '800',
+    },
+
+    // Search Results Styles
+    searchResultsContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+    searchHeader: {
+        marginBottom: 24,
+    },
+    searchTitle: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: Colors.textPrimary,
+        letterSpacing: -0.5,
+    },
+    searchCount: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginTop: 4,
+        fontWeight: '600',
+    },
+    searchSection: {
+        marginBottom: 32,
+    },
+    searchSectionTitle: {
+        fontSize: 13,
+        fontWeight: '900',
+        color: Colors.muted,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 16,
+        paddingLeft: 4,
+    },
+    searchResultRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: Colors.white,
+        borderRadius: 16,
+        marginBottom: 10,
+        ...Shadows.card,
+    },
+    searchResultIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: Colors.primaryLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    searchResultText: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.textPrimary,
+    },
+    noResults: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 60,
+        paddingHorizontal: 40,
+    },
+    noResultsText: {
+        fontSize: 16,
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 24,
+        fontWeight: '600',
+        marginBottom: 24,
+    },
+    resetBtn: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        backgroundColor: Colors.primary,
+        borderRadius: 100,
+        ...Shadows.float,
+    },
+    resetBtnText: {
+        color: Colors.white,
+        fontWeight: '800',
+        fontSize: 14,
     },
 });
 

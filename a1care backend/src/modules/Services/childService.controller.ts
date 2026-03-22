@@ -70,3 +70,12 @@ export const deleteChildService = asyncHandler(async (req, res) => {
     const deleted = await ChildServiceModel.findByIdAndDelete(id)
     return res.status(200).json(new ApiResponse(200, "Deleted Successfully", deleted))
 })
+
+export const getFeaturedChildServices = asyncHandler(async (req, res) => {
+    // Fetch top 5 services based on rating and completion count
+    const featured = await ChildServiceModel.find({ isActive: true })
+        .sort({ rating: -1, completed: -1 })
+        .limit(6);
+        
+    return res.json(new ApiResponse(200, "Featured child services fetched", featured));
+});

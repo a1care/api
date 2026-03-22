@@ -28,4 +28,11 @@ export const servicesService = {
         );
         return res.data.data;
     },
+
+    getFeatured: async () => {
+        const res = await api.get<ApiResponse<ChildService[]>>(
+            Endpoints.CHILD_SERVICES_FEATURED
+        );
+        return res.data.data;
+    },
 };

@@ -21,11 +21,46 @@ import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Button } from '@/components/ui/Button';
+import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
+import { API_BASE_URL } from '@/constants/api';
+
+const Toast = ({ message, type, onHide }: { message: string, type: 'success' | 'error', onHide: () => void }) => {
+    React.useEffect(() => {
+        const timer = setTimeout(onHide, 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    return (
+        <Animated.View 
+            entering={FadeInUp} 
+            exiting={FadeOutUp}
+            style={[
+                styles.toastContainer, 
+                { backgroundColor: type === 'success' ? '#10B981' : '#EF4444' }
+            ]}
+        >
+            <Ionicons 
+                name={type === 'success' ? "checkmark-circle" : "alert-circle"} 
+                size={20} 
+                color="#FFF" 
+            />
+            <Text style={styles.toastText}>{message}</Text>
+        </Animated.View>
+    );
+};
 
 export default function HealthVaultScreen() {
     const router = useRouter();
     const qc = useQueryClient();
     const [isUploading, setIsUploading] = useState(false);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const getFileUrl = (url: string) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        const baseUrl = API_BASE_URL.replace('/api', '');
+        return `${baseUrl}/${url.replace(/\\/g, '/')}`;
+    };
 
     const { data: records, isLoading, isError, refetch, isRefetching } = useQuery({
         queryKey: ['medical-records'],
@@ -35,11 +70,11 @@ export default function HealthVaultScreen() {
     const uploadMutation = useMutation({
         mutationFn: (formData: FormData) => medicalService.uploadRecord(formData),
         onSuccess: () => {
-            Alert.alert("Success", "Record uploaded successfully");
+            setToast({ message: "Record uploaded successfully", type: 'success' });
             qc.invalidateQueries({ queryKey: ['medical-records'] });
         },
         onError: (err: any) => {
-            Alert.alert("Upload Failed", err?.response?.data?.message || "Something went wrong");
+            setToast({ message: err?.response?.data?.message || "Upload Failed", type: 'error' });
         },
         onSettled: () => setIsUploading(false)
     });
@@ -100,13 +135,13 @@ export default function HealthVaultScreen() {
 
             <View style={styles.filesRow}>
                 {item.prescriptions.map((url, i) => (
-                    <TouchableOpacity key={i} style={styles.fileChip} onPress={() => Linking.openURL(url)}>
+                    <TouchableOpacity key={i} style={styles.fileChip} onPress={() => Linking.openURL(getFileUrl(url))}>
                         <Ionicons name="document-text" size={14} color="#6366F1" />
                         <Text style={styles.fileChipText}>Prescription {i+1}</Text>
                     </TouchableOpacity>
                 ))}
                 {item.labReports.map((url, i) => (
-                    <TouchableOpacity key={i} style={styles.fileChip} onPress={() => Linking.openURL(url)}>
+                    <TouchableOpacity key={i} style={styles.fileChip} onPress={() => Linking.openURL(getFileUrl(url))}>
                         <Ionicons name="flask" size={14} color="#10B981" />
                         <Text style={styles.fileChipText}>Report {i+1}</Text>
                     </TouchableOpacity>
@@ -124,6 +159,8 @@ export default function HealthVaultScreen() {
                 <Text style={styles.headerTitle}>Health Vault</Text>
                 <View style={{ width: 44 }} />
             </View>
+
+            {toast && <Toast message={toast.message} type={toast.type} onHide={() => setToast(null)} />}
 
             <FlatList
                 data={records}
@@ -240,4 +277,24 @@ const styles = StyleSheet.create({
     emptyState: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
     emptyTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginTop: 20 },
     emptySub: { fontSize: 14, color: '#94A3B8', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+    toastContainer: {
+        position: 'absolute',
+        top: 100,
+        left: 20,
+        right: 20,
+        padding: 16,
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        zIndex: 1000,
+        ...Shadows.card,
+        elevation: 5,
+    },
+    toastText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+        flex: 1,
+    },
 });

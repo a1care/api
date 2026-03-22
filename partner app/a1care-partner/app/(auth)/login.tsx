@@ -9,19 +9,21 @@ import { Toast } from "../../components/CustomToast";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
 
-// Modern Native Firebase Auth
-import auth from '@react-native-firebase/auth';
-
-// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-const DEV_BYPASS_MOBILE = '9701677607';
-const DEV_BYPASS_OTP = '123123';
-// ─────────────────────────────────────────────────────────────────────────────
+// Import native Firebase Auth safely
+const getAuth = () => {
+    try {
+        return require('@react-native-firebase/auth').default;
+    } catch (e) {
+        console.warn('Native Firebase Auth not found, check if you are in Expo Go');
+        return null;
+    }
+};
 
 const roleLabels: Record<string, string> = {
     doctor: "Doctor", nurse: "Nurse", ambulance: "Ambulance", rental: "Medical Rental",
 };
 
-export default function LoginScreen() {
+const LoginScreen = () => {
     const router = useRouter();
     const { role } = useLocalSearchParams<{ role: string }>();
     const { setAuth, setConfirmationResult, confirmationResult } = useAuthStore();
@@ -39,20 +41,19 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            // ─── DEV BYPASS: skip Firebase for test number ──────────────────────────
-            if (cleaned === DEV_BYPASS_MOBILE) {
-                Toast.show({ type: 'success', text1: 'Dev Bypass Active', text2: 'Enter OTP: 123123' });
-                setOtpSessionId('BYPASS');
-                setLoading(false);
-                return;
+            const auth = getAuth();
+            if (!auth) {
+                throw new Error("Phone OTP requires a Production Build. Please use a signed release APK.");
             }
-            // ───────────────────────────────────────────────────────────────
+
             const e164PhoneNumber = `+91${cleaned}`;
             const confirmation = await auth().signInWithPhoneNumber(e164PhoneNumber);
+            
             setConfirmationResult(confirmation);
-            setOtpSessionId(confirmation.verificationId);
+            setOtpSessionId(confirmation.verificationId || 'SESSION_ACTIVE');
             Toast.show({ type: 'success', text1: 'OTP Sent', text2: 'Enter the code you received.' });
         } catch (err: any) {
+            console.error('Send OTP failed', err);
             Toast.show({ type: 'error', text1: 'Error', text2: err?.message || 'Failed to send OTP.' });
         } finally {
             setLoading(false);
@@ -69,24 +70,19 @@ export default function LoginScreen() {
             let idToken = undefined;
             const cleaned = mobile.replace(/\D/g, '');
 
-            // ─── DEV BYPASS ───────────────────────────────────────────────────
-            if (cleaned === DEV_BYPASS_MOBILE && otp === DEV_BYPASS_OTP) {
-                console.log('[DEV BYPASS] Partner: skipping Firebase');
-                // idToken stays undefined — backend will match on otp alone
-            } else if (confirmationResult) {
-                const userCredential = await confirmationResult.confirm(otp);
+            if (confirmationResult && (confirmationResult as any).confirm) {
+                const userCredential = await (confirmationResult as any).confirm(otp);
                 idToken = await userCredential.user.getIdToken(true);
             } else {
                 Toast.show({ type: 'error', text1: 'Error', text2: 'Session expired. Request OTP again.' });
                 return;
             }
-            // ───────────────────────────────────────────────────────────────
 
-            // Backend verification using idToken
-            console.log(`[PartnerAuth] Verifying mobile: ${mobile}`);
+            // Backend verification
             const res = await api.post("/doctor/auth/verify-otp", {
                 idToken,
-                mobileNumber: mobile
+                mobileNumber: `+91${cleaned}`,
+                otp: otp
             });
             const { token } = res.data.data;
 
@@ -95,42 +91,24 @@ export default function LoginScreen() {
             const staff = detailsRes.data.data;
 
             if (!staff.isRegistered) {
-                Toast.show({
-                    type: 'success',
-                    text1: 'Verified',
-                    text2: 'Please complete your registration.'
-                });
+                Toast.show({ type: 'success', text1: 'Verified', text2: 'Please complete your registration.' });
                 router.push({
                     pathname: "/(auth)/register",
                     params: { role: role ?? "doctor", token }
                 });
             } else {
-                Toast.show({
-                    type: 'success',
-                    text1: 'Login Successful',
-                    text2: 'Welcome back!'
-                });
+                Toast.show({ type: 'success', text1: 'Login Successful', text2: 'Welcome back!' });
                 await setAuth(token, { ...staff, role: role as PartnerRole });
                 router.replace("/(tabs)/home");
             }
         } catch (err: any) {
-             console.error('[PartnerAuth] Error details:', {
-                message: err.message,
-                response: err.response?.data,
-                url: err.config?.url
-            });
             let msg = err?.response?.data?.message || err?.message || "Invalid OTP";
-            if (err.message === 'Network Error') msg = "Cannot reach server. Check internet.";
-
-            Toast.show({
-                type: 'error',
-                text1: 'Verification Failed',
-                text2: msg
-            });
+            Toast.show({ type: 'error', text1: 'Verification Failed', text2: msg });
         } finally {
             setVerifying(false);
         }
     };
+
 
     return (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -231,7 +209,9 @@ export default function LoginScreen() {
             </ScrollView>
         </KeyboardAvoidingView>
     );
-}
+};
+
+export default LoginScreen;
 
 const styles = StyleSheet.create({
     back: { fontSize: 16, color: "#1A7FD4", fontWeight: "600" },

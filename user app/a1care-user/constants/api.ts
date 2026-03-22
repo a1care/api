@@ -20,6 +20,7 @@ export const Endpoints = {
     SUBSERVICES: (serviceId: string) => `/subservice/${serviceId}`,
     CHILD_SERVICES: (subServiceId: string) => `/childService/${subServiceId}`,
     CHILD_SERVICE_DETAIL: (id: string) => `/childService/detail/${id}`,
+    CHILD_SERVICES_FEATURED: '/childService/featured',
 
     // Roles
     ROLES: '/role',

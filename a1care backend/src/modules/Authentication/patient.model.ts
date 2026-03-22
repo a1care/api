@@ -26,7 +26,8 @@ const PatientSchema = new Schema<PatientDocument>(
 
     name: {
       type: String,
-      trim: true
+      trim: true,
+      maxLength: 50
     },
 
     email: {

@@ -26,7 +26,7 @@ const MedicalRecordSchema = new Schema<MedicalRecordDocument>(
     appointmentId: {
       type: Schema.Types.ObjectId,
       ref: "DoctorAppointment",
-      index: true
+      index: { unique: false, sparse: true }
     },
     clinicalNotes: {
       type: String,

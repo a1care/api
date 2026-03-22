@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { doctorsService } from '@/services/doctors.service';
 import { bookingsService } from '@/services/bookings.service';
 import { walletService } from '@/services/wallet.service';
+import { paymentService } from '@/services/payment.service';
 import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
@@ -27,7 +28,7 @@ export default function DoctorBookingScreen() {
 
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedSlot, setSelectedSlot] = useState<{ startingTime: string; endingTime: string } | null>(null);
-    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'WALLET'>('COD');
+    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'WALLET' | 'ONLINE'>('COD');
 
     // 1. Fetch Doctor Details (Dynamic Price)
     const { data: doctor, isLoading: doctorLoading, isError: doctorError, refetch: refetchDoctor } = useQuery({
@@ -77,7 +78,7 @@ export default function DoctorBookingScreen() {
         },
     });
 
-    const handleBook = () => {
+    const handleBook = async () => {
         if (!selectedSlot) {
             Alert.alert('Select Slot', 'Please choose a time slot to continue.');
             return;
@@ -88,7 +89,39 @@ export default function DoctorBookingScreen() {
             return;
         }
 
-        bookMutation.mutate(selectedSlot);
+        if (paymentMethod === 'ONLINE') {
+            try {
+                // 1. Create Booking first (status Pending)
+                const booking = await bookingsService.bookDoctor(id!, {
+                    date: selectedDate,
+                    startingTime: selectedSlot.startingTime,
+                    endingTime: selectedSlot.endingTime,
+                    paymentMode: 'ONLINE'
+                });
+
+                // 2. Create Payment Order for this Booking
+                const order = await paymentService.createOrder({
+                    amount: doctor?.consultationFee ?? 0,
+                    type: "BOOKING",
+                    referenceId: booking._id
+                });
+
+                // 3. Initiate Payment
+                const params = await paymentService.initiatePayment(order._id);
+
+                // 4. Navigate to Easebuzz Checkout
+                router.push({
+                    pathname: "/checkout/easebuzz" as any,
+                    params: { ...params }
+                });
+            } catch (err: any) {
+                console.error("Booking Payment Error:", err);
+                Alert.alert("Error", err?.response?.data?.message || "Could not start online payment. Please use COD.");
+            }
+        } else {
+            // WALLET or COD flow
+            bookMutation.mutate(selectedSlot);
+        }
     };
 
     if (doctorError) return <ErrorState message="Could not find doctor context" onRetry={refetchDoctor} />;
@@ -211,6 +244,20 @@ export default function DoctorBookingScreen() {
                             {paymentMethod === 'WALLET' && <View style={styles.radioInner} />}
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.payCard, paymentMethod === 'ONLINE' ? styles.payCardActive : {}]}
+                        onPress={() => setPaymentMethod('ONLINE')}
+                    >
+                        <Text style={styles.payIcon}>💳</Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.payLabel}>Online Payment</Text>
+                            <Text style={styles.paySub}>Cards, UPI, Netbanking</Text>
+                        </View>
+                        <View style={[styles.radio, paymentMethod === 'ONLINE' ? styles.radioActive : {}]}>
+                            {paymentMethod === 'ONLINE' && <View style={styles.radioInner} />}
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={{ height: 180 }} />
@@ -223,7 +270,7 @@ export default function DoctorBookingScreen() {
                     <Text style={styles.priceVal}>{doctor?.consultationFee ? `₹${doctor.consultationFee}` : '...'}</Text>
                 </View>
                 <Button
-                    label={paymentMethod === 'WALLET' ? 'Book & Pay from Wallet' : 'Confirm & Book (COD)'}
+                    label={paymentMethod === 'WALLET' ? 'Book & Pay from Wallet' : paymentMethod === 'ONLINE' ? 'Confirm & Pay Online' : 'Confirm & Book (COD)'}
                     onPress={handleBook}
                     loading={bookMutation.isPending}
                     disabled={!selectedSlot || !doctor}
@@ -232,7 +279,7 @@ export default function DoctorBookingScreen() {
                     fullWidth
                 />
                 <Text style={styles.footerNote}>
-                    {paymentMethod === 'WALLET' ? 'Amount will be deducted from your wallet' : 'Pay at clinic / home after consultation'}
+                    {paymentMethod === 'WALLET' ? 'Amount will be deducted from your wallet' : paymentMethod === 'ONLINE' ? 'You will be redirected to Easebuzz gateway' : 'Pay at clinic / home after consultation'}
                 </Text>
             </View>
         </SafeAreaView>

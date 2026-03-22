@@ -2,6 +2,7 @@ import express from "express";
 import { 
     createOrder, 
     initiatePayment, 
+    handleGatewayResponse,
     handleWebhook, 
     verifyPayment, 
     getOrderById 
@@ -22,10 +23,8 @@ router.post("/verify", protect, verifyPayment);
 // Fetch Single Order
 router.get("/orders/:id", protect, getOrderById);
 
-// Gateway Redirect (User comes back here)
-router.all("/gateway-response", (req, res) => {
-    res.send("<html><body><h2>Processing Payment...</h2><p>Please do not close this window.</p></body></html>");
-});
+// Gateway Redirect (User comes back here after payment)
+router.all("/gateway-response", handleGatewayResponse);
 
 // Webhook (No auth, because it's from Easebuzz - we verify with HASH)
 router.post("/webhook", handleWebhook);

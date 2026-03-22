@@ -105,8 +105,8 @@ export default function ProfileScreen() {
                 <View style={styles.headerGlow} />
                 <View style={styles.userInfoRow}>
                     <View style={styles.userInfoText}>
-                        <Text style={styles.greetingText}>Hello, {displayUser?.name ?? "User"}</Text>
-                        <Text style={styles.infoSubText}>Mobile: {displayUser?.mobileNumber ?? "—"}</Text>
+                        <Text style={styles.greetingText} numberOfLines={1} ellipsizeMode="tail">Hello, {displayUser?.name || "User"}</Text>
+                        <Text style={styles.infoSubText}>Mobile: {displayUser?.mobileNumber || "—"}</Text>
 
                         <LinearGradient
                             colors={['#FFD700', '#FFA500']}
@@ -161,8 +161,8 @@ export default function ProfileScreen() {
 
                         <View style={styles.walletFooter}>
                             <View>
-                                <Text style={styles.walletId}>REF_ID: {displayUser?._id?.slice(-8).toUpperCase() ?? "A1C8B2E9"}</Text>
-                                <Text style={styles.walletUserName}>{displayUser?.name?.toUpperCase() ?? "USER NAME"}</Text>
+                                <Text style={styles.walletId}>REF_ID: {displayUser?._id?.toString().slice(-8).toUpperCase() || "A1C8B2E9"}</Text>
+                                <Text style={styles.walletUserName} numberOfLines={1} ellipsizeMode="tail">{displayUser?.name?.toUpperCase() || "USER NAME"}</Text>
                             </View>
                             <Text style={styles.disaText}>VISA</Text>
                         </View>

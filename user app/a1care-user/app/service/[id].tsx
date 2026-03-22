@@ -18,6 +18,7 @@ import { bookingsService } from '@/services/bookings.service';
 import { doctorsService } from '@/services/doctors.service';
 import { addressService } from '@/services/address.service';
 import { walletService } from '@/services/wallet.service';
+import { paymentService } from '@/services/payment.service';
 import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
@@ -90,7 +91,8 @@ export default function ServiceDetailScreen() {
     const [scheduledDate, setScheduledDate] = useState('');
     const [scheduledTime, setScheduledTime] = useState('');
     const [notes, setNotes] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'WALLET'>('COD');
+    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'WALLET' | 'ONLINE'>('COD');
+    const [submittingOnline, setSubmittingOnline] = useState(false);
     const [isAsap, setIsAsap] = useState(true);
     const [submitted, setSubmitted] = useState(false);
     const submitting = useRef(false);
@@ -265,7 +267,7 @@ export default function ServiceDetailScreen() {
                 bookingType: isAsap ? 'ON_DEMAND' : 'SCHEDULED',
                 fulfillmentMode: (service?.fulfillmentMode) ?? (isHosp ? 'HOSPITAL_VISIT' : 'HOME_VISIT'),
                 price: priceParam ? parseFloat(priceParam) : 0,
-                paymentMode: paymentMethod === 'WALLET' ? 'ONLINE' : 'OFFLINE',
+                paymentMode: paymentMethod === 'COD' ? 'OFFLINE' : 'ONLINE',
             });
         },
         onSuccess: () => {
@@ -321,6 +323,39 @@ export default function ServiceDetailScreen() {
             return `${scheduledDate} at ${scheduledTime}`;
         }
         return 'Not scheduled';
+    };
+
+    const handleFinalSubmit = async () => {
+        if (paymentMethod === 'ONLINE') {
+            try {
+                setSubmittingOnline(true);
+                // 1. Create Booking
+                const booking = await bookMutation.mutateAsync();
+                
+                // 2. Create Order
+                const order = await paymentService.createOrder({
+                    amount: priceParam ? parseFloat(priceParam) : 0,
+                    type: "BOOKING",
+                    referenceId: booking._id
+                });
+
+                // 3. Initiate
+                const params = await paymentService.initiatePayment(order._id);
+
+                // 4. Checkout
+                router.push({
+                    pathname: "/checkout/easebuzz" as any,
+                    params: { ...params }
+                });
+            } catch (err: any) {
+                console.error("Service Payment Error:", err);
+                Alert.alert("Order Error", err?.response?.data?.message || "Could not initiate online payment. Please use COD.");
+            } finally {
+                setSubmittingOnline(false);
+            }
+        } else {
+            bookMutation.mutate();
+        }
     };
 
     const serviceName = nameParam ?? `Service`;
@@ -795,6 +830,21 @@ export default function ServiceDetailScreen() {
                             <Text style={{ fontSize: 26 }}>💵</Text>
                         </TouchableOpacity>
 
+                        {/* Online Option */}
+                        <TouchableOpacity
+                            style={[styles.payMethodCard, paymentMethod === 'ONLINE' ? styles.payMethodActive : {}]}
+                            onPress={() => setPaymentMethod('ONLINE')}
+                        >
+                            <View style={[styles.radioOuter, paymentMethod === 'ONLINE' ? styles.radioActive : {}]}>
+                                {paymentMethod === 'ONLINE' && <View style={styles.radioInner} />}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.payMethodTitle}>Online Payment</Text>
+                                <Text style={styles.payMethodSub}>Easy payment via UPI, Card or Netbanking</Text>
+                            </View>
+                            <Text style={{ fontSize: 26 }}>💳</Text>
+                        </TouchableOpacity>
+
                         {paymentMethod === 'COD' ? (
                             <View style={styles.codInfoBox}>
                                 <Text style={styles.codInfoTitle}>How COD works</Text>
@@ -923,7 +973,7 @@ export default function ServiceDetailScreen() {
                         }
 
                         if (step === 'confirm') {
-                            bookMutation.mutate();
+                            handleFinalSubmit();
                         } else {
                             const idx = activeSteps.indexOf(step as Step);
                             if (idx < activeSteps.length - 1) {
@@ -931,15 +981,15 @@ export default function ServiceDetailScreen() {
                             }
                         }
                     }}
-                    loading={bookMutation.isPending}
+                    loading={bookMutation.isPending || submittingOnline}
                     variant="primary"
                     size="lg"
                     fullWidth
-                    disabled={bookMutation.isPending}
+                    disabled={bookMutation.isPending || submittingOnline}
                 />
                 {step === 'confirm' && (
                     <Text style={styles.footerNote}>
-                        {paymentMethod === 'WALLET' ? 'Amount will be deducted from your wallet' : 'No advance payment required · COD'}
+                        {paymentMethod === 'WALLET' ? 'Amount will be deducted from your wallet' : paymentMethod === 'ONLINE' ? 'You will be redirected to Easebuzz gateway' : 'No advance payment required · COD'}
                     </Text>
                 )}
             </View>

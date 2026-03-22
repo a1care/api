@@ -137,9 +137,15 @@ export default function ServicesScreen() {
                 (serviceId && s._id === serviceId) ||
                 (category && s.name.toLowerCase().includes(category.toLowerCase()))
             );
-            if (target && level === 'services') {
+            if (target && (level === 'services' || selectedService?._id !== target._id)) {
                 handleServicePress(target);
             }
+        } else if (services && !category && !serviceId && level !== 'services') {
+            // Explicit reset if navigating to services tab without specific target
+            setLevel('services');
+            setSelectedService(null);
+            setSelectedSub(null);
+            setSearch('');
         }
     }, [services, category, serviceId]);
 

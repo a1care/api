@@ -9,6 +9,8 @@ import {
     useFonts,
 } from '@expo-google-fonts/inter';
 import { StatusBar } from 'expo-status-bar';
+// Firebase specific imports - handled safely for Expo Go
+import { authService } from '@/services/auth.service';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useConfigStore } from '@/stores/config.store';
@@ -16,6 +18,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Alert } from 'react-native'; // Added Alert import
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -63,9 +66,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         if (!isAuthenticated && !isExcluded) {
             console.log('[AuthGuard] Redirecting to login');
             router.replace('/(auth)/login');
-        } else if (isAuthenticated && (inAuthGroup || isAtRoot)) {
+        } else if (isAuthenticated && user && (inAuthGroup || isAtRoot)) {
             // If registered go to tabs; else go to profile setup
-            if (user?.isRegistered) {
+            if (user.isRegistered) {
                 console.log('[AuthGuard] Redirecting to tabs');
                 router.replace('/(tabs)');
             } else {
@@ -119,7 +122,7 @@ export default function RootLayout() {
                         <Stack.Screen name="booking/[id]" />
                         <Stack.Screen name="booking/chat" />
                         <Stack.Screen name="booking/track" />
-                        <Stack.Screen name="doctor/appointment" />
+                        <Stack.Screen name="doctor/appointment/[id]" />
                         <Stack.Screen name="wallet/index" />
                         <Stack.Screen name="checkout/easebuzz" />
                         <Stack.Screen name="support/chat" />

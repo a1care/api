@@ -27,6 +27,7 @@ interface AppConfig {
     };
     googleMapsApiKey: string;
     maintenanceMode: boolean;
+    knowledgeBase: any[];
 }
 
 interface ConfigState {

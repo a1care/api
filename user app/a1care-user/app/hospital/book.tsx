@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { servicesService } from '@/services/services.service';
 import { bookingsService } from '@/services/bookings.service';
+import { paymentService } from '@/services/payment.service';
 import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
@@ -44,7 +45,8 @@ export default function HospitalBookingScreen() {
     const [selectedSymptom, setSelectedSymptom] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'WALLET' | 'OFFLINE'>('OFFLINE');
+    const [paymentMethod, setPaymentMethod] = useState<'WALLET' | 'OFFLINE' | 'ONLINE'>('OFFLINE');
+    const [submittingOnline, setSubmittingOnline] = useState(false);
     const [step, setStep] = useState<'details' | 'payment'>('details');
     const [submitted, setSubmitted] = useState(false);
 
@@ -112,7 +114,7 @@ export default function HospitalBookingScreen() {
         }
     });
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (step === 'details') {
             if (!selectedDept && !selectedSymptom) {
                 Alert.alert('Select Reason', 'Please select a department or symptom to proceed.');
@@ -124,7 +126,36 @@ export default function HospitalBookingScreen() {
             }
             setStep('payment');
         } else {
-            bookMutation.mutate();
+            if (paymentMethod === 'ONLINE') {
+                try {
+                    setSubmittingOnline(true);
+                    // 1. Create Booking (Pending)
+                    const booking = await bookMutation.mutateAsync();
+
+                    // 2. Create Order
+                    const order = await paymentService.createOrder({
+                        amount: service?.price || 0,
+                        type: "BOOKING",
+                        referenceId: booking._id
+                    });
+
+                    // 3. Initiate
+                    const params = await paymentService.initiatePayment(order._id);
+
+                    // 4. Navigate to Checkout
+                    router.push({
+                        pathname: "/checkout/easebuzz" as any,
+                        params: { ...params }
+                    });
+                } catch (err: any) {
+                    console.error("Hospital Payment Error:", err);
+                    Alert.alert("Order Error", err?.response?.data?.message || "Could not start online payment. Please use COD.");
+                } finally {
+                    setSubmittingOnline(false);
+                }
+            } else {
+                bookMutation.mutate();
+            }
         }
     };
 
@@ -338,6 +369,26 @@ export default function HospitalBookingScreen() {
                             </View>
                         </TouchableOpacity>
 
+                        <TouchableOpacity
+                            style={[styles.payCard, paymentMethod === 'ONLINE' && styles.activePayCard]}
+                            onPress={() => setPaymentMethod('ONLINE')}
+                        >
+                            <View style={[styles.payIcon, paymentMethod === 'ONLINE' && { backgroundColor: Colors.primary }]}>
+                                <Ionicons
+                                    name="card-outline"
+                                    size={24}
+                                    color={paymentMethod === 'ONLINE' ? '#fff' : Colors.primary}
+                                />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.payTitle}>Online Payment</Text>
+                                <Text style={styles.paySub}>Pay via Cards, UPI or Netbanking</Text>
+                            </View>
+                            <View style={[styles.radio, paymentMethod === 'ONLINE' && styles.radioActive]}>
+                                {paymentMethod === 'ONLINE' && <View style={styles.radioInner} />}
+                            </View>
+                        </TouchableOpacity>
+
                         <View style={styles.summaryBox}>
                             <Text style={styles.summaryTitle}>Booking Summary</Text>
                             <View style={styles.summaryRow}>
@@ -356,9 +407,9 @@ export default function HospitalBookingScreen() {
 
             <View style={styles.bottomBar}>
                 <Button
-                    label={bookMutation.isPending ? "Confirming..." : step === 'details' ? "Proceed to Payment" : "Complete OP Booking"}
+                    label={bookMutation.isPending || submittingOnline ? "Confirming..." : step === 'details' ? "Proceed to Payment" : "Complete OP Booking"}
                     onPress={handleConfirm}
-                    disabled={bookMutation.isPending}
+                    disabled={bookMutation.isPending || submittingOnline}
                     fullWidth
                     size="lg"
                 />

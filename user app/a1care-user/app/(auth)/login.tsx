@@ -14,8 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-// Firebase Imports
-import auth from '@react-native-firebase/auth';
+// Firebase Imports - handled safely for Expo Go
 import { useAuthStore } from '@/stores/auth.store';
 
 export default function LoginScreen() {
@@ -32,10 +31,22 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            // Firebase expects phone numbers in standard international format starting with +
+            /* STEP 1: Check if this is the Dev Bypass Number (Disabled for Production)
+            if (cleaned === "9701677607") {
+                router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, isBypass: "true" } });
+                return;
+            }
+            */
+
+            // STEP 2: Use Native Firebase (will throw if in Expo Go)
+            let auth;
+            try {
+                auth = require('@react-native-firebase/auth').default;
+            } catch (e) {
+                throw new Error("Phone OTP requires a Development Build. Please ensure you are using a signed release APK.");
+            }
+
             const e164PhoneNumber = `+91${cleaned}`;
-            
-            // Native Firebase auth will handle reCAPTCHA automatically
             const confirmation = await auth().signInWithPhoneNumber(e164PhoneNumber);
             
             setConfirmationResult(confirmation);

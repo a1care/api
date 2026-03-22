@@ -17,19 +17,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 
-// Firebase specific imports
-import auth from '@react-native-firebase/auth';
+// Firebase specific imports - handled safely for Expo Go
 
-// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-const DEV_BYPASS_MOBILE = '9701677607';
-const DEV_BYPASS_OTP = '123123';
+// ─── DEV BYPASS CONSTANTS (Disabled for Production) ──────────────────────────
+// const DEV_BYPASS_MOBILE = '9701677607';
+// const DEV_BYPASS_OTP = '123123';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
     const router = useRouter();
-    const { mobile, verificationId } = useLocalSearchParams<{ mobile: string, verificationId: string }>();
+    const { mobile, verificationId, isBypass } = useLocalSearchParams<{ mobile: string, verificationId: string, isBypass: string }>();
     const { setToken, setUser, confirmationResult } = useAuthStore();
 
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -67,18 +66,19 @@ export default function OtpScreen() {
         try {
             let idToken = undefined;
 
-            // ─── DEV BYPASS ───────────────────────────────────────────────────
-            const isBypassMobile = mobile === DEV_BYPASS_MOBILE;
-            const isBypassOtp = code === DEV_BYPASS_OTP;
-
-            if (isBypassMobile && isBypassOtp) {
-                // Skip Firebase entirely — backend validates bypass directly
-                console.log('[DEV BYPASS] Skipping Firebase for bypass mobile');
-            } else if (confirmationResult) {
+            if (confirmationResult) {
                 // Normal Firebase verification
                 const userCredential = await confirmationResult.confirm(code);
                 idToken = await userCredential.user.getIdToken();
             } else {
+                 // Attempt to re-import if missing (Safe mode for Expo Go)
+                 try {
+                    const auth = require('@react-native-firebase/auth').default;
+                } catch (e) {
+                     Alert.alert('Error', 'Real OTP verification requires a Development Build. Please use a signed release APK.');
+                     setLoading(false);
+                     return;
+                }
                 Alert.alert('Error', 'Session expired. Please request OTP again.');
                 router.back();
                 return;

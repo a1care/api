@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Search, Info, MessageSquare, AlertCircle, CheckCircle2, Ticket, ChevronRight } from "lucide-react";
+import { api } from "../lib/api";
+
 
 interface Ticket {
     _id: string;
@@ -25,10 +27,9 @@ export function TicketsPage() {
     const [refreshQueue, setRefreshQueue] = useState(0);
 
     useEffect(() => {
-        fetch("http://localhost:3000/api/tickets/all")
-            .then(res => res.json())
-            .then(data => {
-                setTickets(data.data || []);
+        api.get("/tickets/all")
+            .then(res => {
+                setTickets(res.data.data || []);
                 setLoading(false);
             })
             .catch(err => {
@@ -37,20 +38,18 @@ export function TicketsPage() {
             });
     }, [refreshQueue]);
 
+
     const updateStatus = async (id: string, newStatus: string) => {
         try {
-            const res = await fetch(`http://localhost:3000/api/tickets/status/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus })
-            });
-            if (res.ok) {
+            const res = await api.put(`/tickets/status/${id}`, { status: newStatus });
+            if (res.status === 200) {
                 setRefreshQueue(prev => prev + 1);
             }
         } catch (err) {
             console.error(err);
         }
     };
+
 
     const getStatusColor = (status: string) => {
         switch (status) {

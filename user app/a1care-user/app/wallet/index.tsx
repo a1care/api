@@ -110,7 +110,7 @@ export default function WalletScreen() {
                                 style={styles.balanceCard}
                             >
                                 <Text style={styles.balanceLabel}>Available Balance</Text>
-                                <Text style={styles.balanceAmount}>{formatCurrency(wallet?.balance ?? 0)}</Text>
+                                <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(wallet?.balance ?? 0)}</Text>
                                 <TouchableOpacity style={styles.addBtn} onPress={() => setIsAddModalVisible(true)}>
                                     <Text style={styles.addBtnText}>+ Add Money</Text>
                                 </TouchableOpacity>

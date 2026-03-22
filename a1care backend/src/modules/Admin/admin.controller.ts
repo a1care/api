@@ -221,6 +221,7 @@ type ManagedAppConfig = {
     appStoreUrl: string;
     festivalBanners: FestivalBanner[];
   };
+  knowledgeBase: any[];
   updatedAt: string;
 };
 
@@ -286,6 +287,7 @@ const createDefaultConfigFor = (appKey: AppKey): ManagedAppConfig => {
       appStoreUrl: "",
       festivalBanners: []
     },
+    knowledgeBase: [],
     updatedAt: new Date().toISOString()
   };
 };
@@ -398,6 +400,7 @@ const mergeAppConfig = (current: ManagedAppConfig, payload: any): ManagedAppConf
       appStoreUrl: normalizeString(incomingLanding.appStoreUrl ?? current.landing.appStoreUrl),
       festivalBanners
     },
+    knowledgeBase: Array.isArray(payload?.knowledgeBase) ? payload.knowledgeBase : current.knowledgeBase,
     updatedAt: new Date().toISOString()
   };
 };
@@ -1010,12 +1013,20 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
 });
 
 export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   const { status } = req.body;
 
   if (!status) throw new ApiError(400, "Status is required");
 
-  const existing = await doctorAppointmentModel.findById(id);
+  let existing = await doctorAppointmentModel.findById(id);
+  if (!existing) {
+    const hosp = await HospitalBooking.findById(id);
+    if (hosp && hosp.bookingType === 'doctor') {
+      id = String(hosp.bookingId);
+      existing = await doctorAppointmentModel.findById(id);
+    }
+  }
+
   if (!existing) throw new ApiError(404, "Booking not found");
 
   if (
@@ -1045,18 +1056,30 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
       },
       { upsert: true }
     );
+  } else if (status === "Cancelled" || status === "CANCELLED") {
+    // Sync cancel state with HospitalBooking if it exists
+    await HospitalBooking.findOneAndUpdate({ bookingId: booking._id }, { status: "CANCELLED" });
   }
 
   res.status(200).json(new ApiResponse(200, "Booking status updated", booking));
 });
 
+
 export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   const { status, assignedProviderId } = req.body;
 
   if (!status) throw new ApiError(400, "Status is required");
 
-  const existing = await serviceRequestModel.findById(id);
+  let existing = await serviceRequestModel.findById(id);
+  if (!existing) {
+    const hosp = await HospitalBooking.findById(id);
+    if (hosp && hosp.bookingType === 'service') {
+      id = String(hosp.bookingId);
+      existing = await serviceRequestModel.findById(id);
+    }
+  }
+
   if (!existing) throw new ApiError(404, "Service booking not found");
 
   if (
@@ -1094,10 +1117,14 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       },
       { upsert: true }
     );
+  } else if (status === "CANCELLED") {
+    // Sync cancel state with HospitalBooking if it exists
+    await HospitalBooking.findOneAndUpdate({ bookingId: booking._id }, { status: "CANCELLED" });
   }
 
   res.status(200).json(new ApiResponse(200, "Service booking status updated", booking));
 });
+
 
 /** List service bookings that are RETURNED_TO_ADMIN for admin to accept/reject (with urgency, etc.) */
 export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) => {
@@ -1212,6 +1239,7 @@ export const getPublicAppConfig = asyncHandler(async (req, res) => {
     },
     googleMapsApiKey: system.googleMapsApiKey,
     maintenanceMode: system.maintenanceMode || false,
+    knowledgeBase: appConfig.knowledgeBase || [],
     updatedAt: appConfig.updatedAt
   };
 

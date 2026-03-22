@@ -17,11 +17,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@/services/auth.service';
+import { useAuthStore } from '@/stores/auth.store';
 import { Colors, Shadows } from '@/constants/colors';
 
 export default function ProfileEditScreen() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { setUser } = useAuthStore();
 
     const { data: profile, isLoading } = useQuery({
         queryKey: ['profile'],
@@ -43,7 +45,9 @@ export default function ProfileEditScreen() {
 
     const updateMutation = useMutation({
         mutationFn: (data: any) => authService.updateProfile(data),
-        onSuccess: () => {
+        onSuccess: (data) => {
+            if (data) setUser(data);
+            queryClient.setQueryData(['profile'], data);
             queryClient.invalidateQueries({ queryKey: ['profile'] });
             Alert.alert('Success', 'Profile updated successfully', [
                 { text: 'OK', onPress: () => router.back() }

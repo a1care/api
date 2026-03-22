@@ -435,7 +435,7 @@ export function BookingOperationsPage() {
                                                 ) : (
                                                     <button
                                                         disabled={!isPending}
-                                                        onClick={() => handleUpdateStatus(booking._id, (booking as any).bookingType || (activeTab === "doctors" ? "doctor" : "service"), "CONFIRMED")}
+                                                        onClick={() => handleUpdateStatus(booking.bookingId || booking._id, (booking as any).bookingType || (activeTab === "doctors" ? "doctor" : "service"), "CONFIRMED")}
                                                         className={`h-9 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-xs font-bold mx-auto 
                                                             ${isPending
                                                                 ? "bg-blue-600 text-white hover:bg-blue-700 animate-soft-glow"
@@ -459,7 +459,7 @@ export function BookingOperationsPage() {
 
                                                     <button
                                                         disabled={booking.status?.toUpperCase() === "CANCELLED" || booking.status?.toUpperCase() === "COMPLETED"}
-                                                        onClick={() => handleUpdateStatus(booking._id, (booking as any).bookingType || (activeTab === "doctors" ? "doctor" : "service"), "CANCELLED")}
+                                                        onClick={() => handleUpdateStatus(booking.bookingId || booking._id, (booking as any).bookingType || (activeTab === "doctors" ? "doctor" : "service"), "CANCELLED")}
                                                         className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border 
                                                             ${(booking.status?.toUpperCase() === "CANCELLED" || booking.status?.toUpperCase() === "COMPLETED")
                                                                 ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700"

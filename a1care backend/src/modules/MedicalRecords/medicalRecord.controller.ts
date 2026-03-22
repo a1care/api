@@ -6,11 +6,17 @@ import Doctor from "../Doctors/doctor.model.js";
 import doctorAppointmentModel from "../Bookings/doctorAppointment.model.js";
 import MedicalRecord from "./medicalRecord.model.js";
 
-function extractFileUrls(files: any, fieldName: string): string[] {
+function extractFileUrls(req: any, files: any, fieldName: string): string[] {
   const list = files?.[fieldName] ?? [];
   if (!Array.isArray(list)) return [];
+  const baseUrl = `${req.protocol}://${req.get("host")}/`;
   return list
-    .map((f: any) => f?.location || f?.path)
+    .map((f: any) => {
+      const path = f?.location || f?.path;
+      if (!path) return null;
+      if (path.startsWith("http")) return path;
+      return baseUrl + path.replace(/\\/g, "/");
+    })
     .filter(Boolean);
 }
 
@@ -40,8 +46,8 @@ export const createMedicalRecord = asyncHandler(async (req, res) => {
   }
 
   const files = req.files as any;
-  const prescriptions = extractFileUrls(files, "prescriptions");
-  const labReports = extractFileUrls(files, "labReports");
+  const prescriptions = extractFileUrls(req, files, "prescriptions");
+  const labReports = extractFileUrls(req, files, "labReports");
 
   const record = await MedicalRecord.create({
     appointmentId: appointmentId || null,
@@ -76,8 +82,8 @@ export const updateMedicalRecord = asyncHandler(async (req, res) => {
   if (typeof diagnosis === "string") record.diagnosis = diagnosis;
 
   const files = req.files as any;
-  const prescriptions = extractFileUrls(files, "prescriptions");
-  const labReports = extractFileUrls(files, "labReports");
+  const prescriptions = extractFileUrls(req, files, "prescriptions");
+  const labReports = extractFileUrls(req, files, "labReports");
 
   if (prescriptions.length) record.prescriptions.push(...prescriptions);
   if (labReports.length) record.labReports.push(...labReports);
