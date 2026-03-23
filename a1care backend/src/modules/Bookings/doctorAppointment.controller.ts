@@ -9,6 +9,8 @@ import DoctorModel from "../Doctors/doctor.model.js";
 import { Patient } from "../Authentication/patient.model.js";
 import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
 import { readConfigStore } from "../Admin/admin.controller.js";
+import HospitalBooking from "./hospitalBooking.model.js";
+
 
 export const createDoctorAppointment = asyncHandler(async (req, res) => {
     const patientId = req.user?.id;
@@ -159,7 +161,13 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         Confirmed: { title: "✅ Appointment Confirmed", body: `Your appointment with Dr. ${doctorName} is confirmed.` },
         Completed: { title: "💊 Consultation Complete", body: `Your consultation with Dr. ${doctorName} is done. How was it?` },
         Cancelled: { title: "❌ Appointment Cancelled", body: `Your appointment with Dr. ${doctorName} has been cancelled.` },
+        CANCELLED: { title: "❌ Appointment Cancelled", body: `Your appointment with Dr. ${doctorName} has been cancelled.` },
     };
+
+    // Sync with HospitalBooking if it exists
+    if (status === "Cancelled" || status === "CANCELLED") {
+        await HospitalBooking.findOneAndUpdate({ bookingId: id }, { status: "CANCELLED" });
+    }
 
     const push = pushMap[status];
     if (push && patient) {

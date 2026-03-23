@@ -99,15 +99,22 @@ export default function LoginScreen() {
                         </View>
                     </View>
 
-                    <TouchableOpacity onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
-                        <LinearGradient
-                            colors={["#1A7FD4", "#0D5FA0"]}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            style={styles.cta}
-                        >
-                            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>Send OTP</Text>}
-                        </LinearGradient>
-                    </TouchableOpacity>
+                        <TouchableOpacity onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
+                            <LinearGradient
+                                colors={["#1A7FD4", "#0D5FA0"]}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                style={styles.cta}
+                            >
+                                {loading ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                        <ActivityIndicator color="#fff" />
+                                        <Text style={styles.ctaText}>Contacting Server...</Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.ctaText}>Send OTP</Text>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
 
                     <Text style={styles.disclaimer}>
                         By continuing, you agree to our <Text onPress={() => router.push('/terms')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text onPress={() => router.push('/privacy')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>

@@ -30,6 +30,14 @@ export const bookingsService = {
         return res.data.data;
     },
 
+    updateAppointmentStatus: async (id: string, status: string) => {
+        const res = await api.patch<ApiResponse<DoctorAppointment>>(
+            Endpoints.UPDATE_APPOINTMENT_STATUS(id),
+            { status }
+        );
+        return res.data.data;
+    },
+
     // Service bookings
     createServiceBooking: async (data: {
         childServiceId: string;
@@ -56,6 +64,14 @@ export const bookingsService = {
         const res = await api.post<ApiResponse<ServiceRequest>>(
             Endpoints.CREATE_SERVICE_BOOKING,
             payload
+        );
+        return res.data.data;
+    },
+
+    updateServiceBookingStatus: async (id: string, status: string) => {
+        const res = await api.patch<ApiResponse<ServiceRequest>>(
+            Endpoints.UPDATE_SERVICE_BOOKING_STATUS(id),
+            { status }
         );
         return res.data.data;
     },

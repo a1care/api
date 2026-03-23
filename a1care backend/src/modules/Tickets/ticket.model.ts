@@ -6,7 +6,7 @@ export interface TicketDocument extends Document {
     subject: string;
     description: string;
     status: "Pending" | "In Progress" | "Resolved" | "Closed";
-    priority: "Low" | "Medium" | "High";
+    priority: "Low" | "Medium" | "High" | "Critical";
 }
 
 const TicketSchema = new Schema<TicketDocument>(
@@ -17,7 +17,7 @@ const TicketSchema = new Schema<TicketDocument>(
         },
         userId: {
             type: Schema.Types.ObjectId,
-            ref: "user",
+            ref: "Patient",
         },
         subject: {
             type: String,
@@ -36,7 +36,7 @@ const TicketSchema = new Schema<TicketDocument>(
         },
         priority: {
             type: String,
-            enum: ["Low", "Medium", "High"],
+            enum: ["Low", "Medium", "High", "Critical"],
             default: "Medium",
         },
     },

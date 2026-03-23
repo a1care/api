@@ -212,13 +212,35 @@ export default function AppointmentDetailScreen() {
                         </View>
                     )}
 
-                    {appt.status === 'Pending' && (
+                    {(appt.status === 'Pending' || appt.status === 'Confirmed') && (
                         <View style={styles.card}>
                             <Text style={styles.cardTitle}>Manage Appointment</Text>
                             <Button
                                 label="Cancel Appointment"
                                 icon={<XCircle size={18} color="#fff" />}
-                                onPress={() => alert('Cancel feature coming soon')}
+                                onPress={() => {
+                                    import('react-native').then(({ Alert }) => {
+                                        Alert.alert(
+                                            'Cancel Appointment',
+                                            'Are you sure you want to cancel this appointment?',
+                                            [
+                                                { text: 'No', style: 'cancel' },
+                                                {
+                                                    text: 'Yes, Cancel',
+                                                    style: 'destructive',
+                                                    onPress: async () => {
+                                                        try {
+                                                            await bookingsService.updateAppointmentStatus(appt._id, 'Cancelled');
+                                                            refetch();
+                                                        } catch (error: any) {
+                                                            Alert.alert('Error', error?.response?.data?.message || 'Failed to cancel appointment');
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    });
+                                }}
                                 variant="danger"
                                 size="md"
                                 fullWidth

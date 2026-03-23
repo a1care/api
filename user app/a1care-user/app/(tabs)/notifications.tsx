@@ -113,6 +113,9 @@ export default function NotificationsScreen() {
         onMutate: (id: string) => {
             setLocalList(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
         },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['notifications'] });
+        },
     });
 
     return (

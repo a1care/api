@@ -317,6 +317,7 @@ export default function AddressesScreen() {
                                 value={street}
                                 onChangeText={setStreet}
                                 placeholder="e.g. Flat 101, Sunny Enclave"
+                                placeholderTextColor={Colors.muted}
                             />
 
                             <View style={styles.inputRow}>
@@ -327,6 +328,7 @@ export default function AddressesScreen() {
                                         value={city}
                                         onChangeText={setCity}
                                         placeholder="Enter City"
+                                        placeholderTextColor={Colors.textSecondary}
                                     />
                                 </View>
                                 <View style={{ flex: 1 }}>
@@ -336,6 +338,7 @@ export default function AddressesScreen() {
                                         value={state}
                                         onChangeText={setState}
                                         placeholder="Enter State"
+                                        placeholderTextColor={Colors.textSecondary}
                                     />
                                 </View>
                             </View>
@@ -348,6 +351,7 @@ export default function AddressesScreen() {
                                         value={pincode}
                                         onChangeText={setPincode}
                                         placeholder="6-digit ZIP"
+                                        placeholderTextColor={Colors.textSecondary}
                                         keyboardType="numeric"
                                     />
                                 </View>
@@ -358,6 +362,7 @@ export default function AddressesScreen() {
                                         value={landmark}
                                         onChangeText={setLandmark}
                                         placeholder="Near..."
+                                        placeholderTextColor={Colors.textSecondary}
                                     />
                                 </View>
                             </View>
@@ -368,6 +373,7 @@ export default function AddressesScreen() {
                                 value={moreInfo}
                                 onChangeText={setMoreInfo}
                                 placeholder="Optional details"
+                                placeholderTextColor={Colors.muted}
                             />
 
                             <TouchableOpacity
@@ -423,7 +429,7 @@ const styles = StyleSheet.create({
     },
     headerSub: {
         fontSize: 12,
-        color: Colors.muted,
+        color: Colors.textSecondary,
         marginTop: 2,
     },
     addBtn: {
@@ -473,7 +479,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
-        color: Colors.textSecondary,
+        color: Colors.textPrimary,
     },
     primaryPill: {
         flexDirection: 'row',
@@ -498,7 +504,7 @@ const styles = StyleSheet.create({
     },
     subAddress: {
         fontSize: 13,
-        color: Colors.muted,
+        color: Colors.textSecondary,
         fontWeight: '500',
     },
     cardFooter: {
@@ -578,7 +584,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-    inputLabel: { fontSize: 14, fontWeight: '600', color: '#64748B', marginBottom: 8, marginTop: 16 },
+    inputLabel: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8, marginTop: 16 },
     input: {
         backgroundColor: '#F8FAFC',
         borderWidth: 1,
@@ -602,7 +608,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         gap: 8,
     },
-    chipText: { fontSize: 14, fontWeight: '700', color: '#64748B' },
+    chipText: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
     saveAddressBtn: {
         backgroundColor: Colors.primary,
         borderRadius: 16,

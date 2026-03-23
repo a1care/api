@@ -604,6 +604,7 @@ export default function ServiceDetailScreen() {
                                                 if (addrErrors.street) setAddrErrors(prev => { const n = { ...prev }; delete n.street; return n; });
                                             }}
                                             placeholder="Example: Flat 402, Sunshine Apts"
+                                            placeholderTextColor={Colors.textSecondary}
                                         />
                                         {addrErrors.street && <Text style={styles.errorText}>{addrErrors.street}</Text>}
 
@@ -618,6 +619,7 @@ export default function ServiceDetailScreen() {
                                                         if (addrErrors.city) setAddrErrors(prev => { const n = { ...prev }; delete n.city; return n; });
                                                     }}
                                                     placeholder="City"
+                                                    placeholderTextColor={Colors.textSecondary}
                                                 />
                                                 {addrErrors.city && <Text style={styles.errorText}>{addrErrors.city}</Text>}
                                             </View>
@@ -631,6 +633,7 @@ export default function ServiceDetailScreen() {
                                                         if (addrErrors.pincode) setAddrErrors(prev => { const n = { ...prev }; delete n.pincode; return n; });
                                                     }}
                                                     placeholder="500001"
+                                                    placeholderTextColor={Colors.textSecondary}
                                                     keyboardType="numeric"
                                                     maxLength={6}
                                                 />

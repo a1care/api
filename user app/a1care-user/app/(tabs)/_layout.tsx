@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Colors, Shadows } from '@/constants/colors';
-
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Shadows } from '@/constants/colors';
+import { notificationsService } from '@/services/notifications.service';
 
 interface TabIconProps {
     focused: boolean;
@@ -37,6 +38,15 @@ function TabIcon({ focused, icon, label, isCenter }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+    // Fetch unread count for badge
+    const { data } = useQuery({
+        queryKey: ['notifications'],
+        queryFn: () => notificationsService.getAll(1),
+        refetchInterval: 30000, // Refresh every 30s to keep badge updated
+    });
+
+    const unreadCount = data?.unreadCount ?? 0;
+
     return (
         <Tabs
             screenOptions={{
@@ -75,6 +85,13 @@ export default function TabsLayout() {
                     tabBarIcon: ({ focused }) => (
                         <TabIcon focused={focused} icon="notifications" label="Alerts" />
                     ),
+                    // Show red dot if unread
+                    tabBarBadge: unreadCount > 0 ? '' : undefined,
+                    tabBarBadgeStyle: {
+                        backgroundColor: '#EF4444',
+                        transform: [{ scale: 0.6 }],
+                        marginTop: 2,
+                    }
                 }}
             />
             <Tabs.Screen

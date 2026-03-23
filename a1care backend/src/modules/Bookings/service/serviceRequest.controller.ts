@@ -10,6 +10,8 @@ import DoctorModel from "../../Doctors/doctor.model.js";
 import { Patient } from "../../Authentication/patient.model.js";
 import { enqueueEmail, enqueuePush, enqueuePushToMany } from "../../../queues/communicationQueue.js";
 import { scheduleBroadcastToAll } from "../../../queues/bookingQueue.js";
+import HospitalBooking from "../hospitalBooking.model.js";
+
 
 export const createServiceRequest = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
@@ -70,9 +72,29 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         .populate("childServiceId");
     const serviceName = (serviceRequest?.childServiceId as any)?.name ?? "a service";
 
-    // ── Hospital-first: notify hospital only, then after 10s broadcast to all ─
+    // ── Notify Provider(s) ──────────────────────────────────────────────────
     try {
-        if (hospitalFirst && childSvc?.hospitalProviderId) {
+        const patient = await Patient.findById(userId).select("name");
+        const patientName = patient?.name || "A patient";
+
+        // 1. Direct Assignment (User selected an expert)
+        if (req.body.assignedProviderId) {
+            const partner = await DoctorModel.findById(req.body.assignedProviderId).select("_id fcmToken");
+            if (partner) {
+                await enqueuePush({
+                    recipientId: partner._id as mongoose.Types.ObjectId,
+                    recipientType: "partner",
+                    fcmToken: partner.fcmToken ?? null,
+                    title: "🆕 New Booking for You!",
+                    body: `${patientName} has booked your ${serviceName} service. Tap to view.`,
+                    data: { screen: "bookings", bookingId: String(newServiceRequest._id) },
+                    refType: "ServiceRequest",
+                    refId: newServiceRequest._id as mongoose.Types.ObjectId,
+                });
+            }
+        } 
+        // 2. Hospital-first priority
+        else if (hospitalFirst && childSvc?.hospitalProviderId) {
             const hospital = await DoctorModel.findById(childSvc.hospitalProviderId).select("_id fcmToken");
             if (hospital) {
                 await enqueuePush({
@@ -87,12 +109,15 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                 });
             }
             await scheduleBroadcastToAll(String(newServiceRequest._id));
-        } else if (childSvc?.allowedRoleIds?.length) {
+        } 
+        // 3. Broadcast to all matching roles
+        else if (childSvc?.allowedRoleIds?.length) {
             const matchingPartners = await DoctorModel.find({
                 roleId: { $in: childSvc.allowedRoleIds },
                 status: "Active",
                 fcmToken: { $exists: true, $ne: null },
             }).select("_id fcmToken");
+
             await enqueuePushToMany(
                 matchingPartners.map((p) => ({
                     recipientId: p._id as mongoose.Types.ObjectId,
@@ -107,7 +132,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
             );
         }
     } catch (e) {
-        console.error("[Push] broadcast error:", e);
+        console.error("[Push] service request notification error:", e);
     }
 
     return res.status(201).json(new ApiResponse(201, "Service booked", serviceRequest));
@@ -210,8 +235,14 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         IN_PROGRESS: { title: "🚀 Service Started", body: `Your ${serviceName} is now in progress.` },
         COMPLETED: { title: "🎉 Service Completed", body: `Your ${serviceName} is done. Rate your experience!` },
         CANCELLED: { title: "❌ Booking Cancelled", body: `Your ${serviceName} booking has been cancelled.` },
+        Cancelled: { title: "❌ Booking Cancelled", body: `Your ${serviceName} booking has been cancelled.` },
         RETURNED_TO_ADMIN: { title: "⏳ Still Searching…", body: "We're still finding a provider. Hang tight!" },
     };
+
+    // Sync with HospitalBooking if it exists
+    if (status === "CANCELLED" || status === "Cancelled") {
+        await HospitalBooking.findOneAndUpdate({ bookingId: id }, { status: "CANCELLED" });
+    }
 
     const push = pushMap[status];
     if (push && patientFull) {

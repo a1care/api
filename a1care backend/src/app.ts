@@ -24,6 +24,7 @@ import medicalRecordRoutes from './modules/MedicalRecords/medicalRecord.routes.j
 import patientMedicalHistoryRoutes from './modules/MedicalRecords/patientMedicalHistory.routes.js'
 import staffEarningsRoutes from './modules/Earnings/earnings.routes.js'
 import paymentRoutes from './modules/Payments/payment.routes.js'
+import agoraRoutes from './modules/Agora/agora.routes.js'
 const PORT = process.env.PORT || 3000
 
 const app = express()
@@ -129,6 +130,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/medical-records', medicalRecordRoutes)
 app.use('/api/patient', patientMedicalHistoryRoutes)
 app.use('/api/doctor/earnings', staffEarningsRoutes)
+app.use('/api/agora', agoraRoutes)
 
 import { getPublicAppConfig } from "./modules/Admin/admin.controller.js";
 app.get("/api/common/config/:appKey", getPublicAppConfig);

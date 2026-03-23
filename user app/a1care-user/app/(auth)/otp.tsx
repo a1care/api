@@ -91,6 +91,35 @@ export default function OtpScreen() {
             setToken(token);
             const user = await authService.getProfile();
             setUser(user);
+
+            // Register FCM Token for notifications
+            try {
+                let messaging;
+                try {
+                    messaging = require('@react-native-firebase/messaging').default;
+                } catch(e) {
+                    console.log("[OtpScreen] Firebase Messaging not available (Expo Go?)");
+                }
+
+                if (messaging) {
+                    const authStatus = await messaging().requestPermission();
+                    const enabled =
+                        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+                        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+                    if (enabled) {
+                        const fcmToken = await messaging().getToken();
+                        if (fcmToken) {
+                            const api = require('@/services/api').default;
+                            await api.put('/notifications/fcm-token/patient', { fcmToken });
+                            console.log('[OtpScreen] FCM Token registered');
+                        }
+                    }
+                }
+            } catch (fcmErr) {
+                console.error('[OtpScreen] FCM registration error:', fcmErr);
+            }
+
             if (user.isRegistered) {
                 router.replace('/(tabs)');
             } else {

@@ -32,11 +32,13 @@ export const Endpoints = {
 
     // Appointments
     BOOK_DOCTOR: (doctorId: string) => `/appointment/booking/${doctorId}`,
+    UPDATE_APPOINTMENT_STATUS: (id: string) => `/appointment/status/${id}`,
     MY_APPOINTMENTS: '/appointment/patient/appointments',
     PENDING_APPOINTMENTS: '/appointment/patient/appointments/pending',
 
     // Service Bookings
     CREATE_SERVICE_BOOKING: '/service/booking/create',
+    UPDATE_SERVICE_BOOKING_STATUS: (id: string) => `/service/booking/status/${id}`,
     MY_SERVICE_BOOKINGS: '/service/booking/user',
     PENDING_SERVICE_BOOKINGS: '/service/booking/get/pending',
     SERVICE_BOOKING_BY_ID: (id: string) => `/service/booking/request/${id}`,

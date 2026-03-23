@@ -52,12 +52,11 @@ export const getUserAddresses = asyncHandler(async (req, res) => {
     }
 
     const address = await UserAddressModel.find({ userId, isDeleted: false })
-
-    const patient = await Patient.findOne({ _id: new mongoose.Types.ObjectId(userId) })
+    const patientSorted = await Patient.findById(userId).select('primaryAddressId').lean()
 
     const allAddress = address.map(item => ({
         ...item.toObject(),
-        isPrimary: String(item._id) === String(patient?.primaryAddressId)
+        isPrimary: patientSorted?.primaryAddressId ? String(item._id) === String(patientSorted.primaryAddressId) : false
     }))
 
     return res.json(new ApiResponse(200, "addresses fetched", allAddress))

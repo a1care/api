@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import * as Location from 'expo-location';
 import { partnerBookingService } from '../../lib/bookings';
 import { MessageCircle, MapPin, Navigation, Calendar } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
 
 const TABS = ["Pending", "Confirmed", "Completed", "Cancelled"];
@@ -230,15 +231,29 @@ export default function BookingsScreen() {
                                 )}
 
                                 {b.status !== "Pending" && b.status !== "Broadcasted" && (
-                                    <TouchableOpacity 
-                                        style={styles.iconBtn}
-                                        onPress={() => router.push({
-                                            pathname: '/booking_chat' as any,
-                                            params: { id: b._id, name: b.patientName || 'Patient' }
-                                        })}
-                                    >
-                                        <MessageCircle size={24} color="#2D935C" />
-                                    </TouchableOpacity>
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                        <TouchableOpacity 
+                                            style={styles.iconBtn}
+                                            onPress={() => router.push({
+                                                pathname: '/booking_chat' as any,
+                                                params: { id: b._id, name: b.patientName || 'Patient' }
+                                            })}
+                                        >
+                                            <MessageCircle size={24} color="#2D935C" />
+                                        </TouchableOpacity>
+
+                                        {(b.status === "Confirmed" || b.status === "ACCEPTED" || b.status === "IN_PROGRESS") && (
+                                            <TouchableOpacity 
+                                                style={[styles.iconBtn, { backgroundColor: '#FFF7ED' }]}
+                                                onPress={() => router.push({
+                                                    pathname: '/video-call' as any,
+                                                    params: { bookingId: b._id, channelName: b._id }
+                                                })}
+                                            >
+                                                <Ionicons name="videocam" size={24} color="#C2410C" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
                                 )}
                             </View>
                         </View>

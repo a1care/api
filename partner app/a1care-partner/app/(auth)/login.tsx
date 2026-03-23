@@ -90,6 +90,26 @@ const LoginScreen = () => {
             const detailsRes = await api.get("/doctor/auth/details");
             const staff = detailsRes.data.data;
 
+            // Update FCM Token for Push Notifications
+            try {
+                const messaging = require('@react-native-firebase/messaging').default;
+                const authStatus = await messaging().requestPermission();
+                const enabled =
+                    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+                    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+                if (enabled) {
+                    const fcmToken = await messaging().getToken();
+                    if (fcmToken) {
+                        await api.put("/notifications/fcm-token/partner", { fcmToken });
+                        console.log("FCM Token registered successfully");
+                    }
+                }
+            } catch (fcmErr) {
+                console.error("FCM registration failed", fcmErr);
+                // Don't block login if FCM fails
+            }
+
             if (!staff.isRegistered) {
                 Toast.show({ type: 'success', text1: 'Verified', text2: 'Please complete your registration.' });
                 router.push({
@@ -174,7 +194,14 @@ const LoginScreen = () => {
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                 style={styles.cta}
                             >
-                                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>Send OTP</Text>}
+                                {loading ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                        <ActivityIndicator color={"#fff"} />
+                                        <Text style={styles.ctaText}>Contacting Google...</Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.ctaText}>Send OTP</Text>
+                                )}
                             </LinearGradient>
                         </TouchableOpacity>
                     ) : (
@@ -184,7 +211,14 @@ const LoginScreen = () => {
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                 style={styles.cta}
                             >
-                                {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>Verify & Login</Text>}
+                                {verifying ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                        <ActivityIndicator color={"#fff"} />
+                                        <Text style={styles.ctaText}>Verifying Credentials...</Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.ctaText}>Verify & Login</Text>
+                                )}
                             </LinearGradient>
                         </TouchableOpacity>
                     )}

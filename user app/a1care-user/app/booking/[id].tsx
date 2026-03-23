@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { bookingsService } from '@/services/bookings.service';
 import { Colors, Shadows } from '@/constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { FontSize } from '@/constants/spacing';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
@@ -218,18 +219,55 @@ export default function BookingDetailScreen() {
                                     </View>
                                     <Text style={styles.actionLabel}>Chat</Text>
                                 </TouchableOpacity>
+
+                                {booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS' ? (
+                                    <TouchableOpacity 
+                                        style={styles.actionBtn}
+                                        onPress={() => router.push({
+                                            pathname: '/video-call' as any,
+                                            params: { bookingId: booking._id, channelName: booking._id }
+                                        })}
+                                    >
+                                        <View style={[styles.actionIcon, { backgroundColor: '#FFF7ED' }]}>
+                                            <Ionicons name="videocam" size={22} color="#C2410C" />
+                                        </View>
+                                        <Text style={styles.actionLabel}>Video Call</Text>
+                                    </TouchableOpacity>
+                                ) : null}
                             </View>
                         </View>
                     ) : null}
 
                     {/* Actions */}
-                    {booking.status === 'PENDING' || booking.status === 'BROADCASTED' ? (
+                    {booking.status === 'PENDING' || booking.status === 'BROADCASTED' || booking.status === 'ACCEPTED' ? (
                         <View style={styles.card}>
                             <Text style={styles.cardTitle}>Actions</Text>
                             <Button
                                 label="Cancel Booking"
                                 icon={<XCircle size={18} color="#fff" />}
-                                onPress={() => alert('Cancel booking API not yet available in V1')}
+                                onPress={() => {
+                                    import('react-native').then(({ Alert }) => {
+                                        Alert.alert(
+                                            'Cancel Booking',
+                                            'Are you sure you want to cancel this booking?',
+                                            [
+                                                { text: 'No', style: 'cancel' },
+                                                {
+                                                    text: 'Yes, Cancel',
+                                                    style: 'destructive',
+                                                    onPress: async () => {
+                                                        try {
+                                                            await bookingsService.updateServiceBookingStatus(booking._id, 'CANCELLED');
+                                                            refetch();
+                                                        } catch (error: any) {
+                                                            Alert.alert('Error', error?.response?.data?.message || 'Failed to cancel booking');
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    });
+                                }}
                                 variant="danger"
                                 size="md"
                                 fullWidth

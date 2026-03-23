@@ -1117,7 +1117,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       },
       { upsert: true }
     );
-  } else if (status === "CANCELLED") {
+  } else if (status === "CANCELLED" || status === "Cancelled") {
     // Sync cancel state with HospitalBooking if it exists
     await HospitalBooking.findOneAndUpdate({ bookingId: booking._id }, { status: "CANCELLED" });
   }
