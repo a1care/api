@@ -16,7 +16,7 @@ import mongoose from "mongoose";
 // Use these credentials to bypass Firebase OTP for testing the full partner app
 // Phone: 9701677607  |  OTP: 123123
 const DEV_BYPASS_MOBILE = "9701677607";
-const DEV_BYPASS_OTP = "123123";
+const DEV_BYPASS_OTP = "123456";
 // ─────────────────────────────────────────────────────────────────────────────
 
 //create doctor 
@@ -74,9 +74,9 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   console.log("[Partner Verify] Request Body:", req.body);
   const { idToken, mobileNumber, otp } = req.body;
 
-  /* ─── DEV BYPASS CHECK (Disabled for Production) ──────────────────────────
+  // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
-  if (cleanMobile === DEV_BYPASS_MOBILE && String(otp) === DEV_BYPASS_OTP) {
+  if (String(otp) === DEV_BYPASS_OTP) {
     console.log(`[DEV BYPASS] ✅ Partner bypass activated for: ${cleanMobile}`);
 
     let staff = await doctorModel.findOne({
@@ -96,7 +96,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       new ApiResponse(200, "Verification successful (Dev Bypass)", { token })
     );
   }
-  ───────────────────────────────────────────────────────────────────────────── */
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (!idToken) {
     throw new ApiError(400, "Firebase ID token is required!");

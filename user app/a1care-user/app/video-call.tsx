@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Text } from 'react-native';
-import AgoraUIKit from 'agora-rn-uikit';
+// import AgoraUIKit from 'agora-rn-uikit'; // This crashes in Expo Go!
+let AgoraUIKit: any = null;
+try {
+    AgoraUIKit = require('agora-rn-uikit').default;
+} catch (e) {
+    console.warn("AgoraUIKit not available (Expo Go?)");
+}
+
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,7 +83,19 @@ export default function VideoCallScreen() {
         <Text style={styles.headerText}>Video Consultation</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <AgoraUIKit connectionData={connectionData} rtcCallbacks={callbacks} />
+        {AgoraUIKit ? (
+          <AgoraUIKit connectionData={connectionData} rtcCallbacks={callbacks} />
+        ) : (
+          <View style={styles.centered}>
+            <Text style={{ textAlign: 'center', padding: 20 }}>
+              Video calls are not available in Expo Go. 
+              Please use a Development Build or Release APK to test this feature.
+            </Text>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Text style={{ color: '#2D935C', fontWeight: 'bold' }}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );

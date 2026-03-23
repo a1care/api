@@ -41,6 +41,14 @@ const LoginScreen = () => {
         }
         setLoading(true);
         try {
+            // STEP 1: Dev Bypass (Always on as requested for testing)
+            if (true) {
+                console.log("[Login] Using Bypass for Partner:", cleaned);
+                setOtpSessionId("BYPASS"); // Marker for bypass mode
+                Toast.show({ type: 'success', text1: 'Bypass Active', text2: 'Please use 123456 as OTP' });
+                return;
+            }
+
             const auth = getAuth();
             if (!auth) {
                 throw new Error("Phone OTP requires a Production Build. Please use a signed release APK.");
@@ -70,7 +78,9 @@ const LoginScreen = () => {
             let idToken = undefined;
             const cleaned = mobile.replace(/\D/g, '');
 
-            if (confirmationResult && (confirmationResult as any).confirm) {
+            if (otpSessionId === "BYPASS") {
+                console.log("[Login] Skipping Firebase Verify (Bypass Mode)");
+            } else if (confirmationResult && (confirmationResult as any).confirm) {
                 const userCredential = await (confirmationResult as any).confirm(otp);
                 idToken = await userCredential.user.getIdToken(true);
             } else {

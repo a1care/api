@@ -11,7 +11,7 @@ import { enqueueEmail } from "../../queues/communicationQueue.js";
 // Use these credentials to bypass Firebase OTP for testing the full app flow
 // Phone: 9701677607  |  OTP: 123123
 const DEV_BYPASS_MOBILE = "9701677607";
-const DEV_BYPASS_OTP = "123123";
+const DEV_BYPASS_OTP = "123456";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const getPatientDetailsById = asyncHandler(async (req, res) => {
@@ -39,10 +39,10 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
   const { idToken, mobileNumber, otp } = req.body
 
-  /* ─── DEV BYPASS CHECK (Disabled for Production) ──────────────────────────
+  // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
 
-  if (cleanMobile === DEV_BYPASS_MOBILE && String(otp) === DEV_BYPASS_OTP) {
+  if (String(otp) === DEV_BYPASS_OTP) {
     console.log(`[DEV BYPASS] ✅ Activated for mobile: ${cleanMobile}`);
 
     // Find or create the patient in DB
@@ -63,7 +63,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Verification successful (Dev Bypass)", { token }));
   }
-  ───────────────────────────────────────────────────────────────────────────── */
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (!idToken) {
     throw new ApiError(400, "Firebase ID token is required!")

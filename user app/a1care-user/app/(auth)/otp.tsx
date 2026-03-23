@@ -66,7 +66,10 @@ export default function OtpScreen() {
         try {
             let idToken = undefined;
 
-            if (confirmationResult) {
+            if (isBypass === "true") {
+                console.log("[OtpScreen] Using Dev Bypass (skipping Firebase verify)");
+                // We proceed directly to backend verification
+            } else if (confirmationResult) {
                 // Normal Firebase verification
                 const userCredential = await confirmationResult.confirm(code);
                 idToken = await userCredential.user.getIdToken();

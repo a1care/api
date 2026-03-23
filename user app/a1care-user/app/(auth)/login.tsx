@@ -31,12 +31,13 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            /* STEP 1: Check if this is the Dev Bypass Number (Disabled for Production)
-            if (cleaned === "9701677607") {
+            // STEP 1: Dev Bypass (Enabled for Development/Expo/Testing)
+            // Redirect straight to OTP screen with bypass flag
+            if (true) {
+                console.log("[Login] Using Bypass for:", cleaned);
                 router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, isBypass: "true" } });
                 return;
             }
-            */
 
             // STEP 2: Use Native Firebase (will throw if in Expo Go)
             let auth;
