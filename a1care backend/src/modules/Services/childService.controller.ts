@@ -72,10 +72,30 @@ export const deleteChildService = asyncHandler(async (req, res) => {
 })
 
 export const getFeaturedChildServices = asyncHandler(async (req, res) => {
-    // Fetch top 5 services based on rating and completion count
-    const featured = await ChildServiceModel.find({ isActive: true })
+    // Step 1: Try to find admin-marked popular services
+    let featured = await ChildServiceModel.find({ isActive: true, isFeatured: true })
         .sort({ rating: -1, completed: -1 })
         .limit(6);
+
+    // Step 2: Fallback — if no services are admin-marked, use top-rated
+    if (featured.length === 0) {
+        featured = await ChildServiceModel.find({ isActive: true })
+            .sort({ rating: -1, completed: -1 })
+            .limit(6);
+    }
         
     return res.json(new ApiResponse(200, "Featured child services fetched", featured));
+});
+
+export const toggleFeaturedChildService = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id) throw new ApiError(400, "Child service id is missing");
+
+    const service = await ChildServiceModel.findById(id);
+    if (!service) throw new ApiError(404, "Child service not found");
+
+    service.isFeatured = !service.isFeatured;
+    await service.save();
+
+    return res.json(new ApiResponse(200, `Service marked as ${service.isFeatured ? 'popular' : 'not popular'}`, service));
 });

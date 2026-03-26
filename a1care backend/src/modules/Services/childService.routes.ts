@@ -5,7 +5,8 @@ import {
     getChildServiceBySubserviceId, 
     getChildServiceById, 
     deleteChildService,
-    getFeaturedChildServices
+    getFeaturedChildServices,
+    toggleFeaturedChildService
 } from './childService.controller.js'
 import { uploadServiceImage } from '../../middlewares/upload.js'
 import { attachFileUrl } from '../../middlewares/attackFIle.js'
@@ -18,5 +19,7 @@ router.get('/:subServiceId', getChildServiceBySubserviceId)
 router.get('/detail/:id', getChildServiceById)
 router.put("/addroles/:childServiceId", addRolesToChildService)
 router.delete("/:id", deleteChildService)
+router.patch("/featured/toggle/:id", toggleFeaturedChildService)
+
 
 export default router

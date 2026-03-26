@@ -8,6 +8,7 @@ export interface ChildServiceDocument extends Document {
   price: number;
   selectionType: "SELECT" | "ASSIGN";
   isActive: boolean;
+  isFeatured: boolean;
   allowedRoleIds: string[];
   imageUrl: string;
   /** Optional hospital/partner who gets first notification (10s window) before broadcast to all */
@@ -57,6 +58,12 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
     isActive: {
       type: Boolean,
       default: false,
+    },
+
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
 
     allowedRoleIds: {
