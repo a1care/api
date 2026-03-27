@@ -21,6 +21,7 @@ import ReviewsPage from "./pages/ReviewsPage";
 import KYCVerificationPage from "./pages/KYCVerificationPage";
 import { HealthVaultAuditPage } from "./pages/HealthVaultAuditPage";
 import { PaymentLogsPage } from "./pages/PaymentLogsPage";
+import { HealthPackagesPage } from "./pages/HealthPackagesPage";
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/service-categories" element={<ServiceManagementPage />} />
             <Route path="/service-subcategories" element={<ServiceManagementPage />} />
             <Route path="/service-child-services" element={<ServiceManagementPage />} />
+            <Route path="/health-packages" element={<HealthPackagesPage />} />
 
             {/* Revenue & Subscriptions */}
             <Route path="/partner-revenue-model" element={<SubscriptionManagementPage />} />

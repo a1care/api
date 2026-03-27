@@ -9,12 +9,23 @@ import { Toast } from "../../components/CustomToast";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
 
-// Import native Firebase Auth safely
+// Import native Firebase modules safely
 const getAuth = () => {
     try {
-        return require('@react-native-firebase/auth').default;
+        const auth = require('@react-native-firebase/auth');
+        return auth.default || auth;
     } catch (e) {
-        console.warn('Native Firebase Auth not found, check if you are in Expo Go');
+        console.warn('Native Firebase Auth not found, check if you are in a production build');
+        return null;
+    }
+};
+
+const getMessaging = () => {
+    try {
+        const messaging = require('@react-native-firebase/messaging');
+        return messaging.default || messaging;
+    } catch (e) {
+        console.warn('Native Firebase Messaging not found');
         return null;
     }
 };
@@ -56,7 +67,7 @@ const LoginScreen = () => {
 
             const e164PhoneNumber = `+91${cleaned}`;
             const confirmation = await auth().signInWithPhoneNumber(e164PhoneNumber);
-            
+
             setConfirmationResult(confirmation);
             setOtpSessionId(confirmation.verificationId || 'SESSION_ACTIVE');
             Toast.show({ type: 'success', text1: 'OTP Sent', text2: 'Enter the code you received.' });
@@ -102,21 +113,25 @@ const LoginScreen = () => {
 
             // Update FCM Token for Push Notifications
             try {
-                const messaging = require('@react-native-firebase/messaging').default;
-                const authStatus = await messaging().requestPermission();
-                const enabled =
-                    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+                const messaging = getMessaging();
+                if (messaging) {
+                    const authStatus = await messaging().requestPermission();
+                    const enabled =
+                        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+                        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-                if (enabled) {
-                    const fcmToken = await messaging().getToken();
-                    if (fcmToken) {
-                        await api.put("/notifications/fcm-token/partner", { fcmToken });
-                        console.log("FCM Token registered successfully");
+                    if (enabled) {
+                        const fcmToken = await messaging().getToken();
+                        if (fcmToken) {
+                            await api.put("/notifications/fcm-token/partner", { fcmToken });
+                            console.log("FCM Token registered successfully");
+                        }
                     }
+                } else {
+                    console.log("Skipping FCM: Native module not available");
                 }
             } catch (fcmErr) {
-                console.error("FCM registration failed", fcmErr);
+                console.error("FCM registration error:", fcmErr);
                 // Don't block login if FCM fails
             }
 
@@ -132,8 +147,22 @@ const LoginScreen = () => {
                 router.replace("/(tabs)/home");
             }
         } catch (err: any) {
+            console.error('Full Verification Error:', err);
             let msg = err?.response?.data?.message || err?.message || "Invalid OTP";
-            Toast.show({ type: 'error', text1: 'Verification Failed', text2: msg });
+
+            // Helpful debug for release builds
+            if (err.response?.data) {
+                console.log('Server Error Data:', err.response.data);
+            }
+            if (err.message === 'Network Error') {
+                msg = "Network Error: Cannot reach A1Care server. Check your internet/URL.";
+            }
+
+            Toast.show({
+                type: 'error',
+                text1: 'Verification Failed',
+                text2: msg
+            });
         } finally {
             setVerifying(false);
         }

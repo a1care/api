@@ -17,19 +17,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 
-// Firebase specific imports - handled safely for Expo Go
-
-// ─── DEV BYPASS CONSTANTS (Disabled for Production) ──────────────────────────
-// const DEV_BYPASS_MOBILE = '9701677607';
-// const DEV_BYPASS_OTP = '123123';
-// ─────────────────────────────────────────────────────────────────────────────
-
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
     const router = useRouter();
-    const { mobile, verificationId, isBypass } = useLocalSearchParams<{ mobile: string, verificationId: string, isBypass: string }>();
-    const { setToken, setUser, confirmationResult } = useAuthStore();
+    const { mobile } = useLocalSearchParams<{ mobile: string }>();
+    const { setToken, setUser } = useAuthStore();
 
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
     const [loading, setLoading] = useState(false);
@@ -64,64 +57,13 @@ export default function OtpScreen() {
         }
         setLoading(true);
         try {
-            let idToken = undefined;
-
-            if (isBypass === "true") {
-                console.log("[OtpScreen] Using Dev Bypass (skipping Firebase verify)");
-                // We proceed directly to backend verification
-            } else if (confirmationResult) {
-                // Normal Firebase verification
-                const userCredential = await confirmationResult.confirm(code);
-                idToken = await userCredential.user.getIdToken();
-            } else {
-                 // Attempt to re-import if missing (Safe mode for Expo Go)
-                 try {
-                    const auth = require('@react-native-firebase/auth').default;
-                } catch (e) {
-                     Alert.alert('Error', 'Real OTP verification requires a Development Build. Please use a signed release APK.');
-                     setLoading(false);
-                     return;
-                }
-                Alert.alert('Error', 'Session expired. Please request OTP again.');
-                router.back();
-                return;
-            }
-            // ─────────────────────────────────────────────────────────────────
-            // 3. We show our backend the Token!
+            // We show our backend the Mobile and Code! (Bypassing Firebase token check)
             console.log(`[OtpScreen] Verifying with backend: ${mobile}`);
-            const res = await authService.verifyOtp(mobile, code, idToken);
+            const res = await authService.verifyOtp(mobile, code);
             const token = res.data.token;
             setToken(token);
             const user = await authService.getProfile();
             setUser(user);
-
-            // Register FCM Token for notifications
-            try {
-                let messaging;
-                try {
-                    messaging = require('@react-native-firebase/messaging').default;
-                } catch(e) {
-                    console.log("[OtpScreen] Firebase Messaging not available (Expo Go?)");
-                }
-
-                if (messaging) {
-                    const authStatus = await messaging().requestPermission();
-                    const enabled =
-                        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-                    if (enabled) {
-                        const fcmToken = await messaging().getToken();
-                        if (fcmToken) {
-                            const api = require('@/services/api').default;
-                            await api.put('/notifications/fcm-token/patient', { fcmToken });
-                            console.log('[OtpScreen] FCM Token registered');
-                        }
-                    }
-                }
-            } catch (fcmErr) {
-                console.error('[OtpScreen] FCM registration error:', fcmErr);
-            }
 
             if (user.isRegistered) {
                 router.replace('/(tabs)');
@@ -138,8 +80,6 @@ export default function OtpScreen() {
             let msg = 'Please check the code and try again.';
             if (err.message === 'Network Error') {
                 msg = 'Cannot reach A1Care server. Please check your internet connection.';
-            } else if (err.code === 'auth/session-expired') {
-                msg = 'OTP has expired. Please go back and resend.';
             } else if (err.response?.data?.message) {
                 msg = err.response.data.message;
             }
@@ -150,8 +90,19 @@ export default function OtpScreen() {
     };
 
     const handleResend = async () => {
-        Alert.alert('Notice', 'Please go back to the previous screen to request a new OTP.');
-        router.back();
+        setLoading(true);
+        try {
+            await authService.sendOtp(mobile);
+            setResendTimer(30);
+            setOtp(Array(OTP_LENGTH).fill(''));
+            inputs.current[0]?.focus();
+            Alert.alert('OTP Resent', 'A new 6-digit code has been sent to your mobile.');
+        } catch (err: any) {
+            let msg = err?.response?.data?.message || err?.message || "Failed to resend OTP.";
+            Alert.alert('Resend Failed', msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -244,4 +195,3 @@ const styles = StyleSheet.create({
     timer: { color: "#0D2E4D", fontWeight: "600" },
     resendBtn: { color: "#1A7FD4", fontWeight: "700" },
 });
-

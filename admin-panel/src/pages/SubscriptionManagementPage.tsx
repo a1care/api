@@ -195,6 +195,32 @@ export function SubscriptionManagementPage() {
                 })}
             </div>
 
+            {/* Subscription Approval Queue */}
+            <div className="card mt-12 overflow-hidden" style={{ borderRadius: '32px' }}>
+                <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-black text-[var(--text-main)]">Activation Requests</h2>
+                        <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1">Pending Partner Subscriptions</p>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50/50">
+                                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Partner</th>
+                                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Plan</th>
+                                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Price</th>
+                                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Request Date</th>
+                                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <PendingSubscriptionList qc={qc} />
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {editingPlan && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-[var(--card-bg)] w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -282,3 +308,66 @@ export function SubscriptionManagementPage() {
         </section>
     );
 }
+
+function PendingSubscriptionList({ qc }: { qc: any }) {
+    const { data: requests = [], isLoading } = useQuery({
+        queryKey: ["pending-subscriptions"],
+        queryFn: async () => {
+            const res = await api.get("/subscription/admin/list?status=Pending");
+            return res.data.data;
+        }
+    });
+
+    const approve = useMutation({
+        mutationFn: async (id: string) => {
+            await api.put(`/subscription/admin/approve/${id}`);
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["pending-subscriptions"] });
+            alert("Subscription approved successfully!");
+        }
+    });
+
+    if (isLoading) return <tr><td colSpan={5} className="p-8 text-center text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">Scanning Network...</td></tr>;
+    if (requests.length === 0) return <tr><td colSpan={5} className="p-12 text-center text-xs font-black text-[var(--text-muted)] uppercase tracking-widest bg-slate-50/20">All subscriptions reconciled.</td></tr>;
+
+    return (
+        <>
+            {requests.map((req: any) => (
+                <tr key={req._id} className="border-b border-slate-50 group hover:bg-slate-50/50 transition-colors">
+                    <td className="p-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center font-black">
+                                {req.partnerId?.name?.charAt(0) || "P"}
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-[var(--text-main)]">{req.partnerId?.name || "Unknown Partner"}</p>
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{req.partnerId?.mobileNumber}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td className="p-6">
+                        <div className="badge primary px-2 py-1 text-[9px] font-black uppercase tracking-widest">
+                            {req.planId?.name}
+                        </div>
+                    </td>
+                    <td className="p-6 font-black text-sm text-[var(--text-main)]">₹{req.planId?.price}</td>
+                    <td className="p-6 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                        {new Date(req.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="p-6">
+                        <button
+                            onClick={() => approve.mutate(req._id)}
+                            disabled={approve.isPending}
+                            className="h-10 px-6 bg-[#1A7FD4] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-100 hover:scale-105 transition-all flex items-center gap-2"
+                        >
+                            <CheckCircle2 size={14} />
+                            {approve.isPending ? "Approving..." : "Approve Now"}
+                        </button>
+                    </td>
+                </tr>
+            ))}
+        </>
+    );
+}
+

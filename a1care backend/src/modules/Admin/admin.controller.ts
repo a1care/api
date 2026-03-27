@@ -1431,7 +1431,13 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
 });
 
 export const getAdminPayouts = asyncHandler(async (req, res) => {
-  const payouts = await Payout.find().populate("staffId", "name mobileNumber bankDetails").sort({ createdAt: -1 });
+  const { status } = req.query;
+  const filter: any = {};
+  if (status && status !== "All") filter.status = status;
+
+  const payouts = await Payout.find(filter)
+    .populate("staffId", "name mobileNumber bankDetails")
+    .sort({ createdAt: -1 });
   return res.status(200).json(new ApiResponse(200, "Payout requests fetched", payouts));
 });
 
@@ -1443,6 +1449,24 @@ export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
 
   const payout = await Payout.findByIdAndUpdate(id, { status, adminNote }, { new: true });
   if (!payout) throw new ApiError(404, "Payout not found");
+
+  // Notify Partner
+  const partner = await Doctor.findById(payout.staffId);
+  if (partner?.fcmToken) {
+    const title = status === "COMPLETED" ? "Payment Settled! 💰" : "Payout Update";
+    const body = status === "COMPLETED" 
+      ? `₹${payout.amount} has been transferred to your bank account.`
+      : `Your payout request of ₹${payout.amount} was ${status.toLowerCase()}. ${adminNote || ""}`;
+
+    await (await import("../../queues/communicationQueue.js")).enqueuePush({
+      recipientId: String(partner._id),
+      recipientType: "staff" as any,
+      fcmToken: partner.fcmToken,
+      title,
+      body,
+      data: { type: "PAYOUT_UPDATE", payoutId: String(payout._id), status }
+    });
+  }
 
   return res.status(200).json(new ApiResponse(200, "Payout status updated", payout));
 });

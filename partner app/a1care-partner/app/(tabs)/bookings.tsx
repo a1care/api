@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,22 +6,25 @@ import { api } from "../../lib/api";
 import { useRouter } from "expo-router";
 import * as Location from 'expo-location';
 import { partnerBookingService } from '../../lib/bookings';
-import { MessageCircle, MapPin, Navigation, Calendar } from 'lucide-react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MessageCircle, MapPin, Navigation, Calendar, Clock, CreditCard } from 'lucide-react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
+import { LinearGradient } from "expo-linear-gradient";
+
+const { width } = Dimensions.get("window");
 
 const TABS = ["Pending", "Confirmed", "Completed", "Cancelled"];
 
-const statusColors: Record<string, { bg: string; text: string }> = {
-    Pending: { bg: "#FEF9E7", text: "#D97706" },
-    Broadcasted: { bg: "#F5F3FF", text: "#7C3AED" },
-    ACCEPTED: { bg: "#ECFDF5", text: "#059669" },
-    Confirmed: { bg: "#ECFDF5", text: "#047857" },
-    Active: { bg: "#ECFDF5", text: "#047857" },
-    IN_PROGRESS: { bg: "#EFF6FF", text: "#3B82F6" },
-    Completed: { bg: "#F0F9FF", text: "#0369A1" },
-    COMPLETED: { bg: "#F0F9FF", text: "#0369A1" },
-    Cancelled: { bg: "#FEF2F2", text: "#B91C1C" },
+const statusColors: Record<string, { bg: string; text: string; icon: string }> = {
+    Pending: { bg: "#FFFBEB", text: "#D97706", icon: "clock-outline" },
+    Broadcasted: { bg: "#F5F3FF", text: "#7C3AED", icon: "broadcast" },
+    ACCEPTED: { bg: "#ECFDF5", text: "#059669", icon: "check-circle-outline" },
+    Confirmed: { bg: "#ECFDF5", text: "#047857", icon: "check-decagram" },
+    Active: { bg: "#ECFDF5", text: "#047857", icon: "radio-tower" },
+    IN_PROGRESS: { bg: "#EFF6FF", text: "#3B82F6", icon: "map-marker-path" },
+    Completed: { bg: "#F0F9FF", text: "#0369A1", icon: "star-circle" },
+    COMPLETED: { bg: "#F0F9FF", text: "#0369A1", icon: "star-circle" },
+    Cancelled: { bg: "#FEF2F2", text: "#B91C1C", icon: "close-circle-outline" },
 };
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https://api.a1carehospital.in';
@@ -29,7 +32,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https:/
 export default function BookingsScreen() {
     const queryClient = useQueryClient();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState("All");
+    const [activeTab, setActiveTab] = useState("Pending");
     const primaryColor = "#2D935C";
 
     const [isTracking, setIsTracking] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export default function BookingsScreen() {
             partnerBookingService.updateStatus(id, status, bookingType),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            Alert.alert("Success", "Status updated");
+            queryClient.invalidateQueries({ queryKey: ["homeStats"] });
         },
         onError: (err: any) => {
             Alert.alert("Error", err?.response?.data?.message || "Action failed");
@@ -69,21 +72,30 @@ export default function BookingsScreen() {
         mutationFn: (id: string) => partnerBookingService.acceptServiceRequest(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            Alert.alert("Claimed!", "You have accepted this request");
+            Alert.alert("Job Claimed!", "Check 'Confirmed' tab to start the journey.");
         },
         onError: (err: any) => {
-            Alert.alert("Busy!", err?.response?.data?.message || "Someone else might have claimed this just now.");
+            Alert.alert("Busy!", err?.response?.data?.message || "Someone else just claimed this job.");
         }
     });
 
-    const startTracking = async (id: string) => {
+    const openMaps = (address: string) => {
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        import('react-native').then(({ Linking }) => Linking.openURL(url));
+    };
+
+    const startTracking = async (id: string, address?: string) => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("Permission Denied", "Location permission is required to track journey.");
+            Alert.alert("Permission", "Please allow location to track your journey.");
             return;
         }
 
+        if (address) openMaps(address);
+
         setIsTracking(id);
+        if (trackingInterval.current) clearInterval(trackingInterval.current);
+        
         trackingInterval.current = setInterval(async () => {
             try {
                 const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -93,25 +105,20 @@ export default function BookingsScreen() {
                     heading: loc.coords.heading || 0,
                     speed: loc.coords.speed || 0,
                 };
-
-                // 1. Sync with DB (Persistent)
                 await partnerBookingService.updateLocation(coords);
-
-                // 2. Broadcast via Socket (Real-time)
-                socketRef.current?.emit('update_location', {
-                    roomId: id,
-                    ...coords
-                });
-
+                socketRef.current?.emit('update_location', { roomId: id, ...coords });
             } catch (err) {
                 console.error("Tracking error", err);
             }
-        }, 10000);
+        }, 12000);
     };
 
     const stopTracking = () => {
         setIsTracking(null);
-        if (trackingInterval.current) clearInterval(trackingInterval.current);
+        if (trackingInterval.current) {
+            clearInterval(trackingInterval.current);
+            trackingInterval.current = null;
+        }
     };
 
     useEffect(() => {
@@ -121,14 +128,19 @@ export default function BookingsScreen() {
     }, []);
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#EBF1F5" }}>
-            <View style={styles.headerBar}>
-                <Text style={styles.title}>My Bookings</Text>
-                <Text style={styles.sub}>Manage your service requests</Text>
+        <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <View>
+                    <Text style={styles.title}>Service Hub</Text>
+                    <Text style={styles.sub}>{bookings.length} assigned requests</Text>
+                </View>
+                <TouchableOpacity onPress={() => refetch()} style={styles.refreshBtn}>
+                    <Ionicons name="refresh" size={20} color="#2D935C" />
+                </TouchableOpacity>
             </View>
 
-            <View style={{ height: 60 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+            <View style={styles.tabsWrapper}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
                     {TABS.map(t => (
                         <TouchableOpacity
                             key={t}
@@ -142,115 +154,143 @@ export default function BookingsScreen() {
             </View>
 
             <ScrollView
-                contentContainerStyle={{ padding: 20, gap: 16 }}
-                refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={primaryColor} />}
+                showsVerticalScrollIndicator={false}
             >
                 {isLoading ? (
-                    <ActivityIndicator size="large" color={primaryColor} style={{ marginTop: 40 }} />
+                    <View style={styles.loaderBox}>
+                        <ActivityIndicator size="large" color={primaryColor} />
+                        <Text style={styles.loaderText}>Syncing Feed...</Text>
+                    </View>
                 ) : bookings.length === 0 ? (
                     <View style={styles.empty}>
-                        <Text style={{ fontSize: 40 }}>📭</Text>
-                        <Text style={styles.emptyText}>No {activeTab.toLowerCase()} bookings</Text>
+                        <LinearGradient colors={["#F8FAFC", "#F1F5F9"]} style={styles.emptyIconBox}>
+                            <MaterialCommunityIcons name="clipboard-text-outline" size={48} color="#CBD5E1" />
+                        </LinearGradient>
+                        <Text style={styles.emptyText}>No {activeTab.toLowerCase()} requests</Text>
+                        <Text style={styles.emptySub}>Your queue is currently empty</Text>
                     </View>
                 ) : (
                     bookings.map((b: any) => (
                         <View key={b._id} style={styles.card}>
-                            <View style={styles.cardHeader}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.patientName}>{b.patientName || "Guest Patient"}</Text>
-                                    <Text style={[styles.service, { color: b.bookingType === 'Doctor' ? '#3B82F6' : '#8B5CF6' }]}>
-                                        {b.bookingType === 'Doctor' ? '🩺 ' : '🧪 '}{b.serviceType}
-                                    </Text>
+                            <View style={styles.cardInfo}>
+                                <View style={styles.cardHeader}>
+                                    <View>
+                                        <Text style={styles.patientName}>{b.patientName || "Guest Patient"}</Text>
+                                        <View style={styles.serviceRow}>
+                                            <MaterialCommunityIcons 
+                                                name={b.bookingType === 'Doctor' ? "stethoscope" : "flask-outline"} 
+                                                size={14} 
+                                                color="#64748B" 
+                                            />
+                                            <Text style={styles.serviceText}>{b.serviceType}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={[styles.statusBadge, { backgroundColor: statusColors[b.status]?.bg || "#F1F5F9" }]}>
+                                        <MaterialCommunityIcons name={statusColors[b.status]?.icon as any || "help-circle-outline"} size={14} color={statusColors[b.status]?.text || "#64748B"} style={{marginRight: 4}} />
+                                        <Text style={[styles.statusText, { color: statusColors[b.status]?.text || "#64748B" }]}>{b.status}</Text>
+                                    </View>
                                 </View>
-                                <View style={[styles.statusBadge, { backgroundColor: statusColors[b.status]?.bg || "#EEF2FF" }]}>
-                                    <Text style={[styles.statusText, { color: statusColors[b.status]?.text || "#6366F1" }]}>{b.status}</Text>
-                                </View>
-                            </View>
 
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoItem}>🕐 {b.timeSlot || "Standard Time"}</Text>
-                                <Text style={styles.infoItem}>📍 {b.location?.address || "No address provided"}</Text>
-                                <Text style={styles.amount}>₹{b.totalAmount || 0}</Text>
+                                <View style={styles.divider} />
+
+                                <View style={styles.detailsRow}>
+                                    <View style={styles.detailItem}>
+                                        <Clock size={16} color="#64748B" />
+                                        <Text style={styles.detailText}>{b.timeSlot || "Anytime"}</Text>
+                                    </View>
+                                    <View style={styles.detailItem}>
+                                        <CreditCard size={16} color="#2D935C" />
+                                        <Text style={[styles.detailText, { fontWeight: '800', color: '#1E293B' }]}>₹{b.totalAmount || 0}</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.addressRow}>
+                                    <MapPin size={16} color="#EF4444" />
+                                    <Text style={styles.addressText} numberOfLines={1}>{b.location?.address || "Location not provided"}</Text>
+                                </View>
                             </View>
 
                             <View style={styles.actions}>
                                 {b.status === "Broadcasted" && (
                                     <TouchableOpacity
-                                        style={[styles.acceptBtn, { backgroundColor: '#8B5CF6' }]}
+                                        style={[styles.mainBtn, { backgroundColor: '#8B5CF6' }]}
                                         onPress={() => acceptServiceMutation.mutate(b._id)}
                                     >
-                                        <Text style={styles.acceptText}>⚡ Claim Job</Text>
+                                        <Text style={styles.mainBtnText}>⚡ Accept Request</Text>
                                     </TouchableOpacity>
                                 )}
 
                                 {b.status === "Pending" && (
-                                    <>
+                                    <View style={styles.dualActions}>
                                         <TouchableOpacity
-                                            style={styles.acceptBtn}
+                                            style={styles.mainBtn}
                                             onPress={() => updateStatusMutation.mutate({ id: b._id, status: "Confirmed", bookingType: b.bookingType })}
                                         >
-                                            <Text style={styles.acceptText}>✅ Accept</Text>
+                                            <Text style={styles.mainBtnText}>Confirm Visit</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={styles.declineBtn}
                                             onPress={() => updateStatusMutation.mutate({ id: b._id, status: "Cancelled", bookingType: b.bookingType })}
                                         >
-                                            <Text style={styles.declineText}>✕ Decline</Text>
+                                            <Ionicons name="close" size={20} color="#EF4444" />
                                         </TouchableOpacity>
-                                    </>
+                                    </View>
                                 )}
                                 
                                 {(b.status === "Confirmed" || b.status === "ACCEPTED" || b.status === "IN_PROGRESS") && (
-                                    <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
+                                    <View style={styles.activeActions}>
                                         {isTracking !== b._id ? (
                                             <TouchableOpacity
-                                                style={[styles.acceptBtn, { backgroundColor: '#3498DB' }]}
-                                                onPress={() => startTracking(b._id)}
+                                                style={[styles.mainBtn, { backgroundColor: '#3B82F6' }]}
+                                                onPress={() => startTracking(b._id, b.location?.address)}
                                             >
-                                                <Text style={styles.acceptText}>Track Live</Text>
+                                                <Navigation size={18} color="#FFF" />
+                                                <Text style={styles.mainBtnText}>Navigate</Text>
                                             </TouchableOpacity>
                                         ) : (
                                             <TouchableOpacity
-                                                style={[styles.acceptBtn, { backgroundColor: '#E74C3C' }]}
+                                                style={[styles.mainBtn, { backgroundColor: '#EF4444' }]}
                                                 onPress={stopTracking}
                                             >
-                                                <Text style={styles.acceptText}>Stop</Text>
+                                                <Text style={styles.mainBtnText}>Stop Track</Text>
                                             </TouchableOpacity>
                                         )}
                                         <TouchableOpacity
-                                            style={styles.acceptBtn}
+                                            style={[styles.mainBtn, { flex: 1.2 }]}
                                             onPress={() => updateStatusMutation.mutate({ 
                                                 id: b._id, 
                                                 status: b.bookingType === 'Doctor' ? "Completed" : "COMPLETED", 
                                                 bookingType: b.bookingType 
                                             })}
                                         >
-                                            <Text style={styles.acceptText}>Complete</Text>
+                                            <Text style={styles.mainBtnText}>End Service</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
 
                                 {b.status !== "Pending" && b.status !== "Broadcasted" && (
-                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={styles.commsRow}>
                                         <TouchableOpacity 
-                                            style={styles.iconBtn}
+                                            style={styles.commBtn}
                                             onPress={() => router.push({
                                                 pathname: '/booking_chat' as any,
                                                 params: { id: b._id, name: b.patientName || 'Patient' }
                                             })}
                                         >
-                                            <MessageCircle size={24} color="#2D935C" />
+                                            <MessageCircle size={22} color="#2D935C" />
                                         </TouchableOpacity>
 
                                         {(b.status === "Confirmed" || b.status === "ACCEPTED" || b.status === "IN_PROGRESS") && (
                                             <TouchableOpacity 
-                                                style={[styles.iconBtn, { backgroundColor: '#FFF7ED' }]}
+                                                style={[styles.commBtn, { backgroundColor: '#FFF7ED' }]}
                                                 onPress={() => router.push({
                                                     pathname: '/video-call' as any,
                                                     params: { bookingId: b._id, channelName: b._id }
                                                 })}
                                             >
-                                                <Ionicons name="videocam" size={24} color="#C2410C" />
+                                                <Ionicons name="videocam" size={22} color="#C2410C" />
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -265,43 +305,44 @@ export default function BookingsScreen() {
 }
 
 const styles = StyleSheet.create({
-    headerBar: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-    title: { fontSize: 24, fontWeight: "800", color: "#0D2E4D" },
-    sub: { fontSize: 13, color: "#6B8A9E", marginTop: 2 },
-    tabsScroll: { maxHeight: 56, marginTop: 8 },
-    tab: {
-        paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20,
-        backgroundColor: "#FFFFFF",
-        shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-    },
-    tabActive: { backgroundColor: "#2D935C" },
-    tabText: { fontSize: 13, fontWeight: "700", color: "#6B8A9E" },
-    tabTextActive: { color: "#FFFFFF" },
-    empty: { alignItems: "center", paddingTop: 60, gap: 12 },
-    emptyText: { fontSize: 15, color: "#9CB3C4", fontWeight: "600" },
-    card: {
-        backgroundColor: "#FFFFFF", borderRadius: 20, padding: 18,
-        shadowColor: "#000", shadowOpacity: 0.07, shadowRadius: 10, elevation: 4,
-        gap: 12,
-    },
+    container: { flex: 1, backgroundColor: "#F8FAFC" },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 20 },
+    title: { fontSize: 28, fontWeight: "900", color: "#1E293B", letterSpacing: -0.5 },
+    sub: { fontSize: 13, color: "#64748B", marginTop: 2, fontWeight: '600' },
+    refreshBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+    tabsWrapper: { height: 64, backgroundColor: '#F8FAFC' },
+    tabsContent: { paddingHorizontal: 24, alignItems: 'center', gap: 12 },
+    tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 15, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#F1F5F9" },
+    tabActive: { backgroundColor: "#2D935C", borderColor: "#2D935C" },
+    tabText: { fontSize: 13, fontWeight: "800", color: "#64748B" },
+    tabTextActive: { color: "#FFF" },
+    scrollContent: { padding: 24, gap: 20 },
+    loaderBox: { alignItems: 'center', marginTop: 100, gap: 15 },
+    loaderText: { fontSize: 15, color: '#64748B', fontWeight: '700' },
+    empty: { alignItems: "center", marginTop: 60, gap: 16 },
+    emptyIconBox: { width: 100, height: 100, borderRadius: 35, justifyContent: 'center', alignItems: 'center' },
+    emptyText: { fontSize: 18, color: "#475569", fontWeight: "900" },
+    emptySub: { fontSize: 14, color: "#94A3B8", fontWeight: "600" },
+    card: { backgroundColor: "#FFF", borderRadius: 32, padding: 24, elevation: 6, shadowColor: "#1E293B", shadowOpacity: 0.08, shadowRadius: 15, gap: 20, borderWidth: 1, borderColor: '#F8FAFC' },
+    cardInfo: { gap: 16 },
     cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-    patientName: { fontSize: 16, fontWeight: "800", color: "#0D2E4D" },
-    service: { fontSize: 13, color: "#6B8A9E", marginTop: 2 },
-    statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-    statusText: { fontSize: 11, fontWeight: "800" },
-    infoRow: { gap: 4, borderTopWidth: 1, borderTopColor: "#F0F7FC", paddingTop: 12 },
-    infoItem: { fontSize: 12, color: "#4A6E8A" },
-    amount: { fontSize: 18, fontWeight: "900", color: "#27AE60", marginTop: 4 },
-    actions: { flexDirection: "row", gap: 10, alignItems: 'center' },
-    acceptBtn: {
-        backgroundColor: "#27AE60", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, flex: 1,
-        alignItems: "center", justifyContent: "center"
-    },
-    acceptText: { fontSize: 13, fontWeight: "800", color: "#fff" },
-    declineBtn: {
-        backgroundColor: "#FDECEA", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14,
-        alignItems: "center", justifyContent: "center"
-    },
-    declineText: { fontSize: 13, fontWeight: "800", color: "#E74C3C" },
-    iconBtn: { padding: 10, backgroundColor: '#ECFDF5', borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    patientName: { fontSize: 18, fontWeight: "900", color: "#1E293B" },
+    serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+    serviceText: { fontSize: 13, color: "#64748B", fontWeight: '700' },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    statusText: { fontSize: 11, fontWeight: "800", textTransform: 'uppercase' },
+    divider: { height: 1.5, backgroundColor: "#F1F5F9", marginVertical: 4 },
+    detailsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    detailItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    detailText: { fontSize: 14, color: "#475569", fontWeight: '600' },
+    addressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFF5F5', padding: 12, borderRadius: 12 },
+    addressText: { fontSize: 13, color: "#B91C1C", fontWeight: '700', flex: 1 },
+    actions: { flexDirection: 'row', gap: 12 },
+    mainBtn: { flex: 2, height: 50, backgroundColor: "#2D935C", borderRadius: 16, flexDirection: 'row', alignItems: "center", justifyContent: "center", gap: 8 },
+    mainBtnText: { fontSize: 14, fontWeight: "800", color: "#fff" },
+    dualActions: { flex: 1, flexDirection: 'row', gap: 10 },
+    activeActions: { flex: 1, flexDirection: 'row', gap: 10 },
+    declineBtn: { width: 50, height: 50, backgroundColor: "#FEF2F2", borderRadius: 16, alignItems: "center", justifyContent: "center" },
+    commsRow: { flexDirection: 'row', gap: 10 },
+    commBtn: { width: 50, height: 50, backgroundColor: '#F0FDF4', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
 });

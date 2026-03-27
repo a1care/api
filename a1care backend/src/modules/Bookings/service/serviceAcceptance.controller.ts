@@ -5,6 +5,7 @@ import asyncHandler from "../../../utils/asyncHandler.js";
 import serviceAcceptanceModal from "./serviceAcceptance.model.js";
 import serviceAcceptanceValidation from "./serviceAcceptance.schema.js";
 import serviceRequestModel from "./serviceRequest.model.js";
+import PartnerSubscription from "../../PartnerSubscription/subscription.model.js";
 import { Patient } from "../../Authentication/patient.model.js";
 import DoctorModel from "../../Doctors/doctor.model.js";
 import { enqueuePush } from "../../../queues/communicationQueue.js";
@@ -23,6 +24,16 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     if (!parsed.success) {
         console.error("Validation failed!", parsed.error);
         throw new ApiError(401, "Validation failed!");
+    }
+
+    // Subscription Check
+    const activeSub = await PartnerSubscription.findOne({
+        partnerId: providerId,
+        status: "Active",
+        endDate: { $gte: new Date() }
+    });
+    if (!activeSub) {
+        throw new ApiError(403, "Active subscription required to accept jobs.");
     }
 
     const serviceRequestDetails = await serviceRequestModel

@@ -21,7 +21,7 @@ export interface IOrder extends Document {
   amount: number;
   currency: string;
   status: OrderStatus;
-  type: "WALLET_TOPUP" | "BOOKING";
+  type: "WALLET_TOPUP" | "BOOKING" | "SUBSCRIPTION";
   referenceId?: string; // e.g. Booking ID if type is BOOKING
   txnId: string; // Unique transaction ID sent to gateway
   createdAt: Date;
@@ -34,7 +34,7 @@ const OrderSchema = new Schema<IOrder>(
     amount: { type: Number, required: true },
     currency: { type: String, default: "INR" },
     status: { type: String, enum: Object.values(OrderStatus), default: OrderStatus.PENDING },
-    type: { type: String, enum: ["WALLET_TOPUP", "BOOKING"], required: true },
+    type: { type: String, enum: ["WALLET_TOPUP", "BOOKING", "SUBSCRIPTION"], required: true },
     referenceId: { type: String },
     txnId: { type: String, required: true, unique: true },
   },

@@ -119,33 +119,46 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.container}>
             {staffData?.status === "Pending" && (
                 <View style={styles.kycOverlay}>
-                    <LinearGradient colors={["rgba(255,255,255,0.9)", "#F8FAFC"]} style={styles.kycContent}>
-                        <View style={styles.kyclIconBox}>
-                            <MaterialCommunityIcons name="shield-search" size={64} color="#6366F1" />
+                    <LinearGradient colors={["#FFFFFF", "#F8FAFC"]} style={styles.kycContent}>
+                        <View style={styles.kycHeader}>
+                            <View style={styles.kyclIconBox}>
+                                <LinearGradient colors={["#ECFDF5", "#D1FAE5"]} style={StyleSheet.absoluteFill} />
+                                <Ionicons name="shield-checkmark" size={42} color="#10B981" />
+                            </View>
+                            <Text style={styles.kycTitle}>Verification in Progress</Text>
+                            <Text style={styles.kycDesc}>
+                                We are reviewing your certificates and credentials. This usually takes <Text style={{fontWeight:'800', color:'#1E293B'}}>24-48 hours</Text>.
+                            </Text>
                         </View>
-                        <Text style={styles.kycTitle}>Reviewing Documents</Text>
-                        <Text style={styles.kycDesc}>
-                            Our admin team is currently verifying your profile and credentials. 
-                            This usually takes 24-48 hours.
-                        </Text>
+
                         <View style={styles.stepBox}>
                             <View style={styles.step}>
-                                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                                <Text style={styles.stepText}>Documents Uploaded</Text>
+                                <View style={[styles.stepDot, { backgroundColor: "#10B981" }]}>
+                                    <Ionicons name="checkmark" size={12} color="#FFF" />
+                                </View>
+                                <View style={styles.stepLine} />
+                                <Text style={styles.stepText}>Documents Submitted</Text>
                             </View>
-                            <View style={styles.step}>
-                                <ActivityIndicator size="small" color="#6366F1" style={{ marginRight: 8 }} />
-                                <Text style={[styles.stepText, { color: "#6366F1" }]}>Admin Verification</Text>
+                            <View style={[styles.step, { opacity: 1 }]}>
+                                <View style={[styles.stepDot, { backgroundColor: "#3B82F6", borderWidth: 0 }]}>
+                                    <ActivityIndicator size="small" color="#FFF" />
+                                </View>
+                                <View style={[styles.stepLine, { backgroundColor: "#E2E8F0" }]} />
+                                <Text style={[styles.stepText, { color: "#3B82F6" }]}>Admin Reviewing</Text>
                             </View>
-                            <View style={styles.step}>
-                                <Ionicons name="ellipse-outline" size={20} color="#CBD5E1" />
-                                <Text style={[styles.stepText, { color: "#94A3B8" }]}>Go Live</Text>
+                            <View style={[styles.step, { opacity: 0.5 }]}>
+                                <View style={[styles.stepDot, { backgroundColor: "#FFF", borderWidth: 2, borderColor: "#CBD5E1" }]} />
+                                <Text style={styles.stepText}>Go Live & Earn</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.refreshBadge} onPress={onRefresh}>
-                            <Ionicons name="refresh" size={16} color="#475569" />
-                            <Text style={styles.refreshBadgeText}>Check Status</Text>
+
+                        <TouchableOpacity style={styles.kycCta} onPress={onRefresh} activeOpacity={0.8}>
+                            <LinearGradient colors={["#1E293B", "#0F172A"]} style={StyleSheet.absoluteFill} />
+                            <Ionicons name="refresh" size={20} color="#FFF" />
+                            <Text style={styles.kycCtaText}>Check Update</Text>
                         </TouchableOpacity>
+                        
+                        <Text style={styles.kycFooter}>A1Care Security Verification</Text>
                     </LinearGradient>
                 </View>
             )}
@@ -542,78 +555,106 @@ const styles = StyleSheet.create({
     // KYC Styles
     kycOverlay: {
         ...StyleSheet.absoluteFillObject,
-        zIndex: 1000,
-        backgroundColor: "rgba(0,0,0,0.3)",
+        zIndex: 10000,
+        backgroundColor: "rgba(15, 23, 42, 0.6)",
         justifyContent: "center",
         alignItems: "center",
         padding: 24,
     },
     kycContent: {
         width: "100%",
-        borderRadius: 32,
+        borderRadius: 40,
         padding: 32,
         alignItems: "center",
-        elevation: 10,
+        elevation: 20,
         shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowRadius: 15,
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
     },
+    kycHeader: { alignItems: 'center', marginBottom: 32 },
     kyclIconBox: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: "#EEF2FF",
+        width: 86,
+        height: 86,
+        borderRadius: 30,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 24,
+        marginBottom: 20,
+        overflow: 'hidden'
     },
     kycTitle: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: "900",
         color: "#1E293B",
-        marginBottom: 12,
+        marginBottom: 10,
         textAlign: "center",
+        letterSpacing: -0.5
     },
     kycDesc: {
-        fontSize: 14,
+        fontSize: 15,
         color: "#64748B",
         lineHeight: 22,
         textAlign: "center",
-        marginBottom: 24,
+        paddingHorizontal: 10
     },
     stepBox: {
         width: "100%",
-        backgroundColor: "#FFF",
-        borderRadius: 20,
-        padding: 20,
-        gap: 16,
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: "#F1F5F9",
+        gap: 0,
+        marginBottom: 32,
     },
     step: {
         flexDirection: "row",
         alignItems: "center",
+        height: 40,
+        gap: 16
+    },
+    stepDot: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2
+    },
+    stepLine: {
+        position: 'absolute',
+        left: 13,
+        top: 28,
+        width: 2,
+        height: 20,
+        backgroundColor: '#10B981',
+        zIndex: 1
     },
     stepText: {
-        fontSize: 13,
+        fontSize: 15,
         fontWeight: "700",
         color: "#475569",
-        marginLeft: 12,
     },
-    refreshBadge: {
+    kycCta: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#F1F5F9",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
-        gap: 8,
+        justifyContent: 'center',
+        height: 60,
+        width: '100%',
+        borderRadius: 20,
+        gap: 10,
+        overflow: 'hidden',
+        elevation: 8,
+        shadowColor: '#1E293B',
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        marginBottom: 20
     },
-    refreshBadgeText: {
-        fontSize: 13,
+    kycCtaText: {
+        fontSize: 16,
         fontWeight: "800",
-        color: "#475569",
+        color: "#FFF",
     },
+    kycFooter: {
+        fontSize: 11,
+        color: "#94A3B8",
+        fontWeight: "600",
+        textTransform: 'uppercase',
+        letterSpacing: 1
+    }
 });
 

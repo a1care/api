@@ -28,13 +28,17 @@ export class EasebuzzService {
     
     // Key order: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10|salt
     const hashString = `${this.config.merchantKey}|${txnid}|${formattedAmount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}|${udf6}|${udf7}|${udf8}|${udf9}|${udf10}|${this.config.salt}`;
+    
+    console.log(`\n🔐 [Easebuzz Hash Debug]`);
+    console.log(`Raw: ${hashString}`);
+    
     return crypto.createHash("sha512").update(hashString).digest("hex");
   }
 
   async initiatePaymentApi(params: any): Promise<any> {
     const apiEndpoint = this.config.env === "test" 
-      ? "https://testpay.easebuzz.in/payment/initiate" 
-      : "https://pay.easebuzz.in/payment/initiate";
+      ? "https://testpay.easebuzz.in/payment/initiateLink" 
+      : "https://pay.easebuzz.in/payment/initiateLink";
 
     const hash = this.generateHash(params);
     
@@ -95,6 +99,11 @@ export class EasebuzzService {
     // Response hash order: salt|status|udf10|udf9|udf8|udf7|udf6|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key
     const hashString = `${this.config.salt}|${status}|||||${udf5}|${udf4}|${udf3}|${udf2}|${udf1}|${email}|${firstname}|${productinfo}|${formattedAmount}|${txnid}|${key}`;
     const generatedHash = crypto.createHash("sha512").update(hashString).digest("hex");
+    
+    console.log(`\n🔐 [Easebuzz Response Hash Debug]`);
+    console.log(`Raw: ${hashString}`);
+    console.log(`Status: ${status} | Hash: ${hash?.slice(0, 10)}... | Generated: ${generatedHash?.slice(0, 10)}...`);
+
     return generatedHash === hash;
   }
 
@@ -111,14 +120,22 @@ export class EasebuzzService {
         const hashString = `${this.config.merchantKey}|${txnid}|${this.config.salt}`;
         const hash = crypto.createHash("sha512").update(hashString).digest("hex");
 
-        const response = await axios.post(apiEndpoint, {
-            key: this.config.merchantKey,
-            txnid,
-            hash
-        }, {
-            headers: { 'Content-Type': 'application/json' }
+        console.log(`\n🔍 [Easebuzz Inquiry Debug]`);
+        console.log(`   Key: ${this.config.merchantKey}`);
+        console.log(`   Txn: ${txnid}`);
+        console.log(`   Salt: ${this.config.salt?.slice(0, 3)}...`);
+        console.log(`   Hash: ${hash.slice(0, 10)}...`);
+        
+        const params = new URLSearchParams();
+        params.append("key", this.config.merchantKey.trim());
+        params.append("txnid", txnid.trim());
+        params.append("hash", hash.trim());
+
+        const response = await axios.post(apiEndpoint, params.toString(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
 
+        console.log(`📥 [Easebuzz Inquiry Raw]`, JSON.stringify(response.data, null, 2));
         return response.data;
     } catch (error: any) {
         await this.logEvent(txnid, "STATUS_VERIFICATION_FAILED", "ERROR", error.message);

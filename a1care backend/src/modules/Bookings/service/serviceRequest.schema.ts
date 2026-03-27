@@ -15,7 +15,8 @@ const locationSchema = z.object({
 })
 
 const serviceRequestValiation = z.object({
-    childServiceId: objectId,
+    childServiceId: objectId.optional(),
+    healthPackageId: objectId.optional(),
     userId: objectId,
     roleId: z.array(objectId).optional(),
     status: z.enum(["PENDING", "ACCEPTED", "CANCELLED"]).optional(),

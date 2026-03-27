@@ -10,6 +10,7 @@ interface DoctorCardProps {
     rating: number;
     experience: string;
     price: number;
+    workingHours?: string;
     onPress: () => void;
     fullWidth?: boolean;
 }
@@ -20,6 +21,7 @@ export function DoctorCard({
     rating,
     experience,
     price,
+    workingHours,
     onPress,
     fullWidth = false,
 }: DoctorCardProps) {
@@ -49,6 +51,12 @@ export function DoctorCard({
                         <Text style={styles.dot}> • </Text>
                         <Text style={styles.exp}>{experience}</Text>
                     </View>
+                    {workingHours && (
+                        <View style={styles.workingRow}>
+                            <Text style={styles.workingIcon}>🕒</Text>
+                            <Text style={styles.workingText} numberOfLines={1}>{workingHours}</Text>
+                        </View>
+                    )}
                 </View>
             </View>
 
@@ -134,4 +142,19 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     bookText: { color: Colors.white, fontSize: 13, fontWeight: '800' },
+
+    workingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+        backgroundColor: '#F8FAFC',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    workingIcon: { fontSize: 10, marginRight: 4 },
+    workingText: { fontSize: 10, fontWeight: '600', color: Colors.health, letterSpacing: 0.3 },
 });

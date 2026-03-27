@@ -14,15 +14,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-// Firebase Imports - handled safely for Expo Go
-import { useAuthStore } from '@/stores/auth.store';
 
 export default function LoginScreen() {
     const router = useRouter();
     const [mobile, setMobile] = useState('');
     const [loading, setLoading] = useState(false);
-    const { setConfirmationResult } = useAuthStore();
-    
+
     const handleSendOtp = async () => {
         const cleaned = mobile.replace(/\D/g, '');
         if (cleaned.length < 10) {
@@ -31,30 +28,13 @@ export default function LoginScreen() {
         }
         setLoading(true);
         try {
-            // STEP 1: Dev Bypass (Enabled for Development/Expo/Testing)
-            // Redirect straight to OTP screen with bypass flag
-            if (true) {
-                console.log("[Login] Using Bypass for:", cleaned);
-                router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, isBypass: "true" } });
-                return;
-            }
-
-            // STEP 2: Use Native Firebase (will throw if in Expo Go)
-            let auth;
-            try {
-                auth = require('@react-native-firebase/auth').default;
-            } catch (e) {
-                throw new Error("Phone OTP requires a Development Build. Please ensure you are using a signed release APK.");
-            }
-
-            const e164PhoneNumber = `+91${cleaned}`;
-            const confirmation = await auth().signInWithPhoneNumber(e164PhoneNumber);
-            
-            setConfirmationResult(confirmation);
-            router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, verificationId: confirmation.verificationId } });
+            // Dev Bypass (Always enabled as Firebase is removed)
+            console.log("[Login] Using Bypass for:", cleaned);
+            router.push({ pathname: '/(auth)/otp', params: { mobile: cleaned, isBypass: "true" } });
         } catch (err: any) {
-            console.error(err);
-            Alert.alert('Error', err?.message ?? 'Failed to send OTP. Please try again.');
+            console.error('[Login] Send OTP Error:', err);
+            let msg = err?.response?.data?.message || err?.message || "Failed to send OTP.";
+            Alert.alert('Send OTP Failed', msg);
         } finally {
             setLoading(false);
         }
@@ -100,22 +80,22 @@ export default function LoginScreen() {
                         </View>
                     </View>
 
-                        <TouchableOpacity onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
-                            <LinearGradient
-                                colors={["#1A7FD4", "#0D5FA0"]}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                                style={styles.cta}
-                            >
-                                {loading ? (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                        <ActivityIndicator color="#fff" />
-                                        <Text style={styles.ctaText}>Contacting Server...</Text>
-                                    </View>
-                                ) : (
-                                    <Text style={styles.ctaText}>Send OTP</Text>
-                                )}
-                            </LinearGradient>
-                        </TouchableOpacity>
+                    <TouchableOpacity onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
+                        <LinearGradient
+                            colors={["#1A7FD4", "#0D5FA0"]}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={styles.cta}
+                        >
+                            {loading ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                    <ActivityIndicator color="#fff" />
+                                    <Text style={styles.ctaText}>Contacting Server...</Text>
+                                </View>
+                            ) : (
+                                <Text style={styles.ctaText}>Send OTP</Text>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
 
                     <Text style={styles.disclaimer}>
                         By continuing, you agree to our <Text onPress={() => router.push('/terms')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text onPress={() => router.push('/privacy')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>
@@ -169,4 +149,3 @@ const styles = StyleSheet.create({
     },
     badgeText: { color: '#1A7FD4', fontSize: 12, fontWeight: '600' },
 });
-

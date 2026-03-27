@@ -91,6 +91,7 @@ export default function DoctorBookingScreen() {
 
         if (paymentMethod === 'ONLINE') {
             try {
+                console.log(`[DoctorBooking] Starting online payment for: ${id} | Fee: ${doctor?.consultationFee}`);
                 // 1. Create Booking first (status Pending)
                 const booking = await bookingsService.bookDoctor(id!, {
                     date: selectedDate,
@@ -98,6 +99,7 @@ export default function DoctorBookingScreen() {
                     endingTime: selectedSlot.endingTime,
                     paymentMode: 'ONLINE'
                 });
+                console.log(`[DoctorBooking] Booking created: ${booking._id}. Now creating payment order...`);
 
                 // 2. Create Payment Order for this Booking
                 const order = await paymentService.createOrder({
@@ -105,9 +107,11 @@ export default function DoctorBookingScreen() {
                     type: "BOOKING",
                     referenceId: booking._id
                 });
+                console.log(`[DoctorBooking] Order created: ${order._id}. Now initiating gateway...`);
 
                 // 3. Initiate Payment
                 const params = await paymentService.initiatePayment(order._id);
+                console.log(`[DoctorBooking] Gateway initiation success. Redirecting to Easebuzz...`);
 
                 // 4. Navigate to Easebuzz Checkout
                 router.push({
@@ -142,6 +146,11 @@ export default function DoctorBookingScreen() {
                 <View style={styles.infoBox}>
                     <Text style={styles.infoLabel}>Consulting with</Text>
                     <Text style={styles.doctorName}>Dr. {doctor?.name || '...'}</Text>
+                    {doctor?.workingHours && (
+                        <View style={styles.workingBadge}>
+                            <Text style={styles.workingBadgeText}>🕒 {doctor.workingHours}</Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* Date Selector */}
@@ -416,4 +425,20 @@ const styles = StyleSheet.create({
     },
     radioActive: { borderColor: Colors.primary },
     radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
+
+    workingBadge: {
+        backgroundColor: '#F8FAFC',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        marginTop: 8,
+        alignSelf: 'flex-start',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    workingBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: Colors.health,
+    },
 });

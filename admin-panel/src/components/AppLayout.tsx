@@ -28,7 +28,8 @@ import {
   Command,
   Flame,
   Banknote,
-  Receipt
+  Receipt,
+  Package
 } from "lucide-react";
 
 const mainNav = [
@@ -161,6 +162,9 @@ export function AppLayout() {
               <NavLink to="/service-management" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Catalog</NavLink>
               <NavLink to="/service-categories" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Categories</NavLink>
               <NavLink to="/service-subcategories" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Sub-Services</NavLink>
+              <NavLink to="/health-packages" className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
+                <Package size={13} /> Health Packages
+              </NavLink>
             </div>
           )}
 

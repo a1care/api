@@ -10,6 +10,7 @@ export interface HealthPackageDocument extends Document {
   color: string;  // hex color for the card gradient
   testsIncluded: string[];
   validityDays: number;
+  allowedRoleIds?: mongoose.Types.ObjectId[];
   isActive: boolean;
   isFeatured: boolean;
   order: number; // display order
@@ -26,6 +27,7 @@ const healthPackageSchema = new Schema<HealthPackageDocument>(
     color: { type: String, default: "#2F80ED" },
     testsIncluded: { type: [String], default: [] },
     validityDays: { type: Number, default: 30 },
+    allowedRoleIds: [{ type: Schema.Types.ObjectId, ref: "Role" }],
     isActive: { type: Boolean, default: true, index: true },
     isFeatured: { type: Boolean, default: false, index: true },
     order: { type: Number, default: 0 },

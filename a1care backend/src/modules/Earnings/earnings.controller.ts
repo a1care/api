@@ -28,10 +28,10 @@ export const getEarningsSummary = asyncHandler(async (req, res) => {
         },
         {
             $facet: {
-                total: [{ $group: { _id: null, sum: { $sum: "$totalAmount" }, count: { $sum: 1 } } }],
-                today: [{ $match: { createdAt: { $gte: startOfToday } } }, { $group: { _id: null, sum: { $sum: "$totalAmount" } } }],
-                week: [{ $match: { createdAt: { $gte: startOfWeek } } }, { $group: { _id: null, sum: { $sum: "$totalAmount" } } }],
-                month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $group: { _id: null, sum: { $sum: "$totalAmount" } } }]
+                total: [{ $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$totalAmount", 0.8] }] } }, count: { $sum: 1 } } }],
+                today: [{ $match: { createdAt: { $gte: startOfToday } } }, { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$totalAmount", 0.8] }] } } } }],
+                week: [{ $match: { createdAt: { $gte: startOfWeek } } }, { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$totalAmount", 0.8] }] } } } }],
+                month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$totalAmount", 0.8] }] } } } }]
             }
         }
     ]);
@@ -46,10 +46,10 @@ export const getEarningsSummary = asyncHandler(async (req, res) => {
         },
         {
             $facet: {
-                total: [{ $group: { _id: null, sum: { $sum: "$price" }, count: { $sum: 1 } } }],
-                today: [{ $match: { createdAt: { $gte: startOfToday } } }, { $group: { _id: null, sum: { $sum: "$price" } } }],
-                week: [{ $match: { createdAt: { $gte: startOfWeek } } }, { $group: { _id: null, sum: { $sum: "$price" } } }],
-                month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $group: { _id: null, sum: { $sum: "$price" } } }]
+                total: [{ $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", 0.8] }] } }, count: { $sum: 1 } } }],
+                today: [{ $match: { createdAt: { $gte: startOfToday } } }, { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", 0.8] }] } } } }],
+                week: [{ $match: { createdAt: { $gte: startOfWeek } } }, { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", 0.8] }] } } } }],
+                month: [{ $match: { createdAt: { $gte: startOfMonth } } }, { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", 0.8] }] } } } }]
             }
         }
     ]);

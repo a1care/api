@@ -5,6 +5,7 @@ import {
     createHealthPackage,
     updateHealthPackage,
     deleteHealthPackage,
+    getHealthPackageById,
     toggleHealthPackageActive,
     toggleHealthPackageFeatured,
     seedHealthPackages,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 // Public
 router.get("/", getHealthPackages);
+router.get("/detail/:id", getHealthPackageById);
 
 // Admin
 router.get("/admin/all", getAllHealthPackagesAdmin);

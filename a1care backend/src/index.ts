@@ -5,6 +5,7 @@ import { initFCM } from "./configs/fcmConfig.js";
 import http from 'http';
 import { Server } from 'socket.io';
 import { saveChatMessage } from './modules/Chat/chat.controller.js';
+import { runSubscriptionCleanup } from './jobs/subscriptionCleaner.js';
 
 dotenv.config();
 
@@ -44,6 +45,11 @@ const startServer = async () => {
     try {
         await connectDb();
         await initFCM();
+        
+        // Background Jobs
+        await runSubscriptionCleanup();
+        setInterval(runSubscriptionCleanup, 3600 * 1000); // Every Hour
+
         server.listen(Number(process.env.PORT) || 3000, '0.0.0.0', () => {
             console.log(`Server (Socket enabled) running on 0.0.0.0:${process.env.PORT || 3000}`);
         });

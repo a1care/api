@@ -10,19 +10,36 @@ import DoctorModel from "../../Doctors/doctor.model.js";
 import { Patient } from "../../Authentication/patient.model.js";
 import { enqueueEmail, enqueuePush, enqueuePushToMany } from "../../../queues/communicationQueue.js";
 import { scheduleBroadcastToAll } from "../../../queues/bookingQueue.js";
+import { HealthPackageModel } from "../../HealthPackages/healthPackage.model.js";
 import HospitalBooking from "../hospitalBooking.model.js";
+import { getActiveCommissionRate } from "../../PartnerSubscription/subscription.controller.js";
 
 
 export const createServiceRequest = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, "Not authorized");
 
-    const childSvc = await ChildServiceModel.findById(req.body.childServiceId);
+    let childSvc = null;
+    let healthPkg = null;
+
+    if (req.body.childServiceId) {
+        childSvc = await ChildServiceModel.findById(req.body.childServiceId);
+    } else if (req.body.healthPackageId) {
+        healthPkg = await HealthPackageModel.findById(req.body.healthPackageId);
+    }
+
+    if (!childSvc && !healthPkg) throw new ApiError(404, "Service or Package not found");
+
     const hospitalFirst = !!childSvc?.hospitalProviderId;
+    const finalPrice = childSvc?.price ?? healthPkg?.price ?? 0;
+    const bookingName = childSvc?.name ?? healthPkg?.name ?? "Service";
 
     const payload = {
         ...req.body,
         userId,
+        price: finalPrice,
+        bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
+        fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
         ...(hospitalFirst ? { notifiedHospitalAt: new Date() } : { broadcastedAt: new Date() }),
     };
@@ -36,11 +53,11 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Validation failed!");
     }
 
-    if (payload.paymentMode === 'ONLINE') {
+    if (payload.paymentMode === 'ONLINE' && !payload.isGatewayPayment) {
         try {
-            await processPaymentFromWallet(userId, payload.price, `Booking for ${payload.bookingType} service`);
+            await processPaymentFromWallet(userId, finalPrice, `Booking for ${bookingName}`);
         } catch (error: any) {
-            throw new ApiError(400, error.message || "Payment failed");
+            throw new ApiError(400, error.message || "Payment from wallet failed");
         }
     }
 
@@ -69,8 +86,9 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
 
     const serviceRequest = await serviceRequestModel
         .findById(newServiceRequest._id)
-        .populate("childServiceId");
-    const serviceName = (serviceRequest?.childServiceId as any)?.name ?? "a service";
+        .populate("childServiceId")
+        .populate("healthPackageId");
+    const serviceName = (serviceRequest?.childServiceId as any)?.name ?? (serviceRequest?.healthPackageId as any)?.name ?? "a service";
 
     // ── Notify Provider(s) ──────────────────────────────────────────────────
     try {
@@ -111,25 +129,28 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
             await scheduleBroadcastToAll(String(newServiceRequest._id));
         } 
         // 3. Broadcast to all matching roles
-        else if (childSvc?.allowedRoleIds?.length) {
-            const matchingPartners = await DoctorModel.find({
-                roleId: { $in: childSvc.allowedRoleIds },
-                status: "Active",
-                fcmToken: { $exists: true, $ne: null },
-            }).select("_id fcmToken");
+        else {
+            const allowedRoleIds = childSvc?.allowedRoleIds ?? healthPkg?.allowedRoleIds;
+            if (allowedRoleIds?.length) {
+                const matchingPartners = await DoctorModel.find({
+                    roleId: { $in: allowedRoleIds },
+                    status: "Active",
+                    fcmToken: { $exists: true, $ne: null },
+                }).select("_id fcmToken");
 
-            await enqueuePushToMany(
-                matchingPartners.map((p) => ({
-                    recipientId: p._id as mongoose.Types.ObjectId,
-                    recipientType: "partner" as const,
-                    fcmToken: p.fcmToken ?? null,
-                })),
-                "🆕 New Job Available!",
-                `A new ${serviceName} booking near you — tap to accept.`,
-                { screen: "bookings", bookingId: String(newServiceRequest._id) },
-                "ServiceRequest",
-                newServiceRequest._id as mongoose.Types.ObjectId
-            );
+                await enqueuePushToMany(
+                    matchingPartners.map((p) => ({
+                        recipientId: p._id as mongoose.Types.ObjectId,
+                        recipientType: "partner" as const,
+                        fcmToken: p.fcmToken ?? null,
+                    })),
+                    "🆕 New Job Available!",
+                    `A new ${serviceName} booking near you — tap to accept.`,
+                    { screen: "bookings", bookingId: String(newServiceRequest._id) },
+                    "ServiceRequest",
+                    newServiceRequest._id as mongoose.Types.ObjectId
+                );
+            }
         }
     } catch (e) {
         console.error("[Push] service request notification error:", e);
@@ -219,8 +240,22 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), refundDescription);
     }
 
+    let updateData: any = { status };
+
+    // Calculate Commission if Completed
+    if (status === "COMPLETED" && existing.status !== "COMPLETED" && existing.assignedProviderId) {
+        const commissionPercentage = await getActiveCommissionRate(existing.assignedProviderId.toString());
+        const totalPrice = existing.price || 0;
+        const commissionAmount = (totalPrice * commissionPercentage) / 100;
+        const partnerEarning = totalPrice - commissionAmount;
+
+        updateData.commissionPercentage = commissionPercentage;
+        updateData.commissionAmount = commissionAmount;
+        updateData.partnerEarning = partnerEarning;
+    }
+
     const booking = await serviceRequestModel
-        .findByIdAndUpdate(id, { status }, { new: true })
+        .findByIdAndUpdate(id, updateData, { new: true })
         .populate("childServiceId")
         .populate("userId");
 

@@ -356,6 +356,16 @@ export default function ServicesScreen() {
                                 </TouchableOpacity>
                             ))}
 
+                    {level === 'sub' && !subLoading && (subServices ?? []).length === 0 && (
+                        <EmptyState
+                            icon="📋"
+                            title="No categories found"
+                            subtitle="There are no sub-categories for this service yet."
+                            actionLabel="Back to All Services"
+                            onAction={goBack}
+                        />
+                    )}
+
                     {/* Level: Child services — bookable items */}
                     {level === 'child' &&
                         (childServices ?? [])

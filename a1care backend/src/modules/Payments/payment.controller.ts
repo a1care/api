@@ -79,8 +79,8 @@ export const initiatePayment = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Order already in ${order.status} state. Cannot re-initiate.`);
     }
 
-    const patient = await Patient.findById((order as any).userId);
-    if (!patient) throw new ApiError(404, "Patient not found");
+    const patient = await Patient.findById((order as any).userId) || await (await import("../Doctors/doctor.model.js")).default.findById((order as any).userId);
+    if (!patient) throw new ApiError(404, "User not found for payment");
 
     const ezService = await getEasebuzzService();
     const settings = await getSystemSettings();
@@ -96,12 +96,12 @@ export const initiatePayment = asyncHandler(async (req, res) => {
     const params: any = {
         txnid: order.txnId,
         amount: Number(order.amount).toFixed(2),
-        productinfo: order.type === "WALLET_TOPUP" ? "Wallet_Topup" : "A1care_Booking",
+        productinfo: order.type === "WALLET_TOPUP" ? "WalletTopup" : "A1careBooking",
         firstname: firstName,
         phone: (patient.mobileNumber?.toString() || "9999999999").replace(/[^0-9]/g, "").slice(-10),
         email: (patient.email && patient.email.includes("@")) ? patient.email.trim() : "patient@example.com",
-        surl: redirectUrl,
-        furl: redirectUrl,
+        surl: `${redirectUrl}?status=success`,
+        furl: `${redirectUrl}?status=failure`,
         udf1: (order as any)._id?.toString() || "",
         address1: "A1Care Test Street",
         address2: "District HQ",
@@ -188,15 +188,18 @@ const fulfillOrder = async (order: any, response: any, ezService: EasebuzzServic
             await appointment.save();
             await ezService.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Confirmed Doctor Appointment: ${order.referenceId}`);
         } else {
-            // Try Service Request
             const serviceReq = await ServiceRequest.findById(order.referenceId);
             if (serviceReq) {
                 serviceReq.paymentStatus = "COMPLETED";
-                // For services, status might stay PENDING until broadcasted, 
-                // but paymentStatus must be COMPLETED.
                 await serviceReq.save();
                 await ezService.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Updated Service Request payment: ${order.referenceId}`);
             }
+        }
+    } else if (order.type === "SUBSCRIPTION" && order.referenceId) {
+        const PartnerSubscription = (await import("../PartnerSubscription/subscription.model.js")).default;
+        const sub = await PartnerSubscription.findByIdAndUpdate(order.referenceId, { status: "Active" }, { new: true });
+        if (sub) {
+            await ezService.logEvent(order.txnId, "SUBSCRIPTION_ACTIVATED", "INFO", `Activated subscription: ${order.referenceId}`);
         }
     }
 };
@@ -252,6 +255,10 @@ export const handleWebhook = asyncHandler(async (req, res) => {
  * Handles the visible Redirect from Easebuzz (Synchronous).
  */
 export const handleGatewayResponse = asyncHandler(async (req, res) => {
+    console.log(`\n📥 [Easebuzz Gateway Response Entry] Method: ${req.method}`);
+    console.log(`Body:`, JSON.stringify(req.body, null, 2));
+    console.log(`Query:`, JSON.stringify(req.query, null, 2));
+    
     const response = req.method === "POST" ? req.body : req.query;
     const ezService = await getEasebuzzService();
 
@@ -297,16 +304,34 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     }
 
     const ezService = await getEasebuzzService();
-
-    // Logic: In production, we would actually use Easebuzz Inquiry API.
-    // For now, since we don't have a real API access key for Inquiry (sometimes separate), 
-    // we mark it as VERIFICATION_PENDING or use the Inquiry API if configured.
-
     await ezService.logEvent(order.txnId, "MANUAL_VERIFICATION_REQUESTED", "INFO", "User returned to app, checking status...");
 
-    // Simulating Inquiry API call
-    // const statusRes = await ezService.verifyTransactionStatus(order.txnId);
-    // process statusRes...
+    // Call Easebuzz Inquiry API
+    const statusRes = await ezService.verifyTransactionStatus(order.txnId);
+    console.log(`🔍 [Easebuzz Inquiry Response] Order: ${order.txnId}`, JSON.stringify(statusRes, null, 2));
+
+    if (statusRes.status && statusRes.data) {
+        const response = statusRes.data;
+        const gatewayStatus = response.status; // 'success', 'failed', 'user_cancelled', etc.
+
+        // Update Payment Transaction record
+        await PaymentTransaction.findOneAndUpdate(
+            { orderId: order._id },
+            {
+                gatewayTxnId: response.easepayid,
+                gatewayResponse: response,
+                status: gatewayStatus === "success" ? PaymentStatus.SUCCESS : PaymentStatus.FAILED,
+            },
+            { upsert: true }
+        );
+
+        if (gatewayStatus === "success") {
+            await fulfillOrder(order, response, ezService);
+        } else if (gatewayStatus !== "pending") {
+            order.status = OrderStatus.FAILED;
+            await order.save();
+        }
+    }
 
     return res.status(200).json(new ApiResponse(200, "Order status", order));
 });

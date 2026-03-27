@@ -58,7 +58,9 @@ const maintenanceMiddleware = async (req: Request, res: Response, next: NextFunc
 app.use(maintenanceMiddleware);
 
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log(`\n🔍 [Incoming Request] ${new Date().toISOString()}`);
+    console.log(`📡 ${req.method} ${req.originalUrl || req.url}`);
+    console.log(`📦 Body Size: ${req.body ? JSON.stringify(req.body).length : 0} bytes`);
     next();
 });
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

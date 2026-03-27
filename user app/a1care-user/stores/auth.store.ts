@@ -7,11 +7,9 @@ interface AuthState {
     user: Patient | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    confirmationResult: any | null;
 
     setToken: (token: string) => void;
     setUser: (user: Patient) => void;
-    setConfirmationResult: (result: any) => void;
     initialize: () => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -21,22 +19,25 @@ export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     isAuthenticated: false,
     isLoading: true,
-    confirmationResult: null,
 
     setToken: (token) => set({ token, isAuthenticated: true }),
     setUser: (user) => set({ user }),
-    setConfirmationResult: (result) => set({ confirmationResult: result }),
 
     initialize: async () => {
         set({ isLoading: true });
         try {
             const token = await authService.getToken();
             if (token) {
+                console.log('[AuthStore] Pre-existing token found, verifying...');
                 const user = await authService.getProfile();
                 set({ token, user, isAuthenticated: true });
+                console.log('[AuthStore] Verification Success');
+            } else {
+                set({ isAuthenticated: false });
+                console.log('[AuthStore] No token found');
             }
-        } catch {
-            // Token expired or invalid — reset
+        } catch (error: any) {
+            console.log('[AuthStore] Verification Failed — clearing session', error.message);
             await authService.logout();
             set({ token: null, user: null, isAuthenticated: false });
         } finally {

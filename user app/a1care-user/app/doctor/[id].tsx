@@ -23,6 +23,15 @@ export default function DoctorDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
 
+    const formatExperience = (exp: any) => {
+        if (!exp) return "0";
+        const start = new Date(exp);
+        if (isNaN(start.getTime())) return exp;
+        const now = new Date();
+        const diff = now.getFullYear() - start.getFullYear();
+        return `${diff > 0 ? diff : 0}`;
+    };
+
     const { data: doctor, isLoading, isError, refetch } = useQuery({
         queryKey: ['doctor', id],
         queryFn: () => doctorsService.getById(id!),
@@ -66,7 +75,9 @@ export default function DoctorDetailScreen() {
                     <View style={styles.avatarLarge}>
                         <Text style={styles.avatarText}>{doctor.name?.charAt(0).toUpperCase() ?? 'Dr'}</Text>
                     </View>
-                    <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
+                    <Text style={styles.doctorName}>
+                        {doctor.name?.toLowerCase().startsWith('dr') ? doctor.name : `Dr. ${doctor.name}`}
+                    </Text>
                     <View style={styles.specializationRow}>
                         {(doctor.specialization ?? []).map((s) => (
                             <View key={s} style={styles.specBadge}>
@@ -76,12 +87,12 @@ export default function DoctorDetailScreen() {
                     </View>
                     <View style={styles.statsRow}>
                         <View style={styles.statItem}>
-                            <Text style={styles.statNum}>{doctor.startExperience ?? '0'}+</Text>
+                            <Text style={styles.statNum}>{formatExperience(doctor.startExperience)}+</Text>
                             <Text style={styles.statLabel}>Exp. Years</Text>
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
-                            <Text style={styles.statNum}>⭐ {doctor.rating ?? '5.0'}</Text>
+                            <Text style={styles.statNum}>⭐ {Number(doctor.rating || 5).toFixed(1)}</Text>
                             <Text style={styles.statLabel}>Rating</Text>
                         </View>
                         <View style={styles.statDivider} />

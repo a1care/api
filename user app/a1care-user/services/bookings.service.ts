@@ -6,9 +6,14 @@ export const bookingsService = {
     // Doctor appointments
     bookDoctor: async (
         doctorId: string,
-        data: { date: string; startingTime: string; endingTime: string; totalAmount?: number; paymentMode?: 'ONLINE' | 'OFFLINE' | 'WALLET' }
+        data: { date: string; startingTime: string; endingTime: string; totalAmount?: number; paymentMode?: 'ONLINE' | 'OFFLINE' | 'WALLET'; isGatewayPayment?: boolean }
     ) => {
-        const payload = { ...data, paymentStatus: data.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING' };
+        const payload = { 
+            ...data, 
+            paymentMode: data.paymentMode === 'WALLET' ? 'ONLINE' : data.paymentMode, 
+            isGatewayPayment: data.isGatewayPayment || data.paymentMode === 'ONLINE',
+            paymentStatus: (data.paymentMode === 'ONLINE' || data.paymentMode === 'WALLET') ? 'COMPLETED' : 'PENDING' 
+        };
         const res = await api.post<ApiResponse<DoctorAppointment>>(
             Endpoints.BOOK_DOCTOR(doctorId),
             payload
@@ -40,25 +45,31 @@ export const bookingsService = {
 
     // Service bookings
     createServiceBooking: async (data: {
-        childServiceId: string;
+        childServiceId?: string;
+        healthPackageId?: string;
         addressId?: string;
+        location?: { lat: number; lng: number };
         assignedProviderId?: string;
         scheduledTime?: string;
         bookingType: string;
         fulfillmentMode: string;
         price: number;
         paymentMode?: 'ONLINE' | 'OFFLINE' | 'WALLET';
+        isGatewayPayment?: boolean;
         notes?: string;
     }) => {
         const payload = {
             childServiceId: data.childServiceId,
+            healthPackageId: data.healthPackageId,
             addressId: data.addressId,
+            location: data.location,
             assignedProviderId: data.assignedProviderId,
             scheduledSlot: data.scheduledTime ? { startTime: data.scheduledTime, endTime: data.scheduledTime } : undefined,
             bookingType: data.bookingType,
             fulfillmentMode: data.fulfillmentMode,
             price: data.price,
-            paymentMode: data.paymentMode || 'OFFLINE',
+            paymentMode: data.paymentMode === 'WALLET' ? 'ONLINE' : (data.paymentMode || 'OFFLINE'),
+            isGatewayPayment: data.isGatewayPayment || data.paymentMode === 'ONLINE',
             notes: data.notes
         };
         const res = await api.post<ApiResponse<ServiceRequest>>(

@@ -10,6 +10,7 @@ import { Patient } from "../Authentication/patient.model.js";
 import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
 import { readConfigStore } from "../Admin/admin.controller.js";
 import HospitalBooking from "./hospitalBooking.model.js";
+import { getActiveCommissionRate } from "../PartnerSubscription/subscription.controller.js";
 
 
 export const createDoctorAppointment = asyncHandler(async (req, res) => {
@@ -147,8 +148,22 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         await creditWalletAtomic(String(existing.patientId), Number(existing.totalAmount || 0), refundDescription);
     }
 
+    let updateData: any = { status };
+
+    // Calculate Commission if Completed
+    if (status === "Completed" && existing.status !== "Completed") {
+        const commissionPercentage = await getActiveCommissionRate(existing.doctorId.toString());
+        const totalAmount = existing.totalAmount || 0;
+        const commissionAmount = (totalAmount * commissionPercentage) / 100;
+        const partnerEarning = totalAmount - commissionAmount;
+
+        updateData.commissionPercentage = commissionPercentage;
+        updateData.commissionAmount = commissionAmount;
+        updateData.partnerEarning = partnerEarning;
+    }
+
     const appointment = await doctorAppointmentModel
-        .findByIdAndUpdate(id, { status }, { new: true })
+        .findByIdAndUpdate(id, updateData, { new: true })
         .populate("doctorId")
         .populate("patientId");
 

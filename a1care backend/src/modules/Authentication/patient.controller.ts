@@ -8,9 +8,6 @@ import mongoose from 'mongoose';
 import { enqueueEmail } from "../../queues/communicationQueue.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-// Use these credentials to bypass Firebase OTP for testing the full app flow
-// Phone: 9701677607  |  OTP: 123123
-const DEV_BYPASS_MOBILE = "9701677607";
 const DEV_BYPASS_OTP = "123456";
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -73,7 +70,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
     // 1. Verify the secure Firebase Token
     const admin = (await import('../../configs/firebaseAdmin.js')).default;
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    
+
     // 2. Extract the verified phone number from Google (e.g. +919876543210)
     const firebasePhone = decodedToken.phone_number || mobileNumber;
 
@@ -92,7 +89,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }
     )
-    
+
     return res.status(200).json(new ApiResponse(200, "Firebase Verification successful", { token }))
 
   } catch (error) {

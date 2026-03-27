@@ -43,8 +43,10 @@ import {
 import { servicesService } from '@/services/services.service';
 import { bookingsService } from '@/services/bookings.service';
 import { doctorsService } from '@/services/doctors.service';
+import api from '@/services/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { Colors, Shadows } from '@/constants/colors';
+import { Endpoints } from '@/constants/api';
 import { FontSize } from '@/constants/spacing';
 import { DoctorCard } from '@/components/ui/DoctorCard';
 import { EmergencyFAB } from '@/components/ui/EmergencyFAB';
@@ -360,6 +362,14 @@ export default function HomeScreen() {
         enabled: !!doctorRoleId,
     });
 
+    const { data: healthPackages, refetch: refetchPackages } = useQuery({
+        queryKey: ['health-packages'],
+        queryFn: async () => {
+            const res = await api.get(Endpoints.HEALTH_PACKAGES);
+            return res.data.data as any[];
+        },
+    });
+
     const topDoctors = useMemo(() => {
         if (!allDoctors) return [];
         if (!searchQuery.trim()) return allDoctors.slice(0, 6);
@@ -400,7 +410,8 @@ export default function HomeScreen() {
             refetchServices(), 
             refetchFeatured(),
             refetchBookings(), 
-            refetchDoctors(), 
+            refetchDoctors(),
+            refetchPackages(),
             fetchConfig()
         ]);
         setRefreshing(false);
@@ -801,6 +812,7 @@ export default function HomeScreen() {
                                 rating={d.rating || 4.8}
                                 experience={formatExperience(d.startExperience ?? 0)}
                                 price={d.consultationFee || 650}
+                                workingHours={d.workingHours}
                                 onPress={() => router.push(`/doctor/${d._id}`)}
                             />
                         )) : (
@@ -811,48 +823,97 @@ export default function HomeScreen() {
                     </ScrollView>
                 </View>
 
-                {/* ── 7. Featured Offers ── */}
+                {/* ── 7. Health Packages (Dynamic) ── */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Health Packages</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.seeAll}>More</Text>
-                        </TouchableOpacity>
+                        <View>
+                            <Text style={styles.sectionTitle}>Health Packages</Text>
+                            <Text style={styles.sectionSub}>Bundled checkups at best prices</Text>
+                        </View>
                     </View>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ paddingHorizontal: 20 }}
+                        contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}
                     >
-                        {featured && featured.length > 3 ? (
-                            featured.slice(3, 6).map((item) => (
-                                <TouchableOpacity 
-                                    key={item._id} 
-                                    style={[styles.offerCard, { backgroundColor: '#F0FDF4' }]}
-                                    onPress={() => router.push(`/service/${item._id}`)}
-                                >
-                                    <View style={[styles.offerBadge, { backgroundColor: '#86EFAC' }]}>
-                                        <Text style={styles.offerBadgeText}>PACKAGE</Text>
-                                    </View>
-                                    <Text style={styles.offerTitle}>{item.name}</Text>
-                                    <Text style={styles.offerSubtitle} numberOfLines={2}>{item.description}</Text>
-                                    <View style={styles.offerPriceRow}>
-                                        <Text style={styles.offerPrice}>₹{item.price}</Text>
+                        {healthPackages && healthPackages.length > 0 ? (
+                            healthPackages.map((pkg: any) => {
+                                const discountPct = pkg.originalPrice > pkg.price
+                                    ? Math.round(((pkg.originalPrice - pkg.price) / pkg.originalPrice) * 100)
+                                    : 0;
+                                return (
+                                    <TouchableOpacity
+                                        key={pkg._id}
+                                        activeOpacity={0.88}
+                                        style={styles.pkgCard}
+                                        onPress={() => router.push({
+                                            pathname: '/package/[id]',
+                                            params: { id: pkg._id }
+                                        })}
+                                    >
+                                        {/* Color top bar */}
+                                        <LinearGradient
+                                            colors={[pkg.color || '#2F80ED', (pkg.color || '#2F80ED') + 'AA']}
+                                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                            style={styles.pkgHeader}
+                                        >
+                                            {pkg.badge && (
+                                                <View style={styles.pkgBadge}>
+                                                    <Text style={styles.pkgBadgeText}>{pkg.badge}</Text>
+                                                </View>
+                                            )}
+                                            <Text style={styles.pkgName}>{pkg.name}</Text>
+                                            <View style={styles.pkgPriceRow}>
+                                                <Text style={styles.pkgPrice}>₹{pkg.price}</Text>
+                                                {discountPct > 0 && (
+                                                    <View style={styles.pkgDiscountBadge}>
+                                                        <Text style={styles.pkgDiscountText}>{discountPct}% OFF</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            {pkg.originalPrice > pkg.price && (
+                                                <Text style={styles.pkgOriginalPrice}>₹{pkg.originalPrice}</Text>
+                                            )}
+                                        </LinearGradient>
+
+                                        {/* Tests */}
+                                        <View style={styles.pkgBody}>
+                                            <Text style={styles.pkgTestsLabel}>{(pkg.testsIncluded || []).length} Tests Included</Text>
+                                            <View style={styles.pkgTestsTags}>
+                                                {(pkg.testsIncluded || []).slice(0, 3).map((t: string) => (
+                                                    <View key={t} style={styles.pkgTag}>
+                                                        <Text style={styles.pkgTagText}>{t}</Text>
+                                                    </View>
+                                                ))}
+                                                {(pkg.testsIncluded || []).length > 3 && (
+                                                    <View style={styles.pkgTag}>
+                                                        <Text style={styles.pkgTagText}>+{(pkg.testsIncluded || []).length - 3} more</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <TouchableOpacity style={[styles.pkgBtn, { backgroundColor: pkg.color || '#2F80ED' }]}>
+                                                <Text style={styles.pkgBtnText}>Book Package</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })
+                        ) : (
+                            // Static fallback while loading or if no packages
+                            [{ name: 'Basic Health Checkup', price: 999, color: '#2F80ED', badge: 'BEST VALUE' },
+                             { name: 'Diabetes Care Pack', price: 1499, color: '#9B51E0', badge: 'POPULAR' },
+                             { name: 'Full Body Checkup', price: 2999, color: '#F2994A', badge: 'COMPREHENSIVE' }].map((p, i) => (
+                                <TouchableOpacity key={i} activeOpacity={0.88} style={styles.pkgCard}>
+                                    <LinearGradient colors={[p.color, p.color + 'AA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.pkgHeader}>
+                                        <View style={styles.pkgBadge}><Text style={styles.pkgBadgeText}>{p.badge}</Text></View>
+                                        <Text style={styles.pkgName}>{p.name}</Text>
+                                        <Text style={styles.pkgPrice}>₹{p.price}</Text>
+                                    </LinearGradient>
+                                    <View style={styles.pkgBody}>
+                                        <Text style={styles.pkgTestsLabel}>Loading tests...</Text>
                                     </View>
                                 </TouchableOpacity>
                             ))
-                        ) : (
-                            <TouchableOpacity style={styles.offerCard}>
-                                <View style={styles.offerBadge}>
-                                    <Text style={styles.offerBadgeText}>OFFER</Text>
-                                </View>
-                                <Text style={styles.offerTitle}>First Consult</Text>
-                                <Text style={styles.offerSubtitle}>Flat 50% OFF on your first home visit.</Text>
-                                <View style={styles.offerPriceRow}>
-                                    <Text style={styles.offerPrice}>₹250</Text>
-                                    <Text style={styles.offerOldPrice}>₹500</Text>
-                                </View>
-                            </TouchableOpacity>
                         )}
                     </ScrollView>
                 </View>
@@ -1804,6 +1865,105 @@ const styles = StyleSheet.create({
         color: Colors.white,
         fontWeight: '800',
         fontSize: 14,
+    },
+
+    // ── Health Package Card Styles ──
+    pkgCard: {
+        width: 240,
+        borderRadius: 20,
+        overflow: 'hidden',
+        backgroundColor: Colors.white,
+        ...Shadows.card,
+    },
+    pkgHeader: {
+        padding: 16,
+        paddingBottom: 14,
+    },
+    pkgBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        marginBottom: 8,
+    },
+    pkgBadgeText: {
+        color: '#fff',
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
+    pkgName: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '800',
+        lineHeight: 20,
+    },
+    pkgPriceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 8,
+    },
+    pkgPrice: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '900',
+    },
+    pkgDiscountBadge: {
+        backgroundColor: '#22c55e',
+        borderRadius: 999,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+    },
+    pkgDiscountText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '800',
+    },
+    pkgOriginalPrice: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 12,
+        textDecorationLine: 'line-through',
+        marginTop: 2,
+    },
+    pkgBody: {
+        padding: 14,
+        gap: 10,
+    },
+    pkgTestsLabel: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: Colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    pkgTestsTags: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    pkgTag: {
+        backgroundColor: '#f1f5f9',
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+    },
+    pkgTagText: {
+        fontSize: 10,
+        color: '#475569',
+        fontWeight: '600',
+    },
+    pkgBtn: {
+        borderRadius: 12,
+        paddingVertical: 10,
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    pkgBtnText: {
+        color: '#fff',
+        fontWeight: '800',
+        fontSize: 13,
     },
 });
 

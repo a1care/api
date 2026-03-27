@@ -17,6 +17,9 @@ import {
 import { useAuthStore } from "../stores/auth";
 import { useConfigStore } from "../stores/config.store";
 import { ToastProvider } from '../components/CustomToast';
+import messaging from '@react-native-firebase/messaging';
+import { Alert, PermissionsAndroid, Platform } from "react-native";
+import { api } from "../lib/api";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +33,44 @@ function AuthGuard() {
         loadFromStorage();
         fetchConfig();
     }, []);
+
+    const requestUserPermission = async () => {
+        try {
+            if (Platform.OS === 'android' && Platform.Version >= 33) {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+            }
+
+            const authStatus = await messaging().requestPermission();
+            const enabled =
+                authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+                authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+            if (enabled) {
+                const fcmToken = await messaging().getToken();
+                if (fcmToken) {
+                    await api.put('/doctor/auth/fcm-token', { fcmToken });
+                }
+            }
+        } catch (e) {
+            console.log("FCM Registry Error:", e);
+        }
+    };
+
+    useEffect(() => {
+        if (token) {
+            requestUserPermission();
+            const unsubscribe = messaging().onMessage(async remoteMessage => {
+                Alert.alert(
+                    remoteMessage.notification?.title || "New Update",
+                    remoteMessage.notification?.body || "Tap to view details"
+                );
+            });
+            return unsubscribe;
+        }
+    }, [token]);
 
     useEffect(() => {
         if (isLoading) return;

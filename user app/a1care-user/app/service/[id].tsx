@@ -23,15 +23,15 @@ import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
 import { DoctorCard } from '@/components/ui/DoctorCard';
-import { ErrorState } from '@/components/ui/EmptyState';
+import { EmptyState, ErrorState } from '@/components/ui/EmptyState';
 import { formatCurrency } from '@/utils/formatters';
 import type { Address } from '@/types';
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
-type Step = 'doctor' | 'address' | 'schedule' | 'payment' | 'confirm';
+type Step = 'info' | 'doctor' | 'address' | 'schedule' | 'payment' | 'confirm';
 
-const ALL_STEPS: Step[] = ['doctor', 'address', 'schedule', 'payment', 'confirm'];
-const ALL_STEP_LABELS = ['Expert', 'Location', 'Schedule', 'Payment', 'Review'];
+const ALL_STEPS: Step[] = ['info', 'doctor', 'address', 'schedule', 'payment', 'confirm'];
+const ALL_STEP_LABELS = ['Service', 'Expert', 'Location', 'Schedule', 'Payment', 'Review'];
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function StepIndicator({ current, activeSteps }: { current: Step, activeSteps: Step[] }) {
@@ -97,6 +97,8 @@ export default function ServiceDetailScreen() {
     const [submitted, setSubmitted] = useState(false);
     const submitting = useRef(false);
 
+
+
     // Date generation for next 7 days
     const dates = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
@@ -126,6 +128,13 @@ export default function ServiceDetailScreen() {
         pincode: '',
     });
 
+    // ── Address drafts for each label (swaps inputs when switching labels) ──
+    const [addrDrafts, setAddrDrafts] = useState<Record<string, any>>({
+        HOME: { street: '', city: '', pincode: '' },
+        WORK: { street: '', city: '', pincode: '' },
+        OTHERS: { street: '', city: '', pincode: '' },
+    });
+
     const addAddressMutation = useMutation({
         mutationFn: (data: typeof newAddress) => {
             const payload = {
@@ -148,6 +157,11 @@ export default function ServiceDetailScreen() {
             setEditingAddressId(null);
             setAddrErrors({});
             setNewAddress({ label: 'HOME', street: '', city: '', state: 'Telangana', pincode: '' });
+            setAddrDrafts({
+                HOME: { street: '', city: '', pincode: '' },
+                WORK: { street: '', city: '', pincode: '' },
+                OTHERS: { street: '', city: '', pincode: '' },
+            });
         },
         onError: (error: any) => {
             const serverMsg = error?.response?.data?.message;
@@ -217,7 +231,7 @@ export default function ServiceDetailScreen() {
     // Compute dynamic steps based on service config
     const activeSteps: Step[] = React.useMemo(() => {
         if (!service) return [];
-        const steps: Step[] = [];
+        const steps: Step[] = ['info'];
 
         // Show doctor selection by default unless explicitly set to ASSIGN
         if (service.selectionType !== 'ASSIGN') {
@@ -235,6 +249,23 @@ export default function ServiceDetailScreen() {
         steps.push('schedule', 'payment', 'confirm');
         return steps;
     }, [service, subName]);
+
+    // ── Handle Hardware Back Button (Android Step-by-Step) ──
+    React.useEffect(() => {
+        const onBackPress = () => {
+            if (activeSteps && step) {
+                const idx = activeSteps.indexOf(step as Step);
+                if (idx > 0) {
+                    setStep(activeSteps[idx - 1]);
+                    return true;
+                }
+            }
+            return false; // Let system handle (exits screen)
+        };
+
+        const subscription = require('react-native').BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => subscription.remove();
+    }, [step, activeSteps]);
 
     // Initialize first step
     React.useEffect(() => {
@@ -274,7 +305,12 @@ export default function ServiceDetailScreen() {
             submitting.current = false;
             qc.invalidateQueries({ queryKey: ['service-bookings'] });
             qc.invalidateQueries({ queryKey: ['pending-bookings'] });
-            setSubmitted(true);
+            
+            // Only show the internal success screen for COD/Wallet. 
+            // For Online, we redirect to gateway and handle success there.
+            if (paymentMethod !== 'ONLINE') {
+                setSubmitted(true);
+            }
         },
         onError: (err: any) => {
             submitting.current = false;
@@ -486,6 +522,31 @@ export default function ServiceDetailScreen() {
                 contentContainerStyle={styles.scroll}
                 keyboardShouldPersistTaps="handled"
             >
+                {/* ── Step: INFO ── */}
+                {step === 'info' && service && (
+                    <View style={styles.card}>
+                        <View style={styles.heroSection}>
+                            <View style={styles.heroIconBg}>
+                                <Text style={{ fontSize: 42 }}>⚕️</Text>
+                            </View>
+                            <Text style={styles.heroTitle}>{service.name}</Text>
+                            <Text style={styles.heroDesc}>{service.description || 'Professional home-care service provided by certified experts.'}</Text>
+                        </View>
+                        
+                        <View style={styles.infoGrid}>
+                            <View style={styles.infoItem}>
+                                <Text style={styles.infoLabel}>CATEGORY</Text>
+                                <Text style={styles.infoValue}>{subName || 'General Health'}</Text>
+                            </View>
+                            <View style={styles.infoItem}>
+                                <Text style={styles.infoLabel}>PRICE</Text>
+                                <Text style={styles.infoValue}>₹{priceParam || service.price || '0'}</Text>
+                            </View>
+                        </View>
+
+                    </View>
+                )}
+
                 {/* ──────────────────────── STEP 1: Address ──────────────────────── */}
                 {step === 'address' && (
                     <View style={styles.stepContent}>
@@ -565,6 +626,20 @@ export default function ServiceDetailScreen() {
                                     </TouchableOpacity>
                                 ))}
 
+
+                                {(addresses ?? []).length === 0 && !isAddingAddress && (
+                                    <View style={{ marginVertical: 20 }}>
+                                        <EmptyState
+                                            icon="🏠"
+                                            title="No addresses found"
+                                            subtitle="You must add an address to book a home service."
+                                            actionLabel="Add Address"
+                                            onAction={() => setIsAddingAddress(true)}
+                                        />
+                                    </View>
+                                )}
+
+                                {/* The original instruction had a misplaced `> 0 && !isAddingAddress && (` here. Removing it. */}
                                 {(addresses ?? []).length > 0 && !isAddingAddress && (
                                     <TouchableOpacity
                                         style={styles.addAddrMiniBtn}
@@ -586,7 +661,26 @@ export default function ServiceDetailScreen() {
                                                 <TouchableOpacity
                                                     key={lab}
                                                     style={[styles.labelChip, newAddress.label === lab && styles.labelChipActive]}
-                                                    onPress={() => setNewAddress(prev => ({ ...prev, label: lab }))}
+                                                    onPress={() => {
+                                                        if (editingAddressId) {
+                                                            // When editing, just change the label
+                                                            setNewAddress(prev => ({ ...prev, label: lab }));
+                                                        } else {
+                                                            // When adding, save current as draft and load the next label's draft
+                                                            setAddrDrafts(prev => ({
+                                                                ...prev,
+                                                                [newAddress.label]: { street: newAddress.street, city: newAddress.city, pincode: newAddress.pincode }
+                                                            }));
+                                                            const draft = addrDrafts[lab] || { street: '', city: '', pincode: '' };
+                                                            setNewAddress(prev => ({
+                                                                ...prev,
+                                                                label: lab,
+                                                                street: draft.street,
+                                                                city: draft.city,
+                                                                pincode: draft.pincode
+                                                            }));
+                                                        }
+                                                    }}
                                                 >
                                                     <Text style={[styles.labelChipText, newAddress.label === lab && styles.labelChipTextActive]}>
                                                         {lab}
@@ -615,7 +709,8 @@ export default function ServiceDetailScreen() {
                                                     style={[styles.input, addrErrors.city && { borderColor: '#EF4444' }]}
                                                     value={newAddress.city}
                                                     onChangeText={(v) => {
-                                                        setNewAddress(prev => ({ ...prev, city: v }));
+                                                        const clean = v.replace(/[^a-zA-Z\s]/g, '');
+                                                        setNewAddress(prev => ({ ...prev, city: clean }));
                                                         if (addrErrors.city) setAddrErrors(prev => { const n = { ...prev }; delete n.city; return n; });
                                                     }}
                                                     placeholder="City"
@@ -655,6 +750,11 @@ export default function ServiceDetailScreen() {
                                                         setIsAddingAddress(false);
                                                         setEditingAddressId(null);
                                                         setNewAddress({ label: 'HOME', street: '', city: '', state: 'Telangana', pincode: '' });
+                                                        setAddrDrafts({
+                                                            HOME: { street: '', city: '', pincode: '' },
+                                                            WORK: { street: '', city: '', pincode: '' },
+                                                            OTHERS: { street: '', city: '', pincode: '' },
+                                                        });
                                                     }}
                                                     variant="outline"
                                                     style={{ flex: 1 }}
@@ -1528,6 +1628,70 @@ const styles = StyleSheet.create({
         fontSize: FontSize.xs,
         color: Colors.primary,
         fontWeight: '600',
+    },
+
+    // Info step styles
+    card: {
+        backgroundColor: Colors.card,
+        borderRadius: 24,
+        padding: 24,
+        ...Shadows.card,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    heroSection: {
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    heroIconBg: {
+        width: 100,
+        height: 100,
+        borderRadius: 35,
+        backgroundColor: '#F0F7FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+        ...Shadows.float,
+    },
+    heroTitle: {
+        fontSize: 26,
+        fontWeight: '900',
+        color: Colors.textPrimary,
+        textAlign: 'center',
+        marginBottom: 12,
+        letterSpacing: -0.5,
+    },
+    heroDesc: {
+        fontSize: 15,
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 22,
+        fontWeight: '500',
+    },
+    infoGrid: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 12,
+    },
+    infoItem: {
+        flex: 1,
+        backgroundColor: '#F8FAFC',
+        padding: 16,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    infoLabel: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: Colors.muted,
+        marginBottom: 6,
+        letterSpacing: 0.5,
+    },
+    infoValue: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: Colors.textPrimary,
     },
 
     // Doctor Selection styles

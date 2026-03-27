@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal } from "react-native";
+import { WebView } from "react-native-webview";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -12,6 +13,7 @@ export default function SubscriptionsScreen() {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<"Plans" | "History">("Plans");
     const [selectedPlanForFeatures, setSelectedPlanForFeatures] = useState<any>(null);
+    const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
     const { user } = useAuthStore() as any;
     const role = user?.role || "doctor";
@@ -47,16 +49,28 @@ export default function SubscriptionsScreen() {
     const buySubscription = useMutation({
         mutationFn: async (planId: string) => {
             const res = await api.post("/subscription/subscribe", { planId });
-            return res.data;
+            return res.data.data;
         },
-        onSuccess: () => {
-            Alert.alert("Success", "Subscription activated successfully!");
-            queryClient.invalidateQueries({ queryKey: ["myActiveSubscription"] });
-            queryClient.invalidateQueries({ queryKey: ["subscriptionHistory"] });
-            router.replace("/(tabs)/profile");
+        onSuccess: async (data: any) => {
+            if (data.requiresPayment) {
+                try {
+                    // Initiate Payment
+                    const initRes = await api.post("/payments/initiate", { orderId: data.order._id });
+                    const { accessKey, env } = initRes.data.data;
+                    const baseUrl = env === "test" ? "https://testpay.easebuzz.in" : "https://pay.easebuzz.in";
+                    setPaymentUrl(`${baseUrl}/pay/${accessKey}`);
+                } catch (err: any) {
+                    Alert.alert("Payment Error", "Failed to initiate payment. Please try again.");
+                }
+            } else {
+                Alert.alert("Success", "Subscription activated successfully!");
+                queryClient.invalidateQueries({ queryKey: ["myActiveSubscription"] });
+                queryClient.invalidateQueries({ queryKey: ["subscriptionHistory"] });
+                router.replace("/(tabs)/profile");
+            }
         },
         onError: (error: any) => {
-            Alert.alert("Error", error.response?.data?.message || "Failed to activate subscription");
+            Alert.alert("Error", error.response?.data?.message || "Failed to initiate subscription");
         }
     });
 
@@ -155,11 +169,11 @@ export default function SubscriptionsScreen() {
                                                 <Text style={[styles.buyButtonText, plan.tier === "Premium" && { color: "#000" }]}>
                                                     {mySub?.planId?._id === plan._id
                                                         ? "Current Plan"
-                                                        : plan.tier === "Basic"
-                                                            ? "Activate Free"
-                                                            : plan.tier === "Standard"
-                                                                ? "Go Standard"
-                                                                : "Go Premium"}
+                                                        : mySub?.status === "Pending" && mySub?.planId?._id === plan._id
+                                                            ? "Pending Admin Approval"
+                                                            : plan.tier === "Basic"
+                                                                ? "Activate Free"
+                                                                : "Request Activation"}
                                                 </Text>
                                             )}
                                         </TouchableOpacity>
@@ -201,8 +215,8 @@ export default function SubscriptionsScreen() {
                                             <Text style={[styles.planCategory, item.planId?.tier === "Premium" && { color: "#FFF" }]}>
                                                 {item.planId?.tier?.toUpperCase()} PLAN
                                             </Text>
-                                            <View style={[styles.statusTag, { backgroundColor: item.status === "Active" ? "#DCFCE7" : "#F1F5F9" }]}>
-                                                <Text style={[styles.statusTagText, { color: item.status === "Active" ? "#166534" : "#64748B" }]}>
+                                            <View style={[styles.statusTag, { backgroundColor: item.status === "Active" ? "#DCFCE7" : item.status === "Pending" ? "#FEF3C7" : "#F1F5F9" }]}>
+                                                <Text style={[styles.statusTagText, { color: item.status === "Active" ? "#166534" : item.status === "Pending" ? "#D97706" : "#64748B" }]}>
                                                     {item.status}
                                                 </Text>
                                             </View>
@@ -286,6 +300,38 @@ export default function SubscriptionsScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Easebuzz Payment WebView Modal */}
+            <Modal
+                visible={!!paymentUrl}
+                animationType="slide"
+                onRequestClose={() => setPaymentUrl(null)}
+            >
+                <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF" }}>
+                    <View style={styles.paymentHeader}>
+                        <Text style={styles.paymentHeaderTitle}>Complete Payment</Text>
+                        <TouchableOpacity onPress={() => setPaymentUrl(null)}>
+                            <Ionicons name="close" size={28} color="#1E293B" />
+                        </TouchableOpacity>
+                    </View>
+                    <WebView 
+                        source={{ uri: paymentUrl || "" }}
+                        style={{ flex: 1 }}
+                        onNavigationStateChange={(navState) => {
+                            if (navState.url.includes("status=success")) {
+                                setPaymentUrl(null);
+                                Alert.alert("Payment Successful", "Subscription activated!");
+                                queryClient.invalidateQueries({ queryKey: ["myActiveSubscription"] });
+                                queryClient.invalidateQueries({ queryKey: ["subscriptionHistory"] });
+                                router.replace("/(tabs)/profile");
+                            } else if (navState.url.includes("status=failure")) {
+                                setPaymentUrl(null);
+                                Alert.alert("Payment Failed", "Transaction failed. Please try again or check your account.");
+                            }
+                        }}
+                    />
+                </SafeAreaView>
             </Modal>
         </SafeAreaView>
     );
@@ -612,5 +658,18 @@ const styles = StyleSheet.create({
         marginTop: 8,
         textAlign: "center",
         maxWidth: "80%",
+    },
+    paymentHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#F1F5F9",
+    },
+    paymentHeaderTitle: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: "#1E293B",
     },
 });

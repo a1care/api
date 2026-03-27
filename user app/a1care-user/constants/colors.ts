@@ -27,6 +27,20 @@ export const Shadows = {
         shadowRadius: 4,
         elevation: 1,
     },
+    small: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
+    },
+    medium: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 5,
+    },
     float: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },

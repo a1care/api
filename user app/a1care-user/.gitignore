@@ -42,7 +42,22 @@ yarn-error.*
 
 # Build artifacts & logs
 *log.txt
+*.log
 *.bat
 .env
 .env.staging
 .env.production
+env.bak
+
+# Screenshots & Assets
+*.png
+!assets/**/*.png
+
+# System
+.DS_Store
+*.pem
+node_modules/
+.expo/
+dist/
+android/
+ios/

@@ -17,11 +17,19 @@ export const getAllHealthPackagesAdmin = asyncHandler(async (req, res) => {
     return res.json(new ApiResponse(200, "All health packages", packages));
 });
 
+// ── Public: Get a single package by id ──
+export const getHealthPackageById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const pkg = await HealthPackageModel.findById(id);
+    if (!pkg) throw new ApiError(404, "Health package not found");
+    return res.json(new ApiResponse(200, "Health package detail fetched", pkg));
+});
+
 // ── Admin: Create a package ──
 export const createHealthPackage = asyncHandler(async (req, res) => {
     const {
         name, description, price, originalPrice,
-        badge, color, testsIncluded, validityDays, order
+        badge, color, testsIncluded, validityDays, allowedRoleIds, order
     } = req.body;
 
     if (!name || !description || !price || !originalPrice) {
@@ -42,6 +50,7 @@ export const createHealthPackage = asyncHandler(async (req, res) => {
                 ? testsIncluded.split(",").map((t: string) => t.trim()).filter(Boolean)
                 : [],
         validityDays: validityDays ? Number(validityDays) : 30,
+        allowedRoleIds: Array.isArray(allowedRoleIds) ? allowedRoleIds : [],
         order: order ? Number(order) : 0,
     });
 
@@ -62,6 +71,9 @@ export const updateHealthPackage = asyncHandler(async (req, res) => {
     if ((req as any).fileUrl) update.imageUrl = (req as any).fileUrl;
     if (update.testsIncluded && typeof update.testsIncluded === "string") {
         update.testsIncluded = update.testsIncluded.split(",").map((t: string) => t.trim()).filter(Boolean);
+    }
+    if (update.allowedRoleIds && typeof update.allowedRoleIds === "string") {
+        update.allowedRoleIds = update.allowedRoleIds.split(",").map((t: string) => t.trim()).filter(Boolean);
     }
 
     const pkg = await HealthPackageModel.findByIdAndUpdate(id, update, { new: true });

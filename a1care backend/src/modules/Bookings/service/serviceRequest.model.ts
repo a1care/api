@@ -5,7 +5,12 @@ const ServiceRequestSchema = new Schema(
     childServiceId: {
       type: Schema.Types.ObjectId,
       ref: "ChildService",
-      required: true
+      required: false
+    },
+    healthPackageId: {
+      type: Schema.Types.ObjectId,
+      ref: "HealthPackage",
+      required: false
     },
 
     userId: {
@@ -113,6 +118,18 @@ const ServiceRequestSchema = new Schema(
       type: String,
       enum: ['PENDING', 'COMPLETED', 'FAILED'],
       default: 'PENDING'
+    },
+    commissionPercentage: {
+      type: Number,
+      default: 0
+    },
+    commissionAmount: {
+      type: Number,
+      default: 0
+    },
+    partnerEarning: {
+      type: Number,
+      default: 0
     }
   },
   {

@@ -40,6 +40,13 @@ export default function AddressesScreen() {
     const [landmark, setLandmark] = useState('');
     const [moreInfo, setMoreInfo] = useState('');
 
+    // ── Per-label drafts to preserve input state when switching labels ──
+    const [drafts, setDrafts] = useState<Record<string, any>>({
+        'Home': { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' },
+        'Work': { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' },
+        'Other': { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' },
+    });
+
     const { data: addresses, isLoading, refetch } = useQuery({
         queryKey: ['addresses'],
         queryFn: addressService.getAll,
@@ -92,6 +99,11 @@ export default function AddressesScreen() {
         setPincode('');
         setLandmark('');
         setMoreInfo('');
+        setDrafts({
+            'Home': { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' },
+            'Work': { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' },
+            'Other': { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' },
+        });
     };
 
     const handleEdit = (addr: Address) => {
@@ -295,7 +307,26 @@ export default function AddressesScreen() {
                                                 styles.chip,
                                                 isActive && { backgroundColor: config.bg, borderColor: config.color }
                                             ]}
-                                            onPress={() => setLabel(l)}
+                                            onPress={() => {
+                                                if (editingAddressId) {
+                                                    setLabel(l);
+                                                } else {
+                                                    // Save current inputs to draft of the OLD label
+                                                    setDrafts(prev => ({
+                                                        ...prev,
+                                                        [label]: { street, city, state, pincode, landmark, moreInfo }
+                                                    }));
+                                                    // Load inputs from draft of the NEW label
+                                                    const d = drafts[l] || { street: '', city: '', state: '', pincode: '', landmark: '', moreInfo: '' };
+                                                    setLabel(l);
+                                                    setStreet(d.street);
+                                                    setCity(d.city);
+                                                    setState(d.state);
+                                                    setPincode(d.pincode);
+                                                    setLandmark(d.landmark);
+                                                    setMoreInfo(d.moreInfo);
+                                                }
+                                            }}
                                         >
                                             <MaterialCommunityIcons
                                                 name={config.icon as any}
@@ -326,7 +357,7 @@ export default function AddressesScreen() {
                                     <TextInput
                                         style={styles.input}
                                         value={city}
-                                        onChangeText={setCity}
+                                        onChangeText={(v) => setCity(v.replace(/[^a-zA-Z\s]/g, ''))}
                                         placeholder="Enter City"
                                         placeholderTextColor={Colors.textSecondary}
                                     />
@@ -336,7 +367,7 @@ export default function AddressesScreen() {
                                     <TextInput
                                         style={styles.input}
                                         value={state}
-                                        onChangeText={setState}
+                                        onChangeText={(v) => setState(v.replace(/[^a-zA-Z\s]/g, ''))}
                                         placeholder="Enter State"
                                         placeholderTextColor={Colors.textSecondary}
                                     />

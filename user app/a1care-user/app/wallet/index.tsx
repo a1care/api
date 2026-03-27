@@ -42,14 +42,17 @@ export default function WalletScreen() {
 
     const addMoneyMutation = useMutation({
         mutationFn: async (amount: number) => {
+            console.log(`[Wallet] Starting topup: ${amount}`);
             // STEP 1: Create Order in Backend (Pending state)
             const order = await paymentService.createOrder({
                 amount,
                 type: "WALLET_TOPUP"
             });
+            console.log(`[Wallet] Order created: ${order._id}. Now initiating gateway...`);
 
             // STEP 2: Initiate with Gateway (Get Hash and Params)
             const params = await paymentService.initiatePayment(order._id);
+            console.log(`[Wallet] Gateway initiation success. Redirecting to Easebuzz...`);
 
             // STEP 3: Navigate to Payment Checkout Screen
             router.push({

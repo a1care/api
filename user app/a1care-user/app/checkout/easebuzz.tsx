@@ -22,25 +22,26 @@ export default function EasebuzzCheckout() {
         const { url } = navState;
         console.log("Navigating to:", url);
         
-        // Detection of Success or Failure (Check for keywords in URL as fallback if exact surl/furl fails)
+        // Detection of Success or Failure
         if (url.includes('gateway-response') || url.includes('success') || url.includes('failure')) {
-            // Give it a moment to let the backend process the redirect or webhook
+            // Give it a moment to let the backend process the redirect or inquiry
             setTimeout(async () => {
                 try {
-                    // Always verify with the backend status using orderId (passed as udf1/orderId)
                     const orderStatus = await paymentService.verifyPayment(params.orderId);
                     
-                    if (orderStatus.status === 'SUCCESS') {
-                        Alert.alert("Payment Success", "Transaction completed successfully!");
-                    } else {
-                        Alert.alert("Payment Failed", "Transaction could not be completed.");
-                    }
-                    router.replace("/wallet");
+                    router.replace({
+                        pathname: "/checkout/status",
+                        params: {
+                            status: orderStatus.status,
+                            txnId: orderStatus.txnId,
+                            amount: orderStatus.amount,
+                            type: orderStatus.type
+                        }
+                    });
                 } catch (err) {
-                    Alert.alert("Status Unknown", "Check your wallet after a few minutes to confirm.");
                     router.replace("/wallet");
                 }
-            }, 1500);
+            }, 2000); // Increased timeout slightly for reliable inquiry
         }
     };
 

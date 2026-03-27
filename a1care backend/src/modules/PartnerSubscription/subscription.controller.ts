@@ -1,6 +1,10 @@
 import type { Request, Response } from "express";
 import PartnerSubscriptionPlan from "./plan.model.js";
 import PartnerSubscription from "./subscription.model.js";
+import { enqueuePush } from "../../queues/communicationQueue.js";
+import doctorModel from "../Doctors/doctor.model.js";
+import { Order, OrderStatus } from "../Payments/payment.model.js";
+import { v4 as uuidv4 } from "uuid";
 
 export const getPlans = async (req: Request, res: Response) => {
     try {
@@ -66,15 +70,35 @@ export const subscribe = async (req: Request, res: Response) => {
             { status: "Cancelled" }
         );
 
-        const subscription = await PartnerSubscription.create({
+        const subscription: any = await PartnerSubscription.create({
             partnerId,
             planId,
             startDate,
             endDate,
-            status: "Active"
+            status: plan.price > 0 ? "Pending" : "Active"
         });
 
-        res.status(201).json({ success: true, data: subscription });
+        // ── If Paid, Create a Payment Order ──────────────────────────────────
+        let order = null;
+        if (plan.price > 0) {
+            order = await Order.create({
+                userId: partnerId,
+                amount: plan.price,
+                type: "SUBSCRIPTION",
+                referenceId: subscription._id.toString(),
+                txnId: `SUB-${uuidv4().split("-")[0]}-${Date.now()}`,
+                status: OrderStatus.PENDING,
+            });
+        }
+
+        res.status(201).json({ 
+            success: true, 
+            data: { 
+                subscription, 
+                order,
+                requiresPayment: plan.price > 0 
+            } 
+        });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -106,4 +130,61 @@ export const getHistory = async (req: Request, res: Response) => {
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
+};
+export const getAdminSubscriptions = async (req: Request, res: Response) => {
+    try {
+        const { status } = req.query;
+        const filter: any = {};
+        if (status) filter.status = status;
+
+        const subs = await PartnerSubscription.find(filter)
+            .populate("planId")
+            .populate("partnerId", "name mobileNumber roleId")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({ success: true, data: subs });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const approveSubscription = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const sub = await PartnerSubscription.findByIdAndUpdate(id, { status: "Active" }, { new: true });
+        if (!sub) return res.status(404).json({ success: false, message: "Subscription not found" });
+
+        // Notify Partner
+        const partner = await doctorModel.findById(sub.partnerId);
+        if (partner?.fcmToken) {
+            await enqueuePush({
+                recipientId: String(partner._id),
+                recipientType: "staff" as any, // staff/doctor as per schema
+                fcmToken: partner.fcmToken,
+                title: "Plan Activated! 🚀",
+                body: "Your subscription has been approved. You're now ready to accept more jobs.",
+                data: { type: "SUBSCRIPTION_ACTIVE", subId: String(sub._id) }
+            });
+        }
+
+        res.status(200).json({ success: true, data: sub });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+export const getActiveCommissionRate = async (partnerId: string) => {
+    try {
+        const subscription: any = await PartnerSubscription.findOne({
+            partnerId,
+            status: "Active",
+            endDate: { $gte: new Date() }
+        }).populate("planId");
+
+        if (subscription && subscription.planId) {
+            return subscription.planId.commissionPercentage;
+        }
+    } catch (error) {
+        console.error("Error fetching commission rate:", error);
+    }
+    return 20; // Default fallback
 };

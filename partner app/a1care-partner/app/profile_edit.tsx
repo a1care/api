@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
     View, Text, StyleSheet, ScrollView, TextInput,
     TouchableOpacity, ActivityIndicator, KeyboardAvoidingView,
-    Platform, Image
+    Platform, Image, Dimensions
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -20,6 +20,8 @@ const SPECIALIZATIONS = [
     "Dentist", "Ophthalmologist", "ENT Specialist", "General Surgeon",
     "Urologist", "Oncologist", "Radiologist", "Gastroenterologist"
 ].sort();
+
+const { width, height } = Dimensions.get("window");
 
 export default function ProfileEditScreen() {
     const router = useRouter();
@@ -207,8 +209,12 @@ export default function ProfileEditScreen() {
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color="#1E293B" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Edit Profile</Text>
-                    <View style={{ width: 40 }} />
+                    <Text style={styles.headerTitle}>Professional Profile</Text>
+                    <TouchableOpacity onPress={handleSave} disabled={updateProfileMutation.isPending || isUploading}>
+                        <Text style={[styles.saveText, (updateProfileMutation.isPending || isUploading) && { opacity: 0.5 }]}>
+                            Save
+                        </Text>
+                    </TouchableOpacity>
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -272,30 +278,58 @@ export default function ProfileEditScreen() {
                         </View>
                     </View>
 
-                    <View style={[styles.inputGroup, { zIndex: 1000 }]}>
+                    <View style={styles.inputGroup}>
                         <Text style={styles.label}>Specializations</Text>
-                        <TouchableOpacity onPress={() => setShowSpecDropdown(!showSpecDropdown)} style={[styles.input, styles.dropdownTrigger]}>
-                            <Text style={styles.dropdownValue}>
-                                {formData.specialization.length > 0 ? formData.specialization.join(", ") : "Select"}
-                            </Text>
-                            <Ionicons name={showSpecDropdown ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
-                        </TouchableOpacity>
+                        <View style={styles.specChipsContainer}>
+                            {formData.specialization.map(s => (
+                                <TouchableOpacity key={s} style={styles.specChip} onPress={() => toggleSpecialization(s)}>
+                                    <Text style={styles.specChipText}>{s}</Text>
+                                    <Ionicons name="close-circle" size={16} color="#FFF" />
+                                </TouchableOpacity>
+                            ))}
+                            <TouchableOpacity onPress={() => setShowSpecDropdown(true)} style={styles.addSpecBtn}>
+                                <Ionicons name="add-circle" size={22} color="#2D935C" />
+                                <Text style={styles.addSpecText}>Add New</Text>
+                            </TouchableOpacity>
+                        </View>
 
                         {showSpecDropdown && (
-                            <View style={styles.dropdown}>
-                                <TextInput style={styles.searchBar} placeholder="Search..." value={specSearch} onChangeText={setSpecSearch} />
-                                <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-                                    {filteredSpecs.map(s => {
-                                        const selected = formData.specialization.includes(s);
-                                        return (
-                                            <TouchableOpacity key={s} style={[styles.dropdownItem, selected && styles.dropdownItemSelected]} onPress={() => toggleSpecialization(s)}>
-                                                <Text style={[styles.dropdownText, selected && styles.dropdownTextSelected]}>{s}</Text>
-                                                {selected && <Ionicons name="checkmark-circle" size={18} color="#2D935C" />}
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </ScrollView>
-                                <TouchableOpacity style={styles.closeDropdownBtn} onPress={() => setShowSpecDropdown(false)}><Text style={styles.closeDropdownText}>Done</Text></TouchableOpacity>
+                            <View style={styles.dropdownOverlay}>
+                                <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowSpecDropdown(false)} />
+                                <View style={styles.dropdownMenu}>
+                                    <View style={styles.dropdownHeader}>
+                                        <Text style={styles.dropdownTitle}>Select Specializations</Text>
+                                        <TouchableOpacity onPress={() => setShowSpecDropdown(false)}>
+                                            <Ionicons name="close" size={24} color="#64748B" />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <TextInput 
+                                        style={styles.searchBar} 
+                                        placeholder="Search specialization..." 
+                                        value={specSearch} 
+                                        onChangeText={setSpecSearch} 
+                                        placeholderTextColor="#94A3B8"
+                                    />
+                                    <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
+                                        {filteredSpecs.map(s => {
+                                            const selected = formData.specialization.includes(s);
+                                            return (
+                                                <TouchableOpacity 
+                                                    key={s} 
+                                                    style={[styles.dropdownItem, selected && styles.dropdownItemSelected]} 
+                                                    onPress={() => toggleSpecialization(s)}
+                                                >
+                                                    <Text style={[styles.dropdownText, selected && styles.dropdownTextSelected]}>{s}</Text>
+                                                    {selected ? (
+                                                        <Ionicons name="checkbox" size={20} color="#2D935C" />
+                                                    ) : (
+                                                        <Ionicons name="square-outline" size={20} color="#CBD5E1" />
+                                                    )}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                </View>
                             </View>
                         )}
                     </View>
@@ -329,33 +363,38 @@ const styles = StyleSheet.create({
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15, backgroundColor: "#FFF", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
     backBtn: { padding: 5 },
     headerTitle: { fontSize: 18, fontWeight: "800", color: "#1E293B" },
-    scrollContent: { padding: 20, paddingBottom: 40 },
+    saveText: { fontSize: 16, fontWeight: "800", color: "#2D935C" },
+    scrollContent: { padding: 20, paddingBottom: 60 },
     avatarSection: { alignItems: "center", marginBottom: 30 },
     avatarContainer: { position: "relative" },
-    avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: "#FFF" },
+    avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: "#FFF" },
     avatarPlaceholder: { backgroundColor: "#F1F5F9", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#E2E8F0" },
-    editBadge: { position: "absolute", bottom: 0, right: 0, backgroundColor: "#2D935C", width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "#FFF", elevation: 3 },
-    avatarLabel: { marginTop: 10, fontSize: 13, fontWeight: "700", color: "#64748B" },
-    inputGroup: { marginBottom: 20, position: 'relative' },
-    label: { fontSize: 14, fontWeight: "700", color: "#475569", marginBottom: 8 },
-    input: { backgroundColor: "#FFF", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: "#1E293B", borderWidth: 1, borderColor: "#E2E8F0" },
-    textArea: { height: 80, textAlignVertical: "top" },
-    dropdownTrigger: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    dropdownValue: { fontSize: 15, color: "#1E293B", flex: 1 },
-    dropdown: { position: 'absolute', top: 80, left: 0, right: 0, backgroundColor: "#FFF", borderRadius: 16, borderWidth: 1.5, borderColor: "#2D935C", zIndex: 5000, elevation: 5, overflow: 'hidden' },
-    searchBar: { height: 50, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: "#EEE" },
-    dropdownItem: { padding: 15, flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: "#F5F5F5" },
+    editBadge: { position: "absolute", bottom: 4, right: 4, backgroundColor: "#2D935C", width: 34, height: 34, borderRadius: 17, justifyContent: "center", alignItems: "center", borderWidth: 3, borderColor: "#FFF", elevation: 4 },
+    avatarLabel: { marginTop: 12, fontSize: 13, fontWeight: "700", color: "#64748B" },
+    inputGroup: { marginBottom: 24 },
+    label: { fontSize: 14, fontWeight: "800", color: "#1E293B", marginBottom: 10, marginLeft: 2 },
+    input: { backgroundColor: "#FFF", borderRadius: 16, paddingHorizontal: 18, paddingVertical: 14, fontSize: 16, color: "#1E293B", borderWidth: 1.5, borderColor: "#F1F5F9", elevation: 1, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 5 },
+    textArea: { height: 110, textAlignVertical: "top" },
+    specChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+    specChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2D935C', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, gap: 6 },
+    specChipText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+    addSpecBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#2D935C', borderStyle: 'dashed', gap: 6 },
+    addSpecText: { color: '#2D935C', fontSize: 13, fontWeight: '700' },
+    dropdownOverlay: { ...StyleSheet.absoluteFillObject, height: height, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', position: 'absolute' },
+    dropdownMenu: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '80%' },
+    dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    dropdownTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
+    searchBar: { height: 54, backgroundColor: '#F8FAFC', borderRadius: 16, paddingHorizontal: 18, fontSize: 15, marginBottom: 15, borderWidth: 1, borderColor: '#F1F5F9' },
+    dropdownItem: { padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
     dropdownItemSelected: { backgroundColor: '#F0FDF4' },
-    dropdownText: { fontSize: 14, color: "#64748B" },
-    dropdownTextSelected: { color: "#2D935C", fontWeight: "700" },
-    closeDropdownBtn: { backgroundColor: '#2D935C', padding: 12, alignItems: 'center' },
-    closeDropdownText: { color: '#FFF', fontWeight: '800' },
-    genderRow: { flexDirection: "row", gap: 10 },
-    genderBtn: { flex: 1, backgroundColor: "#FFF", paddingVertical: 12, borderRadius: 12, alignItems: "center", borderWidth: 1, borderColor: "#E2E8F0" },
+    dropdownText: { fontSize: 15, color: '#475569', fontWeight: '600' },
+    dropdownTextSelected: { color: '#2D935C', fontWeight: '800' },
+    genderRow: { flexDirection: "row", gap: 12 },
+    genderBtn: { flex: 1, backgroundColor: "#FFF", paddingVertical: 14, borderRadius: 16, alignItems: "center", borderWidth: 1.5, borderColor: "#F1F5F9" },
     genderBtnActive: { backgroundColor: "#2D935C", borderColor: "#2D935C" },
-    genderText: { fontSize: 14, fontWeight: "700", color: "#64748B" },
+    genderText: { fontSize: 15, fontWeight: "700", color: "#64748B" },
     genderTextActive: { color: "#FFF" },
-    saveBtn: { backgroundColor: "#2D935C", borderRadius: 15, height: 56, justifyContent: "center", alignItems: "center", marginTop: 10 },
-    saveBtnDisabled: { opacity: 0.7 },
-    saveBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" }
+    saveBtn: { backgroundColor: "#2D935C", borderRadius: 20, height: 62, justifyContent: "center", alignItems: "center", marginTop: 10, shadowColor: "#2D935C", shadowOpacity: 0.25, shadowRadius: 15, elevation: 8 },
+    saveBtnDisabled: { opacity: 0.6 },
+    saveBtnText: { color: "#FFF", fontSize: 18, fontWeight: "800" }
 });

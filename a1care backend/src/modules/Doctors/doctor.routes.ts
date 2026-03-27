@@ -1,5 +1,5 @@
 import express from 'express'
-import { checkOtpStatus, createDoctor, getDoctorById, getStaffByRoleId, getStaffDetials, registerStaff, sendOtpForStaff, verifyOtp } from './doctor.controller.js'
+import { checkOtpStatus, createDoctor, getDoctorById, getStaffByRoleId, getStaffDetials, registerStaff, sendOtpForStaff, updateFcmToken, verifyOtp } from './doctor.controller.js'
 import { availableSlotByDoctorId, blockTiming, createDoctorAvailability, getDoctorAvailabilitybyDoctorId } from './slots/doctorAvailability.controller.js'
 import { GetObjectLegalHoldCommand } from '@aws-sdk/client-s3'
 import { protect } from '../../middlewares/protect.js'
@@ -15,6 +15,7 @@ router.post("/auth/verify-otp", verifyOtp)
 router.get("/auth/details", protect, getStaffDetials)
 router.post("/auth/otp/status", checkOtpStatus)
 router.put("/auth/register", protect, registerStaff)
+router.put("/auth/fcm-token", protect, updateFcmToken)
 router.post("/auth/upload-document", protect, uploadStaffDocument, (req, res) => {
     if (!req.file) throw new ApiError(400, "File upload failed");
     const response = new ApiResponse(200, "Document uploaded", { url: (req.file as any).location });

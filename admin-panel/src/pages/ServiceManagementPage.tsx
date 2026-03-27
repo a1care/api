@@ -15,7 +15,8 @@ import {
     Filter,
     Search,
     Globe,
-    Settings2
+    Settings2,
+    Star
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +38,10 @@ interface ChildService {
     serviceId: string;
     subServiceId: string;
     price: number;
+    isFeatured: boolean;
+    isActive: boolean;
+    rating: number;
+    completed: number;
 }
 
 export function ServiceManagementPage() {
@@ -165,6 +170,19 @@ export function ServiceManagementPage() {
             toast.success("Item removed");
         },
         onError: () => toast.error("Failed to remove item.")
+    });
+
+    const toggleFeaturedMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const res = await api.patch(`/childService/featured/toggle/${id}`);
+            return res.data;
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ["admin_childservices", selectedSubId] });
+            const isFeatured = data?.data?.isFeatured;
+            toast.success(isFeatured ? "⭐ Marked as Popular — will appear in user app!" : "Removed from Popular section");
+        },
+        onError: () => toast.error("Failed to update popular status.")
     });
 
     // ── Fetching Data ──
@@ -351,15 +369,37 @@ export function ServiceManagementPage() {
                                     <Tag size={18} />
                                 </div>
                                 <div className="flex-col">
-                                    <h4 className="font-bold" style={{ margin: 0 }}>{cleanName(child.name)}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-bold" style={{ margin: 0 }}>{cleanName(child.name)}</h4>
+                                        {child.isFeatured && (
+                                            <span style={{ fontSize: '0.65rem', background: '#fef9c3', color: '#854d0e', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, letterSpacing: '0.05em' }}>POPULAR</span>
+                                        )}
+                                    </div>
                                     <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
                                         <span className="badge-price">₹{child.price}</span>
                                         <span className="text-xs muted font-bold">UNIT PRICE</span>
+                                        {child.completed > 0 && <span className="text-xs muted">{child.completed} bookings</span>}
+                                        {child.rating > 0 && <span className="text-xs" style={{ color: '#f59e0b' }}>★ {child.rating.toFixed(1)}</span>}
                                     </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button className="logout-btn" style={{ padding: '8px' }}><MoreVertical size={18} /></button>
+                                <button
+                                    title={child.isFeatured ? "Remove from Popular" : "Mark as Popular in App"}
+                                    onClick={() => toggleFeaturedMutation.mutate(child._id)}
+                                    disabled={toggleFeaturedMutation.isPending}
+                                    style={{
+                                        padding: '8px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        background: child.isFeatured ? '#fef9c3' : 'transparent',
+                                        color: child.isFeatured ? '#f59e0b' : '#94a3b8',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Star size={18} fill={child.isFeatured ? '#f59e0b' : 'none'} />
+                                </button>
                                 <button
                                     onClick={() => { if (confirm('Remove item permanently?')) deleteChildMutation.mutate(child._id); }}
                                     className="logout-btn"

@@ -28,9 +28,19 @@ export default function ProfileScreen() {
         }
     });
 
+    // Fetch Active Subscription
+    const { data: mySub } = useQuery({
+        queryKey: ["myActiveSubscription"],
+        queryFn: async () => {
+            const res = await api.get("/subscription/my-active");
+            return res.data.data;
+        }
+    });
+
     const pendingCount = bookings.filter((b: any) => b.status === "Pending").length;
     const confirmedCount = bookings.filter((b: any) => b.status === "Confirmed" || b.status === "Active").length;
 
+    const daysLeft = mySub ? Math.ceil((new Date(mySub.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
 
     const handleLogout = () => {
@@ -82,6 +92,20 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
+                {/* Subscription Status Banner */}
+                {(!mySub || daysLeft <= 0) ? (
+                    <TouchableOpacity style={styles.warningBanner} onPress={() => handleNavigation("subscriptions")}>
+                        <Ionicons name="alert-circle" size={20} color="#991B1B" />
+                        <Text style={styles.warningText}>Subscription Expired. Re-activate to accept jobs.</Text>
+                        <Ionicons name="chevron-forward" size={16} color="#991B1B" />
+                    </TouchableOpacity>
+                ) : daysLeft < 7 ? (
+                    <TouchableOpacity style={[styles.warningBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]} onPress={() => handleNavigation("subscriptions")}>
+                        <Ionicons name="time" size={20} color="#92400E" />
+                        <Text style={[styles.warningText, { color: '#92400E' }]}>Plan expires in {daysLeft} days. Renew now.</Text>
+                    </TouchableOpacity>
+                ) : null}
+
                 {/* Wallet Card - Matched Gradient to Mockup */}
                 <TouchableOpacity onPress={() => router.push("/wallet_history")}>
                     <LinearGradient
@@ -122,8 +146,8 @@ export default function ProfileScreen() {
                             <Ionicons name="ribbon-outline" size={30} color="#15803D" />
                         </View>
                         <Text style={styles.actionLabel}>Subscriptions</Text>
-                        <View style={styles.actionBadge}>
-                            <Text style={styles.actionBadgeText}>0</Text>
+                        <View style={[styles.actionBadge, daysLeft <= 0 && { backgroundColor: '#EF4444' }]}>
+                            <Text style={styles.actionBadgeText}>{daysLeft > 0 ? daysLeft : "!"}</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -474,6 +498,23 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#EF4444',
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEE2E2',
+        padding: 14,
+        borderRadius: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        gap: 10,
+    },
+    warningText: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#991B1B',
     },
 
 });

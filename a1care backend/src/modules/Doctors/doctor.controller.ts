@@ -13,9 +13,6 @@ import sendMessage from "../../configs/twilioConfig.js";
 import mongoose from "mongoose";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-// Use these credentials to bypass Firebase OTP for testing the full partner app
-// Phone: 9701677607  |  OTP: 123123
-const DEV_BYPASS_MOBILE = "9701677607";
 const DEV_BYPASS_OTP = "123456";
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -50,7 +47,7 @@ export const getStaffByRoleId = asyncHandler(async (req, res) => {
   if (!roleId) throw new ApiError(404, "Role id is missing")
 
   const roleIds = (roleId as string).split(',').map(id => id.trim());
-  const query: any = { roleId: { $in: roleIds } };
+  const query: any = { roleId: { $in: roleIds }, status: 'Active' };
 
   if (specialization) {
     query.specialization = { $in: [(specialization as string).trim()] };
@@ -220,4 +217,13 @@ export const registerStaff = asyncHandler(async (req, res) => {
   );
 
   return res.status(200).json(new ApiResponse(200, "Profile updated successfully", updatedStaff));
+});
+
+export const updateFcmToken = asyncHandler(async (req, res) => {
+  const staffId = req.user?.id;
+  const { fcmToken } = req.body;
+  if (!fcmToken) throw new ApiError(400, "FCM Token is required");
+
+  await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
+  return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
 });

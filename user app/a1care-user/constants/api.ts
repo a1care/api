@@ -55,4 +55,6 @@ export const Endpoints = {
     // Wallet
     WALLET: '/wallet',
     ADD_MONEY: '/wallet/add',
+    HEALTH_PACKAGES: '/health-packages',
+    HEALTH_PACKAGE_DETAIL: (id: string) => `/health-packages/detail/${id}`,
 };
