@@ -11,6 +11,7 @@ import {
     StyleSheet,
     ScrollView,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,7 +53,12 @@ export default function OtpScreen() {
     const handleVerify = async () => {
         const code = otp.join('');
         if (code.length < OTP_LENGTH) {
-            Alert.alert('Enter OTP', 'Please enter the complete 6-digit OTP.');
+            Toast.show({
+                type: 'error',
+                text1: 'Enter OTP',
+                text2: 'Please enter the complete 6-digit OTP.',
+                position: 'top'
+            });
             return;
         }
         setLoading(true);
@@ -83,7 +89,12 @@ export default function OtpScreen() {
             } else if (err.response?.data?.message) {
                 msg = err.response.data.message;
             }
-            Alert.alert('Verification Failed', msg);
+            Toast.show({
+                type: 'error',
+                text1: 'Verification Failed',
+                text2: msg,
+                position: 'top'
+            });
         } finally {
             setLoading(false);
         }
@@ -96,10 +107,20 @@ export default function OtpScreen() {
             setResendTimer(30);
             setOtp(Array(OTP_LENGTH).fill(''));
             inputs.current[0]?.focus();
-            Alert.alert('OTP Resent', 'A new 6-digit code has been sent to your mobile.');
+            Toast.show({
+                type: 'success',
+                text1: 'OTP Resent',
+                text2: 'A new 6-digit code has been sent to your mobile.',
+                position: 'top'
+            });
         } catch (err: any) {
             let msg = err?.response?.data?.message || err?.message || "Failed to resend OTP.";
-            Alert.alert('Resend Failed', msg);
+            Toast.show({
+                type: 'error',
+                text1: 'Resend Failed',
+                text2: msg,
+                position: 'top'
+            });
         } finally {
             setLoading(false);
         }

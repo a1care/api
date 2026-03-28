@@ -144,3 +144,5 @@ app.get("/api/common/config/:appKey", getPublicAppConfig);
 app.use(errorHandler);
 
 export default app
+
+

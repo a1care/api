@@ -15,6 +15,7 @@ import {
     Animated,
     Easing,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -71,7 +72,7 @@ export default function OnboardingScreen() {
             ).start();
 
             // Cycle through phrases
-            let timer: NodeJS.Timeout;
+            let timer: any;
             const runSequence = (index: number) => {
                 if (index >= phrases.length) return;
 
@@ -94,7 +95,12 @@ export default function OnboardingScreen() {
 
     const handleComplete = async () => {
         if (!name.trim()) {
-            Alert.alert('Name Required', 'Please enter your full name.');
+            Toast.show({
+                type: 'error',
+                text1: 'Required',
+                text2: 'Please enter your full name.',
+                position: 'top'
+            });
             return;
         }
 
@@ -123,7 +129,14 @@ export default function OnboardingScreen() {
 
         } catch (err: any) {
             setShowThinking(false);
-            Alert.alert('Error', err?.response?.data?.message ?? 'Failed to save profile.');
+            const errorMessage = err?.response?.data?.message ?? 'Failed to save profile.';
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: errorMessage,
+                position: 'top',
+                visibilityTime: 4000
+            });
         }
     };
 
@@ -200,7 +213,7 @@ export default function OnboardingScreen() {
                 <View style={{ gap: 16, marginTop: 8 }}>
                     {/* Name */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name *</Text>
+                        <Text style={styles.label}>Full Name <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your full name"
@@ -324,7 +337,7 @@ const styles = StyleSheet.create({
     heading: { fontSize: 24, fontWeight: "800", color: "#0D2E4D", textAlign: "center" },
     sub: { fontSize: 14, color: "#4A6E8A", textAlign: "center", marginTop: 6, marginBottom: 16 },
     inputGroup: { gap: 8 },
-    label: { fontSize: 14, fontWeight: "800", color: "#0D2E4D", marginLeft: 4 },
+    label: { fontSize: 14, fontWeight: "800", color: "#1A4D7A", marginLeft: 4 },
     input: {
         height: 52, backgroundColor: "#FFFFFF", borderRadius: 16,
         paddingHorizontal: 18, fontSize: 15, color: "#0D2E4D",

@@ -49,7 +49,9 @@ export const createOrder = asyncHandler(async (req, res) => {
     if (!amount || amount <= 0) throw new ApiError(400, "Invalid amount");
     if (!["WALLET_TOPUP", "BOOKING"].includes(type)) throw new ApiError(400, "Invalid order type");
 
-    const txnId = `ORD-${uuidv4().split("-")[0]}-${Date.now()}`;
+    const uuidParts = uuidv4().split("-");
+    const prefix = uuidParts[0] || "random";
+    const txnId = `OR-${prefix.slice(0, 6)}-${Date.now()}`;
 
     const order = await Order.create({
         userId,
@@ -85,7 +87,9 @@ export const initiatePayment = asyncHandler(async (req, res) => {
     const ezService = await getEasebuzzService();
     const settings = await getSystemSettings();
 
-    const baseUrl = (process.env.API_URL || "").replace(/\/$/, ""); // Remove trailing slash if any
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = `${protocol}://${host}`;
     const redirectUrl = `${baseUrl}/api/payments/gateway-response`;
 
     const finalKey = process.env.EASEBUZZ_MERCHANT_KEY || settings.easebuzz.merchantKey;
@@ -96,12 +100,12 @@ export const initiatePayment = asyncHandler(async (req, res) => {
     const params: any = {
         txnid: order.txnId,
         amount: Number(order.amount).toFixed(2),
-        productinfo: order.type === "WALLET_TOPUP" ? "WalletTopup" : "A1careBooking",
+        productinfo: "A1Care",
         firstname: firstName,
         phone: (patient.mobileNumber?.toString() || "9999999999").replace(/[^0-9]/g, "").slice(-10),
         email: (patient.email && patient.email.includes("@")) ? patient.email.trim() : "patient@example.com",
-        surl: `${redirectUrl}?status=success`,
-        furl: `${redirectUrl}?status=failure`,
+        surl: redirectUrl,
+        furl: redirectUrl,
         udf1: (order as any)._id?.toString() || "",
         address1: "A1Care Test Street",
         address2: "District HQ",
@@ -127,12 +131,22 @@ Params: ${JSON.stringify(params, null, 2)}
 
     // Server-to-Server initiation to get access_key
     const apiResult = await ezService!.initiatePaymentApi(params);
+    
+    // Log the API Result to file for debugging
+    const resultMsg = `
+[${new Date().toISOString()}] GATEWAY_RESPONSE_RAW
+TxnID: ${order.txnId}
+Status: ${apiResult.status}
+Data/Message: ${JSON.stringify(apiResult.data || apiResult.error_desc || apiResult.message || apiResult, null, 2)}
+--------------------------------------------------\n`;
+    await fs.appendFile(path.join(process.cwd(), "payment_debug.log"), resultMsg).catch(() => {});
+
     console.log("💳 Easebuzz API Response:", JSON.stringify(apiResult, null, 2));
 
     if (apiResult.status !== 1) {
         console.error("🔴 Easebuzz API Initiation Failed:", apiResult);
         const errorDetail = apiResult.data || apiResult.error_desc || apiResult.message || "Unknown Gateway Error";
-        throw new ApiError(400, `Easebuzz Initiation Failed: ${errorDetail}`);
+        throw new ApiError(400, `Easebuzz Initiation Failed: ${errorDetail} (Raw: ${JSON.stringify(apiResult)})`);
     }
 
     const accessKey = apiResult.data;
@@ -262,6 +276,14 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
     const response = req.method === "POST" ? req.body : req.query;
     const ezService = await getEasebuzzService();
 
+    // Persistent log for debugging using static fs import
+    try {
+        const logData = `\n[${new Date().toISOString()}] REDIRECT: ${JSON.stringify(response, null, 2)}\n`;
+        require('fs').appendFileSync('payment_debug.log', logData);
+    } catch (err) {
+        console.error("Failed to log redirect:", err);
+    }
+
     console.log(`🔗 [Easebuzz Redirect] User returned for Txn: ${response.txnid}`);
 
     // Verify Hash
@@ -270,12 +292,14 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
     // Find Order
     const order = await Order.findOne({ txnId: response.txnid });
     
-    if (isValid && order && response.status === "success") {
+    const isTrueSuccess = response.status === "success" || response.status === "1";
+    
+    if (isValid && order && isTrueSuccess) {
         await fulfillOrder(order, response, ezService);
     }
 
     // Response HTML for WebView to detect
-    const isSuccess = response.status === "success" && (order?.status === OrderStatus.SUCCESS || isValid);
+    const isSuccess = (response.status === "success" || response.status === "1") && (order?.status === OrderStatus.SUCCESS || isValid);
     const statusMsg = isSuccess ? "Payment Successful" : "Payment Failed";
     const statusIcon = isSuccess ? "✅" : "❌";
 
@@ -307,33 +331,46 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     await ezService.logEvent(order.txnId, "MANUAL_VERIFICATION_REQUESTED", "INFO", "User returned to app, checking status...");
 
     // Call Easebuzz Inquiry API
+    // Call Easebuzz Inquiry API
     const statusRes = await ezService.verifyTransactionStatus(order.txnId);
     console.log(`🔍 [Easebuzz Inquiry Response] Order: ${order.txnId}`, JSON.stringify(statusRes, null, 2));
 
-    if (statusRes.status && statusRes.data) {
+    // Handle SUCCESS response (status: 1 and data is object)
+    if (statusRes.status === 1 && statusRes.data && typeof statusRes.data === 'object') {
         const response = statusRes.data;
-        const gatewayStatus = response.status; // 'success', 'failed', 'user_cancelled', etc.
+        const gatewayStatus = (response.status || "").toString().toLowerCase();
 
-        // Update Payment Transaction record
         await PaymentTransaction.findOneAndUpdate(
             { orderId: order._id },
             {
                 gatewayTxnId: response.easepayid,
                 gatewayResponse: response,
-                status: gatewayStatus === "success" ? PaymentStatus.SUCCESS : PaymentStatus.FAILED,
+                paymentMethod: response.mode,
+                status: (gatewayStatus === "success" || gatewayStatus === "successful") ? PaymentStatus.SUCCESS : PaymentStatus.FAILED,
             },
             { upsert: true }
         );
 
-        if (gatewayStatus === "success") {
+        if (gatewayStatus === "success" || gatewayStatus === "successful") {
             await fulfillOrder(order, response, ezService);
         } else if (gatewayStatus !== "pending") {
             order.status = OrderStatus.FAILED;
             await order.save();
         }
+    } else {
+        // Handle FAILURE or PENDING messages
+        const errorMsg = typeof statusRes.data === 'string' ? statusRes.data : (statusRes.msg || "Inquiry Failed");
+        
+        // If it's just 'Transaction not found yet', we don't treat it as a hard failure, just return current order
+        if (errorMsg.includes("not found yet") || errorMsg.includes("Pending")) {
+            return res.status(200).json(new ApiResponse(200, "Transaction still pending at gateway", order));
+        }
+
+        await ezService.logEvent(order.txnId, "VERIFICATION_ERROR", "ERROR", errorMsg);
+        throw new ApiError(400, `Gateway Verification Failed: ${errorMsg}`);
     }
 
-    return res.status(200).json(new ApiResponse(200, "Order status", order));
+    return res.status(200).json(new ApiResponse(200, "Order status updated", order));
 });
 
 export const getOrderById = asyncHandler(async (req, res) => {

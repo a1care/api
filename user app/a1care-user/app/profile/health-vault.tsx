@@ -10,8 +10,10 @@ import {
     Image,
     FlatList,
     RefreshControl,
-    Linking
+    Linking,
+    ToastAndroid,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,30 +26,7 @@ import { Button } from '@/components/ui/Button';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { API_BASE_URL } from '@/constants/api';
 
-const Toast = ({ message, type, onHide }: { message: string, type: 'success' | 'error', onHide: () => void }) => {
-    React.useEffect(() => {
-        const timer = setTimeout(onHide, 3000);
-        return () => clearTimeout(timer);
-    }, []);
-
-    return (
-        <Animated.View 
-            entering={FadeInUp} 
-            exiting={FadeOutUp}
-            style={[
-                styles.toastContainer, 
-                { backgroundColor: type === 'success' ? '#10B981' : '#EF4444' }
-            ]}
-        >
-            <Ionicons 
-                name={type === 'success' ? "checkmark-circle" : "alert-circle"} 
-                size={20} 
-                color="#FFF" 
-            />
-            <Text style={styles.toastText}>{message}</Text>
-        </Animated.View>
-    );
-};
+// Removed internal Toast component in favor of global toast-message
 
 export default function HealthVaultScreen() {
     const router = useRouter();
@@ -70,14 +49,56 @@ export default function HealthVaultScreen() {
     const uploadMutation = useMutation({
         mutationFn: (formData: FormData) => medicalService.uploadRecord(formData),
         onSuccess: () => {
-            setToast({ message: "Record uploaded successfully", type: 'success' });
+            Toast.show({
+                type: 'success',
+                text1: 'Upload Successful',
+                text2: 'Record uploaded successfully',
+            });
             qc.invalidateQueries({ queryKey: ['medical-records'] });
         },
         onError: (err: any) => {
-            setToast({ message: err?.response?.data?.message || "Upload Failed", type: 'error' });
+            Toast.show({
+                type: 'error',
+                text1: 'Upload Failed',
+                text2: err?.response?.data?.message || "Upload Failed",
+            });
         },
         onSettled: () => setIsUploading(false)
     });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => medicalService.deleteRecord(id),
+        onSuccess: () => {
+            Toast.show({
+                type: 'success',
+                text1: 'Record Deleted',
+                text2: 'The medical record has been removed.',
+            });
+            qc.invalidateQueries({ queryKey: ['medical-records'] });
+        },
+        onError: (err: any) => {
+            Toast.show({
+                type: 'error',
+                text1: 'Delete Failed',
+                text2: err?.response?.data?.message || "Could not delete record.",
+            });
+        }
+    });
+
+    const handleDeleteRecord = (id: string) => {
+        Alert.alert(
+            "Delete Record", 
+            "Are you sure you want to permanently delete this medical record?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive", 
+                    onPress: () => deleteMutation.mutate(id) 
+                }
+            ]
+        );
+    };
 
     const handlePickDocument = async (type: 'prescriptions' | 'labReports') => {
         try {
@@ -124,7 +145,7 @@ export default function HealthVaultScreen() {
                         {new Date(item.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </Text>
                 </View>
-                <TouchableOpacity onPress={() => {}} style={styles.moreBtn}>
+                <TouchableOpacity onPress={() => handleDeleteRecord(item._id)} style={styles.moreBtn}>
                     <Ionicons name="ellipsis-vertical" size={20} color="#94A3B8" />
                 </TouchableOpacity>
             </View>
@@ -160,7 +181,7 @@ export default function HealthVaultScreen() {
                 <View style={{ width: 44 }} />
             </View>
 
-            {toast && <Toast message={toast.message} type={toast.type} onHide={() => setToast(null)} />}
+            {/* Global toast is now used */}
 
             <FlatList
                 data={records}

@@ -11,6 +11,7 @@ import {
     ScrollView,
     StyleSheet,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -23,7 +24,12 @@ export default function LoginScreen() {
     const handleSendOtp = async () => {
         const cleaned = mobile.replace(/\D/g, '');
         if (cleaned.length < 10) {
-            Alert.alert('Invalid Number', 'Please enter a valid 10-digit mobile number.');
+            Toast.show({
+                type: 'error',
+                text1: 'Invalid Number',
+                text2: 'Please enter a valid 10-digit mobile number.',
+                position: 'top'
+            });
             return;
         }
         setLoading(true);
@@ -34,7 +40,12 @@ export default function LoginScreen() {
         } catch (err: any) {
             console.error('[Login] Send OTP Error:', err);
             let msg = err?.response?.data?.message || err?.message || "Failed to send OTP.";
-            Alert.alert('Send OTP Failed', msg);
+            Toast.show({
+                type: 'error',
+                text1: 'Send OTP Failed',
+                text2: msg,
+                position: 'top'
+            });
         } finally {
             setLoading(false);
         }
@@ -65,7 +76,7 @@ export default function LoginScreen() {
 
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Mobile Number</Text>
+                        <Text style={styles.label}>Mobile Number <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                         <View style={styles.inputWrapper}>
                             <Text style={styles.prefix}>+91</Text>
                             <TextInput
@@ -122,7 +133,7 @@ const styles = StyleSheet.create({
     sub: { fontSize: 14, color: "#4A6E8A", textAlign: "center", marginTop: 6, marginBottom: 28 },
     form: { gap: 16 },
     inputGroup: { gap: 8 },
-    label: { fontSize: 13, fontWeight: "700", color: "#0D2E4D", marginLeft: 4 },
+    label: { fontSize: 13, fontWeight: "700", color: "#1A4D7A", marginLeft: 4 },
     inputWrapper: {
         flexDirection: "row",
         alignItems: "center",

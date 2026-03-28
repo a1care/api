@@ -5,7 +5,8 @@ import {
   createMedicalRecord,
   getMedicalRecordById,
   getMyMedicalRecords,
-  updateMedicalRecord
+  updateMedicalRecord,
+  deleteMedicalRecord
 } from "./medicalRecord.controller.js";
 
 const router = express.Router();
@@ -19,6 +20,7 @@ router.get("/:id", protect, getMedicalRecordById);
 // Doctor: create/update record for an appointment (RBAC enforced in controller)
 router.post("/", protect, uploadMedicalRecordAssets, createMedicalRecord);
 router.put("/:id", protect, uploadMedicalRecordAssets, updateMedicalRecord);
+router.delete("/:id", protect, deleteMedicalRecord);
 
 export default router;
 

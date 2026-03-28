@@ -28,5 +28,9 @@ export const medicalService = {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
         return res.data.data;
+    },
+
+    deleteRecord: async (id: string): Promise<void> => {
+        await api.delete(`/medical-records/${id}`);
     }
 };

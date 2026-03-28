@@ -133,3 +133,25 @@ export const getMedicalRecordById = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, "Medical record fetched", record));
 });
 
+export const deleteMedicalRecord = asyncHandler(async (req, res) => {
+  const requesterId = req.user?.id;
+  if (!requesterId) throw new ApiError(401, "Unauthorized");
+
+  const { id } = req.params;
+  const record = await MedicalRecord.findById(id);
+  
+  if (!record) throw new ApiError(404, "Medical record not found");
+
+  // Only the patient who owns the record OR the doctor who created it can delete it
+  const isOwner = record.patientId.toString() === requesterId.toString();
+  const isCreator = record.doctorId?.toString() === requesterId.toString();
+
+  if (!isOwner && !isCreator) {
+    throw new ApiError(403, "You are not authorized to delete this record");
+  }
+
+  await MedicalRecord.findByIdAndDelete(id);
+
+  return res.status(200).json(new ApiResponse(200, "Medical record deleted successfully", null));
+});
+

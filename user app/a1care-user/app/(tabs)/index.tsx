@@ -44,6 +44,7 @@ import { servicesService } from '@/services/services.service';
 import { bookingsService } from '@/services/bookings.service';
 import { doctorsService } from '@/services/doctors.service';
 import api from '@/services/api';
+import { notificationsService } from '@/services/notifications.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { Colors, Shadows } from '@/constants/colors';
 import { Endpoints } from '@/constants/api';
@@ -362,6 +363,13 @@ export default function HomeScreen() {
         enabled: !!doctorRoleId,
     });
 
+    const { data: notifications, refetch: refetchNotifications } = useQuery({
+        queryKey: ['notifications'],
+        queryFn: () => notificationsService.getAll(1),
+    });
+
+    const unreadCount = notifications?.unreadCount ?? 0;
+
     const { data: healthPackages, refetch: refetchPackages } = useQuery({
         queryKey: ['health-packages'],
         queryFn: async () => {
@@ -412,6 +420,7 @@ export default function HomeScreen() {
             refetchBookings(), 
             refetchDoctors(),
             refetchPackages(),
+            refetchNotifications(),
             fetchConfig()
         ]);
         setRefreshing(false);
@@ -491,7 +500,7 @@ export default function HomeScreen() {
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.iconCircle} onPress={() => router.push('/(tabs)/notifications')}>
                             <Bell size={20} color={Colors.textPrimary} />
-                            <View style={styles.notifDot} />
+                            {unreadCount > 0 && <View style={styles.notifDot} />}
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
                             <View style={styles.avatarCircle}>
@@ -724,23 +733,23 @@ export default function HomeScreen() {
                 </View>
 
                 {/* ── 5. Smart Recommendations (Horizontal) ── */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Popular Near You</Text>
-                    </View>
-                    <ScrollView
-                        ref={popularScrollRef}
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        onScroll={(e) => {
-                            const slide = Math.round(e.nativeEvent.contentOffset.x / width);
-                            if (slide !== activePopular) setActivePopular(slide);
-                        }}
-                        scrollEventThrottle={16}
-                    >
-                        {featured && featured.length > 0 ? (
-                            featured.slice(0, 3).map((item) => {
+                {featured && featured.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Popular Near You</Text>
+                        </View>
+                        <ScrollView
+                            ref={popularScrollRef}
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            onScroll={(e) => {
+                                const slide = Math.round(e.nativeEvent.contentOffset.x / width);
+                                if (slide !== activePopular) setActivePopular(slide);
+                            }}
+                            scrollEventThrottle={16}
+                        >
+                            {featured.slice(0, 3).map((item) => {
                                 const theme = getServiceTheme(item.name);
                                 const IconComp = theme.icon;
                                 return (
@@ -768,20 +777,16 @@ export default function HomeScreen() {
                                         </View>
                                     </TouchableOpacity>
                                 );
-                            })
-                        ) : (
-                            <View style={styles.recommendCard}>
-                                <Text style={styles.recommendTitle}>Loading top deals...</Text>
-                            </View>
-                        )}
-                    </ScrollView>
+                            })}
+                        </ScrollView>
 
-                    <View style={styles.miniPagination}>
-                        {(featured?.slice(0, 3) ?? [1, 2]).map((_, i) => (
-                            <View key={i} style={[styles.miniDot, activePopular === i && styles.miniDotActive]} />
-                        ))}
+                        <View style={styles.miniPagination}>
+                            {(featured?.slice(0, 3) ?? [1, 2]).map((_, i) => (
+                                <View key={i} style={[styles.miniDot, activePopular === i && styles.miniDotActive]} />
+                            ))}
+                        </View>
                     </View>
-                </View>
+                )}
 
                 {/* ── 6. Top Doctors Section ── */}
                 <View style={styles.section}>
@@ -891,7 +896,13 @@ export default function HomeScreen() {
                                                     </View>
                                                 )}
                                             </View>
-                                            <TouchableOpacity style={[styles.pkgBtn, { backgroundColor: pkg.color || '#2F80ED' }]}>
+                                            <TouchableOpacity 
+                                                style={[styles.pkgBtn, { backgroundColor: pkg.color || '#2F80ED' }]}
+                                                onPress={() => router.push({
+                                                    pathname: '/package/[id]',
+                                                    params: { id: pkg._id }
+                                                })}
+                                            >
                                                 <Text style={styles.pkgBtnText}>Book Package</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -911,6 +922,9 @@ export default function HomeScreen() {
                                     </LinearGradient>
                                     <View style={styles.pkgBody}>
                                         <Text style={styles.pkgTestsLabel}>Loading tests...</Text>
+                                        <TouchableOpacity style={[styles.pkgBtn, { backgroundColor: p.color }]}>
+                                            <Text style={styles.pkgBtnText}>Book Package</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 </TouchableOpacity>
                             ))
@@ -986,7 +1000,7 @@ export default function HomeScreen() {
                             <Text style={styles.sectionTitle}>Knowledge Base</Text>
                             <Text style={styles.sectionSub}>Expert health tips and articles</Text>
                         </View>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/knowledge-base' as any)}>
                             <Text style={styles.seeAll}>Read All</Text>
                         </TouchableOpacity>
                     </View>
@@ -1870,7 +1884,8 @@ const styles = StyleSheet.create({
     // ── Health Package Card Styles ──
     pkgCard: {
         width: 240,
-        borderRadius: 20,
+        height: 360,
+        borderRadius: 24,
         overflow: 'hidden',
         backgroundColor: Colors.white,
         ...Shadows.card,
@@ -1895,9 +1910,10 @@ const styles = StyleSheet.create({
     },
     pkgName: {
         color: '#fff',
-        fontSize: 14,
-        fontWeight: '800',
-        lineHeight: 20,
+        fontSize: 16,
+        fontWeight: '900',
+        lineHeight: 22,
+        height: 44, // 2 lines max
     },
     pkgPriceRow: {
         flexDirection: 'row',
@@ -1928,8 +1944,9 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     pkgBody: {
-        padding: 14,
-        gap: 10,
+        padding: 16,
+        flex: 1,
+        justifyContent: 'space-between',
     },
     pkgTestsLabel: {
         fontSize: 11,
@@ -1942,6 +1959,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 6,
+        height: 60, // Fixed height for tags area
+        overflow: 'hidden',
     },
     pkgTag: {
         backgroundColor: '#f1f5f9',

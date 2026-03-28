@@ -7,10 +7,11 @@ import {
     TextInput,
     ScrollView,
     ActivityIndicator,
-    Alert,
     Image,
     Platform,
+    ToastAndroid,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -49,20 +50,34 @@ export default function ProfileEditScreen() {
             if (data) setUser(data);
             queryClient.setQueryData(['profile'], data);
             queryClient.invalidateQueries({ queryKey: ['profile'] });
-            Alert.alert('Success', 'Profile updated successfully', [
-                { text: 'OK', onPress: () => router.back() }
-            ]);
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Profile updated successfully',
+                position: 'top',
+                onHide: () => router.back()
+            });
         },
         onError: (error: any) => {
             const errorMsg = error.response?.data?.message || error.message || 'Failed to update profile';
-            Alert.alert('Error', errorMsg);
+            Toast.show({
+                type: 'error',
+                text1: 'Update Failed',
+                text2: errorMsg,
+                position: 'top'
+            });
         },
     });
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+            Toast.show({
+                type: 'error',
+                text1: 'Permission Denied',
+                text2: 'Sorry, we need camera roll permissions to make this work!',
+                position: 'top'
+            });
             return;
         }
 
@@ -80,7 +95,12 @@ export default function ProfileEditScreen() {
 
     const handleSave = () => {
         if (!name.trim()) {
-            Alert.alert('Error', 'Name is required');
+            Toast.show({
+                type: 'error',
+                text1: 'Name Required',
+                text2: 'Please enter your full name.',
+                position: 'top'
+            });
             return;
         }
 
@@ -145,7 +165,7 @@ export default function ProfileEditScreen() {
                 </View>
 
                 <View style={styles.formSection}>
-                    <Text style={styles.label}>Full Name</Text>
+                    <Text style={styles.label}>Full Name <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                     <TextInput
                         style={styles.input}
                         value={name}
@@ -153,7 +173,7 @@ export default function ProfileEditScreen() {
                         placeholder="Enter your name"
                     />
 
-                    <Text style={styles.label}>Email Address</Text>
+                    <Text style={styles.label}>Email Address <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                     <TextInput
                         style={styles.input}
                         value={email}
@@ -163,7 +183,7 @@ export default function ProfileEditScreen() {
                         autoCapitalize="none"
                     />
 
-                    <Text style={styles.label}>Gender</Text>
+                    <Text style={styles.label}>Gender <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                     <View style={styles.genderContainer}>
                         {['Male', 'Female', 'Other'].map((g) => (
                             <TouchableOpacity
@@ -274,7 +294,7 @@ const styles = StyleSheet.create({
         color: Colors.primary,
     },
     formSection: { gap: 16 },
-    label: { fontSize: 14, fontWeight: '600', color: '#64748B', marginBottom: 6 },
+    label: { fontSize: 13, fontWeight: '800', color: '#1A4D7A', marginBottom: 6 },
     input: {
         backgroundColor: '#fff',
         borderWidth: 1,

@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ticketsService } from '@/services/tickets.service';
+import { useConfigStore } from '@/stores/config.store';
+import { Linking } from 'react-native';
 import { Colors, Shadows } from '@/constants/colors';
 import { FontSize } from '@/constants/spacing';
 import { ErrorState } from '@/components/ui/EmptyState';
@@ -24,6 +26,13 @@ const FAQS = [
 
 export default function SupportDashboardScreen() {
     const router = useRouter();
+
+    const { config } = useConfigStore();
+    const supportPhone = config?.contact?.supportPhone || '1800-123-4567';
+
+    const handleCall = () => {
+        Linking.openURL(`tel:${supportPhone.replace(/\s+/g, '')}`);
+    };
 
     const {
         data: tickets,
@@ -125,8 +134,8 @@ export default function SupportDashboardScreen() {
                 <View style={styles.contactCard}>
                     <Text style={styles.contactTitle}>Still need help?</Text>
                     <Text style={styles.contactSub}>Reach out to our 24/7 support line.</Text>
-                    <TouchableOpacity style={styles.callBtn}>
-                        <Text style={styles.callBtnText}>📞 Call Support</Text>
+                    <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
+                        <Text style={styles.callBtnText}>📞 Call {supportPhone}</Text>
                     </TouchableOpacity>
                 </View>
 

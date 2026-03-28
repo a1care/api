@@ -43,10 +43,6 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
         ...(hospitalFirst ? { notifiedHospitalAt: new Date() } : { broadcastedAt: new Date() }),
     };
-    const checkServiceRequest = await serviceRequestModel.find({ userId: new mongoose.Types.ObjectId(userId) });
-    if (checkServiceRequest.length > 10) {
-        throw new ApiError(400, "Too many service requests");
-    }
     const parsed = serviceRequestValiation.safeParse(payload);
     if (!parsed.success) {
         console.error("Validation failed!", parsed.error);

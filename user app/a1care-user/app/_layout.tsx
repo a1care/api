@@ -18,7 +18,8 @@ import { useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Alert } from 'react-native'; // Added Alert import
+import { Alert } from 'react-native'; 
+import Toast from 'react-native-toast-message';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -134,6 +135,7 @@ export default function RootLayout() {
                     </Stack>
                 </AuthGuard>
             </QueryClientProvider>
+            <Toast />
         </GestureHandlerRootView>
     );
 }

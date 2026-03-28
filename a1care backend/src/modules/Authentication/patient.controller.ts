@@ -6,6 +6,7 @@ import { Patient } from "./patient.model.js";
 import { patientValidation } from "./patient.schema.js";
 import mongoose from 'mongoose';
 import { enqueueEmail } from "../../queues/communicationQueue.js";
+import { formatZodError } from "../../utils/formatZodError.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
 const DEV_BYPASS_OTP = "123456";
@@ -105,7 +106,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (!parsed.success) {
     throw new ApiError(
       400,
-      `validation failed! ${parsed.error}`
+      formatZodError(parsed.error)
     );
   }
 

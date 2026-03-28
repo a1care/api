@@ -8,6 +8,7 @@ import {
     StyleSheet,
     Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,23 +39,35 @@ export default function CreateTicketScreen() {
             priority: 'Medium', // default priority
         }),
         onSuccess: () => {
-            Alert.alert("Success", "Your support ticket has been created. We will get back to you shortly.", [
-                {
-                    text: "OK", onPress: () => {
-                        qc.invalidateQueries({ queryKey: ['tickets'] });
-                        router.back();
-                    }
+            Toast.show({
+                type: 'success',
+                text1: 'Ticket Created',
+                text2: 'Your support ticket has been created. We will get back to you shortly.',
+                position: 'top',
+                onHide: () => {
+                    qc.invalidateQueries({ queryKey: ['tickets'] });
+                    router.back();
                 }
-            ]);
+            });
         },
         onError: (err: any) => {
-            Alert.alert('Error', err?.response?.data?.message ?? 'Could not create ticket. Please try again.');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: err?.response?.data?.message ?? 'Could not create ticket. Please try again.',
+                position: 'top'
+            });
         },
     });
 
     const handleSubmit = () => {
         if (!description.trim()) {
-            Alert.alert('Error', 'Please describe your issue.');
+            Toast.show({
+                type: 'error',
+                text1: 'Missing Description',
+                text2: 'Please describe your issue.',
+                position: 'top'
+            });
             return;
         }
         createMutation.mutate();
@@ -78,7 +91,7 @@ export default function CreateTicketScreen() {
                 </View>
 
                 {/* Category Selection */}
-                <Text style={styles.label}>Select Category</Text>
+                <Text style={styles.label}>Select Category <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                 <View style={styles.catGrid}>
                     {CATEGORIES.map(c => (
                         <TouchableOpacity
@@ -94,7 +107,7 @@ export default function CreateTicketScreen() {
                 </View>
 
                 {/* Description */}
-                <Text style={[styles.label, { marginTop: 24 }]}>Description</Text>
+                <Text style={[styles.label, { marginTop: 24 }]}>Description <Text style={{ color: '#E74C3C' }}>*</Text></Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Provide details about your issue, booking ID, or professional's name..."
