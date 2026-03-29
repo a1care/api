@@ -158,21 +158,30 @@ export default function ProfileScreen() {
                     <Ionicons name="checkmark-circle" size={18} color="#15803D" />
                 </View>
                 <View style={styles.docsContainer}>
-                    {staffData?.documents && staffData.documents.length > 0 ? (
+                    {loadingStaff ? (
+                        <ActivityIndicator size="small" color="#2D935C" />
+                    ) : (staffData?.documents || user?.documents)?.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 5 }}>
-                            {staffData.documents.map((doc: any, idx: number) => (
-                                <TouchableOpacity key={idx} style={styles.docItem}>
+                            {(staffData?.documents || user?.documents).map((doc: any, idx: number) => (
+                                <TouchableOpacity key={idx} style={styles.docItem} onPress={() => {/* View Document */}}>
                                     <View style={styles.docIconBox}>
-                                        <Ionicons name="document-attach" size={24} color="#15803D" />
+                                        {doc.url?.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                                            <Image source={{ uri: doc.url }} style={styles.docPreview} />
+                                        ) : (
+                                            <Ionicons name="document-attach" size={24} color="#15803D" />
+                                        )}
                                     </View>
                                     <Text style={styles.docName} numberOfLines={1}>{doc.type}</Text>
-                                    <Text style={styles.docStatus}>Verified</Text>
+                                    <View style={styles.statusChip}>
+                                        <Text style={styles.docStatus}>Verified</Text>
+                                    </View>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
                     ) : (
                         <View style={styles.emptyDocs}>
-                            <Text style={styles.emptyDocsText}>No documents uploaded yet.</Text>
+                            <Ionicons name="document-text-outline" size={32} color="#CBD5E1" />
+                            <Text style={styles.emptyDocsText}>No documents found.</Text>
                         </View>
                     )}
                 </View>
@@ -418,25 +427,38 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     docIconBox: {
-        width: 50,
-        height: 50,
+        width: 54,
+        height: 54,
         borderRadius: 16,
         backgroundColor: '#F0FDF4',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
+        overflow: 'hidden'
+    },
+    docPreview: {
+        width: '100%',
+        height: '100%',
     },
     docName: {
         fontSize: 12,
         fontWeight: '700',
         color: '#475569',
         textAlign: 'center',
+        width: 100,
+    },
+    statusChip: {
+        backgroundColor: '#DCFCE7',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+        marginTop: 4,
     },
     docStatus: {
-        fontSize: 10,
+        fontSize: 9,
         color: '#15803D',
-        fontWeight: '600',
-        marginTop: 2,
+        fontWeight: '800',
+        textTransform: 'uppercase',
     },
     emptyDocs: {
         padding: 20,

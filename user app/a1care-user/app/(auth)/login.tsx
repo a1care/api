@@ -84,7 +84,7 @@ export default function LoginScreen() {
                                 placeholder="98765 43210"
                                 keyboardType="phone-pad"
                                 value={mobile}
-                                onChangeText={setMobile}
+                                onChangeText={(text) => setMobile(text.replace(/\D/g, ''))}
                                 maxLength={10}
                                 placeholderTextColor="#9CB3C4"
                             />

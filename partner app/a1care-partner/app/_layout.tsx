@@ -24,7 +24,7 @@ import { api } from "../lib/api";
 const queryClient = new QueryClient();
 
 function AuthGuard() {
-    const { token, isLoading, loadFromStorage } = useAuthStore();
+    const { token, user, isLoading, loadFromStorage } = useAuthStore();
     const { fetchConfig, config } = useConfigStore();
     const segments = useSegments();
     const router = useRouter();
@@ -90,13 +90,20 @@ function AuthGuard() {
         const inAuth = currentSegment === "(auth)";
         const inOnboarding = currentSegment === "onboarding";
         const isPolicyPage = currentSegment === "privacy" || currentSegment === "terms";
+        const inRegister = segments[1] as string === "register";
 
         if (!token && !inAuth && !inOnboarding && !isPolicyPage) {
-            router.replace("/onboarding");
+            router.replace("/(auth)/role-select");
         } else if (token && (inAuth || inOnboarding)) {
-            router.replace("/(tabs)/home");
+            // ONLY redirect to HOME if they are actually registered.
+            // If they are NOT registered, let them stay in registration/onboarding.
+            if (user?.isRegistered !== false || !inRegister) {
+                 if (!inRegister) {
+                    router.replace("/(tabs)/home");
+                 }
+            }
         }
-    }, [token, isLoading, segments, config?.maintenanceMode]);
+    }, [token, isLoading, segments, config?.maintenanceMode, user?.isRegistered]);
 
     return <Slot />;
 }

@@ -130,9 +130,14 @@ export default function BookingsScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>Service Hub</Text>
-                    <Text style={styles.sub}>{bookings.length} assigned requests</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <TouchableOpacity onPress={() => router.push("/(tabs)/home")} style={styles.backBtnSmall}>
+                        <Ionicons name="arrow-back" size={24} color="#1E293B" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text style={styles.title}>Service Hub</Text>
+                        <Text style={styles.sub}>{bookings.length} assigned requests</Text>
+                    </View>
                 </View>
                 <TouchableOpacity onPress={() => refetch()} style={styles.refreshBtn}>
                     <Ionicons name="refresh" size={20} color="#2D935C" />
@@ -310,6 +315,7 @@ const styles = StyleSheet.create({
     title: { fontSize: 28, fontWeight: "900", color: "#1E293B", letterSpacing: -0.5 },
     sub: { fontSize: 13, color: "#64748B", marginTop: 2, fontWeight: '600' },
     refreshBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+    backBtnSmall: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
     tabsWrapper: { height: 64, backgroundColor: '#F8FAFC' },
     tabsContent: { paddingHorizontal: 24, alignItems: 'center', gap: 12 },
     tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 15, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#F1F5F9" },

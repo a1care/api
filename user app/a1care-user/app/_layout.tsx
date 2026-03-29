@@ -61,11 +61,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         const currentSegment = (segments as string[])[0];
         const isAtRoot = !segments.length || currentSegment === 'index';
         const inAuthGroup = currentSegment === '(auth)';
-        const excludedSegments = ['(auth)', 'index', 'privacy', 'terms', 'faq'];
+        const excludedSegments = ['(auth)', 'privacy', 'terms', 'faq'];
         const isExcluded = excludedSegments.includes(currentSegment);
 
         if (!isAuthenticated && !isExcluded) {
-            console.log('[AuthGuard] Redirecting to login');
             router.replace('/(auth)/login');
         } else if (isAuthenticated && user && (inAuthGroup || isAtRoot)) {
             // If registered go to tabs; else go to profile setup

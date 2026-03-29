@@ -8,6 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -97,24 +98,54 @@ export default function RegisterScreen() {
 
     const handlePickDocument = async (docType: string) => {
         try {
-            const result = await DocumentPicker.getDocumentAsync({ type: ["image/*", "application/pdf"] });
-            if (!result.canceled) {
-                const file = result.assets[0];
-                setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: "", uploading: true }]);
+            let result: any;
+            let file: any;
 
-                const formData = new FormData();
-                formData.append('document', {
-                    uri: Platform.OS === 'ios' ? file.uri.replace('file://', '') : file.uri,
-                    name: file.name,
-                    type: file.mimeType || 'image/jpeg',
-                } as any);
-
-                const res = await api.post("/doctor/auth/upload-document", formData, {
-                    headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+            if (docType === "Selfie") {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert("Permission Required", "Camera access is needed for selfies.");
+                    return;
+                }
+                result = await ImagePicker.launchCameraAsync({
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.7,
+                    cameraType: ImagePicker.CameraType.front,
                 });
-
-                setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: res.data.data.url, uploading: false }]);
+                if (result.canceled) return;
+                const asset = result.assets[0];
+                file = {
+                    uri: asset.uri,
+                    name: `selfie_${Date.now()}.jpg`,
+                    mimeType: 'image/jpeg'
+                };
+            } else {
+                result = await DocumentPicker.getDocumentAsync({ type: ["image/*", "application/pdf"] });
+                if (result.canceled) return;
+                const asset = result.assets[0];
+                file = {
+                    uri: asset.uri,
+                    name: asset.name,
+                    mimeType: asset.mimeType || 'image/jpeg'
+                };
             }
+
+            setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: "", uploading: true }]);
+
+            const formData = new FormData();
+            formData.append('document', {
+                uri: Platform.OS === 'ios' ? file.uri.replace('file://', '') : file.uri,
+                name: file.name,
+                type: file.mimeType,
+            } as any);
+
+            const res = await api.post("/doctor/auth/upload-document", formData, {
+                headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+            });
+
+            setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: res.data.data.url, uploading: false }]);
+
         } catch (err) {
             Alert.alert("Upload Failed", "Could not upload document. Try again.");
             setDocuments(prev => prev.filter(d => d.type !== docType));
@@ -178,19 +209,32 @@ export default function RegisterScreen() {
                         <Text style={styles.stepSub}>This helps patients know you better</Text>
                         
                         <View style={styles.formGroup}>
-                            {config.fields.map(f => (
-                                <View key={f} style={styles.fieldItem}>
-                                    <Text style={styles.fieldLabel}>{fieldLabels[f]}</Text>
-                                    <TextInput
-                                        style={[styles.fieldInput, f === "about" && styles.fieldArea]}
-                                        placeholder={`Your ${fieldLabels[f]}`}
-                                        placeholderTextColor="#94A3B8"
-                                        value={form[f] ?? ""}
-                                        onChangeText={v => update(f, v)}
-                                        multiline={f === "about"}
-                                    />
-                                </View>
-                            ))}
+                            {config.fields.map(f => {
+                                const isName = f === "name";
+                                const isNumber = ["workingHours", "serviceRadius", "homeConsultationFee", "onlineConsultationFee", "experience"].includes(f);
+                                
+                                return (
+                                    <View key={f} style={styles.fieldItem}>
+                                        <Text style={styles.fieldLabel}>
+                                            {fieldLabels[f]} <Text style={styles.asterisk}>*</Text>
+                                        </Text>
+                                        <TextInput
+                                            style={[styles.fieldInput, f === "about" && styles.fieldArea]}
+                                            placeholder={fieldLabels[f]}
+                                            placeholderTextColor="#94A3B8"
+                                            value={form[f] ?? ""}
+                                            onChangeText={v => {
+                                                let filtered = v;
+                                                if (isName) filtered = v.replace(/[^a-zA-Z\s]/g, "");
+                                                if (isNumber) filtered = v.replace(/\D/g, "");
+                                                update(f, filtered);
+                                            }}
+                                            multiline={f === "about"}
+                                            keyboardType={isNumber ? "number-pad" : "default"}
+                                        />
+                                    </View>
+                                );
+                            })}
                         </View>
                         <TouchableOpacity onPress={() => setStep(2)} style={styles.mainActionBtn}>
                             <Text style={styles.mainActionText}>Next: ID Verification</Text>
@@ -213,7 +257,7 @@ export default function RegisterScreen() {
                                             <MaterialCommunityIcons name={uploaded?.url ? "check-circle" : "file-upload-outline"} size={24} color={uploaded?.url ? "#FFF" : "#64748B"} />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.docLabelTitle}>{doc}</Text>
+                                            <Text style={styles.docLabelTitle}>{doc} <Text style={styles.asterisk}>*</Text></Text>
                                             <Text style={styles.docLabelSub}>{uploaded?.uploading ? "Uploading..." : uploaded?.url ? "Attachment saved" : "Recommended: PDF or Image"}</Text>
                                         </View>
                                         {uploaded?.uploading && <ActivityIndicator size="small" color="#2D935C" />}
@@ -244,10 +288,10 @@ export default function RegisterScreen() {
                         </View>
 
                         <View style={styles.formGroup}>
-                            <TextInput style={styles.fieldInput} placeholder="Account Number" keyboardType="numeric" value={form.bankDetails.accountNumber} onChangeText={v => updateBank('accountNumber', v)} />
-                            <TextInput style={styles.fieldInput} placeholder="IFSC Code" autoCapitalize="characters" value={form.bankDetails.ifscCode} onChangeText={v => updateBank('ifscCode', v)} />
-                            <TextInput style={styles.fieldInput} placeholder="Bank Name" value={form.bankDetails.bankName} onChangeText={v => updateBank('bankName', v)} />
-                            <TextInput style={styles.fieldInput} placeholder="Account Holder Name" value={form.bankDetails.accountHolderName} onChangeText={v => updateBank('accountHolderName', v)} />
+                            <TextInput style={styles.fieldInput} placeholder="Account Number *" keyboardType="number-pad" value={form.bankDetails.accountNumber} onChangeText={v => updateBank('accountNumber', v.replace(/\D/g, ""))} />
+                            <TextInput style={styles.fieldInput} placeholder="IFSC Code *" autoCapitalize="characters" value={form.bankDetails.ifscCode} onChangeText={v => updateBank('ifscCode', v)} />
+                            <TextInput style={styles.fieldInput} placeholder="Bank Name *" value={form.bankDetails.bankName} onChangeText={v => updateBank('bankName', v)} />
+                            <TextInput style={styles.fieldInput} placeholder="Account Holder Name *" value={form.bankDetails.accountHolderName} onChangeText={v => updateBank('accountHolderName', v)} />
                         </View>
 
                         <TouchableOpacity onPress={handleRegister} style={[styles.mainActionBtn, { backgroundColor: '#1E293B', marginTop: 24 }]}>
@@ -277,12 +321,13 @@ const styles = StyleSheet.create({
     progressContainer: { flex: 1, height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' },
     progressIndicator: { height: '100%', backgroundColor: '#2D935C' },
     progressText: { fontSize: 13, fontWeight: '800', color: '#64748B' },
-    stepWrapper: { animation: 'fade' },
+    stepWrapper: { flex: 1 },
     stepTitle: { fontSize: 32, fontWeight: '900', color: '#1E293B', letterSpacing: -1 },
     stepSub: { fontSize: 15, color: '#64748B', marginTop: 4, marginBottom: 32, fontWeight: '600' },
     formGroup: { gap: 16 },
     fieldItem: { gap: 8 },
-    fieldLabel: { fontSize: 14, fontWeight: '800', color: '#475569', marginLeft: 4 },
+    fieldLabel: { fontSize: 13, fontWeight: '800', color: '#475569', marginLeft: 4 },
+    asterisk: { color: "#EF4444" },
     fieldInput: { height: 60, backgroundColor: '#FFF', borderRadius: 20, paddingHorizontal: 20, fontSize: 16, color: '#1E293B', borderWidth: 1.5, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 10 },
     fieldArea: { height: 120, textAlignVertical: 'top', paddingTop: 18 },
     mainActionBtn: { height: 64, backgroundColor: '#2D935C', borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 12, elevation: 8, shadowColor: '#2D935C', shadowOpacity: 0.3, shadowRadius: 10 },

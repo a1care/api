@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, BackHandler } from "react-native";
 import { WebView } from "react-native-webview";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../stores/auth";
 
 export default function SubscriptionsScreen() {
@@ -75,12 +75,22 @@ export default function SubscriptionsScreen() {
     });
 
     const handleBack = () => {
-        if (router.canGoBack()) {
-            router.back();
-        } else {
-            router.replace("/(tabs)/profile");
-        }
+        router.push("/(tabs)/home");
     };
+
+    useEffect(() => {
+        const backAction = () => {
+            handleBack();
+            return true;
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, []);
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

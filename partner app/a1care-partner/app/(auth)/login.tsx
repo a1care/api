@@ -45,7 +45,10 @@ const LoginScreen = () => {
     const [verifying, setVerifying] = useState(false);
 
     const handleSendOtp = async () => {
-        const cleaned = mobile.replace(/\D/g, '');
+        let cleaned = mobile.replace(/\D/g, '');
+        if (cleaned.startsWith('91') && cleaned.length > 10) {
+            cleaned = cleaned.slice(-10);
+        }
         if (cleaned.length < 10) {
             Toast.show({ type: 'error', text1: 'Invalid Mobile', text2: 'Please enter a valid 10-digit mobile number' });
             return;
@@ -87,7 +90,10 @@ const LoginScreen = () => {
         setVerifying(true);
         try {
             let idToken = undefined;
-            const cleaned = mobile.replace(/\D/g, '');
+            let cleaned = mobile.replace(/\D/g, '');
+            if (cleaned.startsWith('91') && cleaned.length > 10) {
+                cleaned = cleaned.slice(-10);
+            }
 
             if (otpSessionId === "BYPASS") {
                 console.log("[Login] Skipping Firebase Verify (Bypass Mode)");
@@ -199,7 +205,7 @@ const LoginScreen = () => {
                                 placeholder="98765 43210"
                                 keyboardType="phone-pad"
                                 value={mobile}
-                                onChangeText={setMobile}
+                                onChangeText={(text) => setMobile(text.replace(/\D/g, ''))}
                                 maxLength={10}
                                 placeholderTextColor="#9CB3C4"
                                 editable={!otpSessionId}
@@ -212,7 +218,7 @@ const LoginScreen = () => {
                             <Text style={styles.label}>Enter OTP</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="0 0 0 0"
+                                placeholder="0 0 0 0 0 0"
                                 keyboardType="number-pad"
                                 value={otp}
                                 onChangeText={setOtp}
@@ -262,18 +268,7 @@ const LoginScreen = () => {
                         </TouchableOpacity>
                     )}
 
-                    <TouchableOpacity
-                        onPress={() => {
-                            setOtpSessionId(null);
-                            setMobile("");
-                            setOtp("");
-                        }}
-                        style={{ marginTop: 20, alignItems: "center" }}
-                    >
-                        <Text style={styles.registerLink}>
-                            New partner? <Text style={{ color: "#1A7FD4", fontWeight: "700" }}>Get started here</Text>
-                        </Text>
-                    </TouchableOpacity>
+                    <View style={{ height: 20 }} />
 
                     <Text style={styles.disclaimer}>
                         By continuing, you agree to our <Text onPress={() => router.push('/terms')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text onPress={() => router.push('/privacy')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>

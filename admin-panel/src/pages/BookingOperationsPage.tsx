@@ -163,9 +163,11 @@ export function BookingOperationsPage() {
     ];
 
     const filteredHospital = hospitalBookings?.filter(b => {
-        const matchesSearch = b.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b._id.toLowerCase().includes(searchQuery.toLowerCase());
+        const query = searchQuery.toLowerCase().replace("#", "");
+        const matchesSearch = b.patientId?.name?.toLowerCase().includes(query) ||
+            b.patientId?.mobile?.toLowerCase().includes(query) ||
+            b.serviceName?.toLowerCase().includes(query) ||
+            b._id.toLowerCase().includes(query);
         const matchesStatus = statusFilter === "All" || b.status?.toUpperCase() === statusFilter || (statusFilter === "CONFIRMED" && (b.status?.toUpperCase() === "ACCEPTED" || b.status?.toUpperCase() === "IN_PROGRESS")) || (statusFilter === "PENDING" && (b.status?.toUpperCase() === "BROADCASTED" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN"));
 
         const bDate = new Date(b.createdAt).getTime();
@@ -175,12 +177,18 @@ export function BookingOperationsPage() {
 
         return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesPayment;
     });
-
     const filteredDocs = doctorBookings?.filter(b => {
-        const matchesSearch = b.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.doctorId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b._id.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === "All" || b.status?.toUpperCase() === statusFilter;
+        const query = searchQuery.toLowerCase().replace("#", "");
+        const matchesSearch = b.patientId?.name?.toLowerCase().includes(query) ||
+            b.patientId?.mobile?.toLowerCase().includes(query) ||
+            b.doctorId?.name?.toLowerCase().includes(query) ||
+            b._id.toLowerCase().includes(query);
+        
+        const s = b.status?.toUpperCase();
+        const matchesStatus = statusFilter === "All" || 
+            s === statusFilter || 
+            (statusFilter === "PENDING" && (s === "BROADCASTED" || s === "RETURNED_TO_ADMIN")) ||
+            (statusFilter === "CONFIRMED" && (s === "ACCEPTED" || s === "IN_PROGRESS" || s === "CONFIRMED"));
 
         const bDate = new Date(b.date || b.createdAt).getTime();
         const matchesDateFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
@@ -192,10 +200,17 @@ export function BookingOperationsPage() {
     });
 
     const filteredServices = serviceBookings?.filter(b => b.fulfillmentMode !== "HOSPITAL_VISIT")?.filter(b => {
-        const matchesSearch = b.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.serviceId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b._id.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === "All" || b.status?.toUpperCase() === statusFilter;
+        const query = searchQuery.toLowerCase().replace("#", "");
+        const matchesSearch = b.patientId?.name?.toLowerCase().includes(query) ||
+            b.patientId?.mobile?.toLowerCase().includes(query) ||
+            b.serviceId?.name?.toLowerCase().includes(query) ||
+            b._id.toLowerCase().includes(query);
+        
+        const s = b.status?.toUpperCase();
+        const matchesStatus = statusFilter === "All" || 
+            s === statusFilter || 
+            (statusFilter === "PENDING" && (s === "BROADCASTED" || s === "RETURNED_TO_ADMIN" || s === "RETURNED")) ||
+            (statusFilter === "CONFIRMED" && (s === "ACCEPTED" || s === "IN_PROGRESS" || s === "CONFIRMED"));
 
         const bDate = new Date(b.createdAt).getTime();
         const matchesDateFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();

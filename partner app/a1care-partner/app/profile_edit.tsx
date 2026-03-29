@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
     View, Text, StyleSheet, ScrollView, TextInput,
     TouchableOpacity, ActivityIndicator, KeyboardAvoidingView,
-    Platform, Image, Dimensions
+    Platform, Image, Dimensions, Modal
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -92,7 +92,6 @@ export default function ProfileEditScreen() {
                 setPreviewImage(asset.uri);
                 setIsUploading(true);
 
-                // Use standard fetch instead of Axios for FormData to avoid "Network Error"
                 const formData = new FormData();
                 const uri = asset.uri;
                 const fileName = uri.split('/').pop() || 'profile.jpg';
@@ -108,21 +107,16 @@ export default function ProfileEditScreen() {
                 const token = await AsyncStorage.getItem("partner_token");
                 const baseUrl = api.defaults.baseURL;
 
-                console.log("DEBUG: Starting fetch upload to:", `${baseUrl}/doctor/auth/upload-document`);
-
                 const response = await fetch(`${baseUrl}/doctor/auth/upload-document`, {
                     method: 'POST',
                     body: formData,
                     headers: {
                         'Accept': 'application/json',
                         'Authorization': `Bearer ${token}`,
-                        // Content-Type is NOT set manually; fetch handles boundary automatically
                     },
                 });
 
                 const resData = await response.json();
-                console.log("DEBUG: Fetch upload response:", resData);
-
                 if ((resData.success || resData.statusCode === 200) && resData.data?.url) {
                     setFormData(prev => ({ ...prev, profileImage: resData.data.url }));
                     setPreviewImage(resData.data.url);
@@ -138,7 +132,6 @@ export default function ProfileEditScreen() {
                 text1: "Upload Failed",
                 text2: "Network issue during photo upload. Please try again."
             });
-            // Revert preview on failure
             setPreviewImage(formData.profileImage);
         } finally {
             setIsUploading(false);
@@ -178,7 +171,6 @@ export default function ProfileEditScreen() {
             return;
         }
 
-        console.log("DEBUG: Final Save Payload:", JSON.stringify(formData, null, 2));
         const finalData = { ...formData, serviceRadius: Number(formData.serviceRadius) || 0 };
         updateProfileMutation.mutate(finalData);
     };
@@ -210,11 +202,7 @@ export default function ProfileEditScreen() {
                         <Ionicons name="arrow-back" size={24} color="#1E293B" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Professional Profile</Text>
-                    <TouchableOpacity onPress={handleSave} disabled={updateProfileMutation.isPending || isUploading}>
-                        <Text style={[styles.saveText, (updateProfileMutation.isPending || isUploading) && { opacity: 0.5 }]}>
-                            Save
-                        </Text>
-                    </TouchableOpacity>
+                    <View style={{ width: 40 }} />
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -244,11 +232,11 @@ export default function ProfileEditScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name</Text>
+                        <Text style={styles.label}>Full Name <Text style={styles.asterisk}>*</Text></Text>
                         <TextInput
                             style={styles.input}
                             value={formData.name}
-                            onChangeText={(text) => setFormData({ ...formData, name: text })}
+                            onChangeText={(text) => setFormData({ ...formData, name: text.replace(/[^a-zA-Z\s]/g, "") })}
                             placeholder="Enter your name"
                         />
                     </View>
@@ -265,7 +253,7 @@ export default function ProfileEditScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Gender</Text>
+                        <Text style={styles.label}>Gender <Text style={styles.asterisk}>*</Text></Text>
                         <View style={styles.genderRow}>
                             {["Male", "Female", "Other"].map((g) => (
                                 <TouchableOpacity key={g}
@@ -279,7 +267,7 @@ export default function ProfileEditScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Specializations</Text>
+                        <Text style={styles.label}>Specializations <Text style={styles.asterisk}>*</Text></Text>
                         <View style={styles.specChipsContainer}>
                             {formData.specialization.map(s => (
                                 <TouchableOpacity key={s} style={styles.specChip} onPress={() => toggleSpecialization(s)}>
@@ -289,59 +277,31 @@ export default function ProfileEditScreen() {
                             ))}
                             <TouchableOpacity onPress={() => setShowSpecDropdown(true)} style={styles.addSpecBtn}>
                                 <Ionicons name="add-circle" size={22} color="#2D935C" />
-                                <Text style={styles.addSpecText}>Add New</Text>
+                                <Text style={styles.addSpecText}>Add Specialization</Text>
                             </TouchableOpacity>
                         </View>
-
-                        {showSpecDropdown && (
-                            <View style={styles.dropdownOverlay}>
-                                <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowSpecDropdown(false)} />
-                                <View style={styles.dropdownMenu}>
-                                    <View style={styles.dropdownHeader}>
-                                        <Text style={styles.dropdownTitle}>Select Specializations</Text>
-                                        <TouchableOpacity onPress={() => setShowSpecDropdown(false)}>
-                                            <Ionicons name="close" size={24} color="#64748B" />
-                                        </TouchableOpacity>
-                                    </View>
-                                    <TextInput 
-                                        style={styles.searchBar} 
-                                        placeholder="Search specialization..." 
-                                        value={specSearch} 
-                                        onChangeText={setSpecSearch} 
-                                        placeholderTextColor="#94A3B8"
-                                    />
-                                    <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
-                                        {filteredSpecs.map(s => {
-                                            const selected = formData.specialization.includes(s);
-                                            return (
-                                                <TouchableOpacity 
-                                                    key={s} 
-                                                    style={[styles.dropdownItem, selected && styles.dropdownItemSelected]} 
-                                                    onPress={() => toggleSpecialization(s)}
-                                                >
-                                                    <Text style={[styles.dropdownText, selected && styles.dropdownTextSelected]}>{s}</Text>
-                                                    {selected ? (
-                                                        <Ionicons name="checkbox" size={20} color="#2D935C" />
-                                                    ) : (
-                                                        <Ionicons name="square-outline" size={20} color="#CBD5E1" />
-                                                    )}
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </ScrollView>
-                                </View>
-                            </View>
-                        )}
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Working Hours</Text>
-                        <TextInput style={styles.input} value={formData.workingHours} onChangeText={(text) => setFormData({ ...formData, workingHours: text })} placeholder="e.g. 9:00 AM - 6:00 PM" />
+                        <Text style={styles.label}>Working Hours <Text style={styles.asterisk}>*</Text></Text>
+                        <TextInput 
+                            style={styles.input} 
+                            value={formData.workingHours} 
+                            onChangeText={(text) => setFormData({ ...formData, workingHours: text.replace(/\D/g, "") })} 
+                            placeholder="e.g. 0918" 
+                            keyboardType="number-pad"
+                        />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Service Radius (in km)</Text>
-                        <TextInput style={styles.input} value={formData.serviceRadius} onChangeText={(text) => setFormData({ ...formData, serviceRadius: text })} placeholder="e.g. 15" keyboardType="numeric" />
+                        <Text style={styles.label}>Service Radius (in km) <Text style={styles.asterisk}>*</Text></Text>
+                        <TextInput 
+                            style={styles.input} 
+                            value={formData.serviceRadius} 
+                            onChangeText={(text) => setFormData({ ...formData, serviceRadius: text.replace(/\D/g, "") })} 
+                            placeholder="e.g. 15" 
+                            keyboardType="number-pad" 
+                        />
                     </View>
 
                     <TouchableOpacity
@@ -352,6 +312,46 @@ export default function ProfileEditScreen() {
                         {updateProfileMutation.isPending ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
                     </TouchableOpacity>
                 </ScrollView>
+
+                <Modal visible={showSpecDropdown} transparent animationType="slide">
+                    <View style={styles.dropdownOverlay}>
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowSpecDropdown(false)} />
+                        <View style={styles.dropdownMenu}>
+                            <View style={styles.dropdownHeader}>
+                                <Text style={styles.dropdownTitle}>Select Specializations</Text>
+                                <TouchableOpacity onPress={() => setShowSpecDropdown(false)}>
+                                    <Ionicons name="close" size={24} color="#64748B" />
+                                </TouchableOpacity>
+                            </View>
+                            <TextInput 
+                                style={styles.searchBar} 
+                                placeholder="Search specialization..." 
+                                value={specSearch} 
+                                onChangeText={setSpecSearch} 
+                                placeholderTextColor="#94A3B8"
+                            />
+                            <ScrollView style={{ maxHeight: 400 }} keyboardShouldPersistTaps="handled">
+                                {filteredSpecs.map(s => {
+                                    const selected = formData.specialization.includes(s);
+                                    return (
+                                        <TouchableOpacity 
+                                            key={s} 
+                                            style={[styles.dropdownItem, selected && styles.dropdownItemSelected]} 
+                                            onPress={() => toggleSpecialization(s)}
+                                        >
+                                            <Text style={[styles.dropdownText, selected && styles.dropdownTextSelected]}>{s}</Text>
+                                            {selected ? (
+                                                <Ionicons name="checkbox" size={20} color="#2D935C" />
+                                            ) : (
+                                                <Ionicons name="square-outline" size={20} color="#CBD5E1" />
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
+                        </View>
+                    </View>
+                </Modal>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -363,7 +363,6 @@ const styles = StyleSheet.create({
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15, backgroundColor: "#FFF", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
     backBtn: { padding: 5 },
     headerTitle: { fontSize: 18, fontWeight: "800", color: "#1E293B" },
-    saveText: { fontSize: 16, fontWeight: "800", color: "#2D935C" },
     scrollContent: { padding: 20, paddingBottom: 60 },
     avatarSection: { alignItems: "center", marginBottom: 30 },
     avatarContainer: { position: "relative" },
@@ -373,6 +372,7 @@ const styles = StyleSheet.create({
     avatarLabel: { marginTop: 12, fontSize: 13, fontWeight: "700", color: "#64748B" },
     inputGroup: { marginBottom: 24 },
     label: { fontSize: 14, fontWeight: "800", color: "#1E293B", marginBottom: 10, marginLeft: 2 },
+    asterisk: { color: "#EF4444" },
     input: { backgroundColor: "#FFF", borderRadius: 16, paddingHorizontal: 18, paddingVertical: 14, fontSize: 16, color: "#1E293B", borderWidth: 1.5, borderColor: "#F1F5F9", elevation: 1, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 5 },
     textArea: { height: 110, textAlignVertical: "top" },
     specChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     specChipText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
     addSpecBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#2D935C', borderStyle: 'dashed', gap: 6 },
     addSpecText: { color: '#2D935C', fontSize: 13, fontWeight: '700' },
-    dropdownOverlay: { ...StyleSheet.absoluteFillObject, height: height, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', position: 'absolute' },
+    dropdownOverlay: { height: height, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
     dropdownMenu: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '80%' },
     dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     dropdownTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },

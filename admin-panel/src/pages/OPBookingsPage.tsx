@@ -36,18 +36,15 @@ export function OPBookingsPage() {
 
     // Fetching Bookings
     const { data: serviceBookings, isLoading: loadingServices } = useQuery({
-        queryKey: ["admin_service_bookings", statusFilter, searchQuery, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
+        queryKey: ["admin_service_bookings", searchQuery, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
         queryFn: async () => {
             const params = new URLSearchParams();
-            if (statusFilter !== "All") params.append("status", statusFilter);
             if (searchQuery) params.append("search", searchQuery);
             if (dateFrom) params.append("dateFrom", dateFrom);
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
             if (sourceFilter !== "All") params.append("source", sourceFilter);
             if (departmentFilter !== "All") params.append("department", departmentFilter);
-
-            // Note: Doctor, Slot, Patient Type mappings in backend schema might need explicit models later
 
             const res = await api.get(`/admin/bookings/services?${params.toString()}`);
             return res.data.data as ServiceBooking[];
@@ -84,17 +81,24 @@ export function OPBookingsPage() {
         </div>
     );
 
-    // By providing query parameters the API already sends us back our exact filtered result list.
-    // We just filter out virtual/home visits out so this table stays strict to HOSPITAL_VISIT (OP Tokens).
-    const filteredTokens = serviceBookings?.filter(b => b.fulfillmentMode === "HOSPITAL_VISIT") || [];
+    // Initial filter for OP Tokens only
+    const allTokens = serviceBookings?.filter(b => b.fulfillmentMode === "HOSPITAL_VISIT") || [];
 
-    // Since in a full robust integration you would want the backend to also explicitly calculate these headers:
-    // We will do a local pass on what's fetched for the tab counts.
-    const allCount = filteredTokens.length;
-    const pendingCount = filteredTokens.filter(b => b.status?.toUpperCase() === "PENDING" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN").length;
-    const confirmedCount = filteredTokens.filter(b => b.status?.toUpperCase() === "CONFIRMED").length;
-    const completedCount = filteredTokens.filter(b => b.status?.toUpperCase() === "COMPLETED").length;
-    const cancelledCount = filteredTokens.filter(b => b.status?.toUpperCase() === "CANCELLED").length;
+    // Calculate counts from the UNFILTERED set (allTokens)
+    const allCount = allTokens.length;
+    const pendingCount = allTokens.filter(b => b.status?.toUpperCase() === "PENDING" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN").length;
+    const confirmedCount = allTokens.filter(b => b.status?.toUpperCase() === "CONFIRMED").length;
+    const completedCount = allTokens.filter(b => b.status?.toUpperCase() === "COMPLETED").length;
+    const cancelledCount = allTokens.filter(b => b.status?.toUpperCase() === "CANCELLED").length;
+
+    // Filter displayed tokens based on selected statusFilter
+    const filteredTokens = statusFilter === "All" 
+        ? allTokens 
+        : allTokens.filter(b => {
+            const s = b.status?.toUpperCase();
+            if (statusFilter === "PENDING") return s === "PENDING" || s === "RETURNED_TO_ADMIN";
+            return s === statusFilter;
+        });
 
     const statsCards = [
         { label: "All", count: allCount, value: "All" },

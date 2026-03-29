@@ -11,6 +11,7 @@ interface PartnerUser {
     role: PartnerRole;
     profileImage?: string;
     isVerified?: boolean;
+    isRegistered?: boolean;
     isOnline?: boolean;
 }
 

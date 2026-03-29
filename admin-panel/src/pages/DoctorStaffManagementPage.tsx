@@ -49,6 +49,7 @@ interface Doctor {
 export function DoctorStaffManagementPage() {
     const queryClient = useQueryClient();
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const { data: staff, isLoading } = useQuery({
         queryKey: ["admin_staff"],
@@ -56,6 +57,15 @@ export function DoctorStaffManagementPage() {
             const res = await api.get("/admin/doctors");
             return res.data.data as Doctor[];
         }
+    });
+
+    const filteredStaff = staff?.filter(doc => {
+        const query = searchQuery.toLowerCase();
+        return (
+            (doc.name || "").toLowerCase().includes(query) ||
+            (doc.mobileNumber || "").toLowerCase().includes(query) ||
+            (doc.specialization || []).some(s => s.toLowerCase().includes(query))
+        );
     });
 
     const updateStatusMutation = useMutation({
@@ -68,7 +78,12 @@ export function DoctorStaffManagementPage() {
         }
     });
 
-    if (isLoading) return <div className="p-4 py-20 text-center text-[var(--text-muted)] font-bold">Accessing Provider Network...</div>;
+    if (isLoading) return (
+        <div className="p-4 py-20 text-center flex-col items-center gap-4">
+            <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={48} />
+            <p className="text-[var(--text-muted)] font-black uppercase tracking-[0.2em] text-sm">Accessing Provider Network...</p>
+        </div>
+    );
 
     const VerificationModal = ({ doctor }: { doctor: Doctor }) => (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
@@ -89,7 +104,7 @@ export function DoctorStaffManagementPage() {
                                         Pending Verification
                                     </span>
                                     <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                                    <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Partner ID: {doctor._id.slice(-6)}</p>
+                                    <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Partner ID: {doctor._id.slice(-6).toUpperCase()}</p>
                                 </div>
                             </div>
                         </div>
@@ -150,7 +165,7 @@ export function DoctorStaffManagementPage() {
                         disabled={updateStatusMutation.isPending}
                         className="button primary h-14 flex-1 shadow-2xl shadow-blue-200 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl"
                     >
-                        {updateStatusMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
+                        {updateStatusMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
                         <span>Approve Provider</span>
                     </button>
                     <button
@@ -158,7 +173,7 @@ export function DoctorStaffManagementPage() {
                         disabled={updateStatusMutation.isPending}
                         className="button secondary h-14 flex-1 border-none bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-100 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
                     >
-                        <XCircle size={20} />
+                        <XCircle size={18} />
                         <span>Reject</span>
                     </button>
                 </div>
@@ -170,72 +185,106 @@ export function DoctorStaffManagementPage() {
         <div className="flex-col gap-4">
             {selectedDoctor && <VerificationModal doctor={selectedDoctor} />}
 
-            <header className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6" style={{ marginBottom: '24px' }}>
                 <div>
-                    <h1 className="brand-name" style={{ fontSize: '1.75rem' }}>Service Providers</h1>
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Inventory</span>
+                        <ChevronRight size={10} className="text-slate-300" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Providers</span>
+                    </div>
+                    <h1 className="brand-name" style={{ fontSize: '2rem', letterSpacing: '-0.03em' }}>Service Providers</h1>
                     <p className="text-xs muted font-bold uppercase tracking-wider mt-1">Review credentials and verify partner network</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="button secondary shadow-sm px-4">
-                        <Clock size={18} />
-                        <span>Pending ({staff?.filter(s => s.status === 'Pending').length || 0})</span>
+                    <button className="button secondary shadow-sm px-4 h-11 rounded-xl">
+                        <Clock size={16} />
+                        <span>Recent Logs</span>
                     </button>
-                    <button className="button primary shadow-lg">
-                        <Plus size={18} />
-                        <span>Add New</span>
+                    <button className="button primary shadow-lg h-11 rounded-xl px-6">
+                        <Plus size={16} />
+                        <span>Add Provider</span>
                     </button>
                 </div>
             </header>
 
-            <div className="card p-0 overflow-hidden shadow-xl shadow-slate-200/50" style={{ border: 'none' }}>
-                <div className="p-4 border-b flex justify-between items-center bg-[var(--card-bg)]">
-                    <div className="relative" style={{ width: '320px' }}>
-                        <Search className="absolute text-[var(--text-muted)]" size={16} style={{ left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <div className="card p-0 overflow-hidden shadow-xl shadow-slate-200/50" style={{ border: 'none', borderRadius: '24px' }}>
+                <div className="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
+                    <div className="relative group w-full md:w-[380px]">
+                        <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={16} style={{ left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
                         <input
-                            placeholder="Search providers..."
-                            className="w-full bg-[var(--bg-main)] border-none px-4 text-sm"
-                            style={{ paddingLeft: '40px', height: '44px', borderRadius: '12px' }}
+                            placeholder="Search by name, phone or specialty..."
+                            className="w-full bg-[var(--bg-main)] border-none px-4 text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
+                            style={{ paddingLeft: '44px', height: '48px', borderRadius: '14px' }}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <button className="button secondary h-10 px-4 text-xs font-bold gap-2 hover:bg-[var(--bg-main)]">
-                        <Filter size={16} />
-                        <span>Advanced Filters</span>
-                    </button>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button className="button secondary h-11 flex-1 md:flex-none px-5 text-xs font-black uppercase tracking-widest gap-2 hover:bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl">
+                            <Filter size={16} />
+                            <span>Filters</span>
+                        </button>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/10 rounded-xl">
+                            <Users size={14} className="text-blue-600" />
+                            <span className="text-xs font-black text-blue-600">{filteredStaff?.length || 0} Network Slots</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="management-table">
                         <thead>
-                            <tr>
-                                <th style={{ paddingLeft: '24px' }}>PROVIDER</th>
+                            <tr className="bg-slate-50/50 dark:bg-white/5">
+                                <th style={{ paddingLeft: '32px', height: '60px' }}>PROVIDER IDENTITY</th>
                                 <th>SPECIALIZATION</th>
-                                <th>EXP</th>
-                                <th>FEE</th>
+                                <th>TENURE</th>
+                                <th>BASE FEE</th>
                                 <th>STATUS</th>
-                                <th className="text-center">CREDENTIALS</th>
+                                <th className="text-center">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {staff?.map((doc) => (
-                                <tr key={doc._id} className="hover:bg-[var(--bg-main)] transition-colors">
-                                    <td style={{ paddingLeft: '24px' }}>
-                                        <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.9rem' }}>{doc.name || "Unnamed Partner"}</div>
-                                        <div className="text-xs muted flex items-center gap-1 mt-1 font-semibold underline decoration-blue-200"><Phone size={10} /> {doc.mobileNumber}</div>
-                                    </td>
-                                    <td>
-                                        <div className="flex flex-wrap gap-1">
-                                            {doc.specialization?.slice(0, 2).map(s => <span key={s} className="badge secondary text-[10px] font-black uppercase tracking-tighter">{s}</span>)}
-                                            {doc.specialization?.length > 2 && <span className="badge secondary text-[10px] font-bold">+{doc.specialization.length - 2}</span>}
+                            {filteredStaff?.map((doc) => (
+                                <tr key={doc._id} className="hover:bg-slate-50/80 dark:hover:bg-blue-500/5 transition-all border-b border-[var(--border-color)]">
+                                    <td style={{ paddingLeft: '32px', paddingBlock: '20px' }}>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black">
+                                                {doc.name?.charAt(0) || "P"}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{doc.name || "Unnamed Partner"}</div>
+                                                <div className="text-[10px] muted flex items-center gap-1.5 mt-1 font-black uppercase tracking-widest"><Phone size={10} className="text-blue-500/60" /> {doc.mobileNumber}</div>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td className="font-bold text-[var(--text-muted)] text-xs">
-                                        {doc.startExperience
-                                            ? `${new Date().getFullYear() - new Date(doc.startExperience).getFullYear()}Y`
-                                            : "5Y+"}
-                                    </td>
-                                    <td className="font-black text-[var(--text-main)] text-sm">₹{doc.consultationFee}</td>
                                     <td>
-                                        <span className={`badge ${doc.status === 'Active' ? 'success' : doc.status === 'Pending' ? 'warning' : 'danger'} text-[10px] font-black uppercase tracking-widest`}>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {doc.specialization?.slice(0, 2).map(s => <span key={s} className="px-2 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
+                                            {doc.specialization?.length > 2 && <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black">+{doc.specialization.length - 2}</span>}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-[var(--text-main)] text-xs tracking-tighter">
+                                                {doc.startExperience
+                                                    ? `${new Date().getFullYear() - new Date(doc.startExperience).getFullYear()}y Clinical`
+                                                    : "5y+ Master"}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase mt-0.5">Exp Registry</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-1.5 font-black text-[var(--text-main)] text-sm">
+                                            <span className="text-xs text-[var(--text-muted)] mt-0.5">₹</span>
+                                            {doc.consultationFee}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
+                                            ${doc.status === 'Active' ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' : 
+                                              doc.status === 'Pending' ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10' : 
+                                              'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${doc.status === 'Active' ? 'bg-emerald-500' : doc.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
                                             {doc.status}
                                         </span>
                                     </td>
@@ -243,14 +292,27 @@ export function DoctorStaffManagementPage() {
                                         <div className="justify-center flex">
                                             <button
                                                 onClick={() => setSelectedDoctor(doc)}
-                                                className={`button ${doc.status === 'Pending' ? 'primary' : 'secondary'} h-9 px-4 text-[10px] font-black uppercase tracking-wider`}
+                                                className={`h-9 px-5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-sm
+                                                    ${doc.status === 'Pending' ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105' : 'bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] shadow-none'}
+                                                `}
                                             >
-                                                {doc.status === 'Pending' ? 'Review Docs' : 'View Profile'}
+                                                {doc.status === 'Pending' ? 'Review Application' : 'Open Profile'}
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
+                            {(!filteredStaff || filteredStaff.length === 0) && (
+                                <tr>
+                                    <td colSpan={6} className="py-24 text-center">
+                                        <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-color)]">
+                                            <Search size={28} className="text-slate-300" />
+                                        </div>
+                                        <p className="font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest text-sm">Registry Trace Miss</p>
+                                        <p className="text-xs text-slate-400 font-bold mt-1">No providers matching "{searchQuery}" in current sector.</p>
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
