@@ -85,7 +85,7 @@ export default function OtpScreen() {
             });
             let msg = 'Please check the code and try again.';
             if (err.message === 'Network Error') {
-                msg = 'Cannot reach A1Care server. Please check your internet connection.';
+                msg = 'Unable to reach A1Care server. Please check your internet connection.';
             } else if (err.response?.data?.message) {
                 msg = err.response.data.message;
             }

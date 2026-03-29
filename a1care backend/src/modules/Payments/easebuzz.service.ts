@@ -94,26 +94,37 @@ export class EasebuzzService {
   }
 
   verifyResponseHash(response: any): boolean {
-    const { 
-        status, hash, amount, txnid, key, email, firstname, productinfo,
-        udf1 = "", udf2 = "", udf3 = "", udf4 = "", udf5 = "",
-        udf6 = "", udf7 = "", udf8 = "", udf9 = "", udf10 = "" 
-    } = response;
-    
-    if (!hash) return false;
-    const formattedAmount = Number(amount).toFixed(2);
-    
-    // Return Hash Order: salt|status|udf10|udf9|udf8|udf7|udf6|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key
-    // There are 5 empty slots between status and udf5: udf10, udf9, udf8, udf7, udf6
-    const hashString = `${this.config.salt.trim()}|${status}|${udf10}|${udf9}|${udf8}|${udf7}|${udf6}|${udf5}|${udf4}|${udf3}|${udf2}|${udf1}|${email}|${firstname}|${productinfo}|${formattedAmount}|${txnid}|${key}`;
-    const generatedHash = crypto.createHash("sha512").update(hashString).digest("hex");
-    
-    console.log(`\n🔐 [Easebuzz Response Hash Debug]`);
-    console.log(`Raw: ${hashString}`);
-    console.log(`Status: ${status} | Received: ${hash} | Generated: ${generatedHash}`);
+  const {
+    status,
+    hash,
+    amount,
+    txnid,
+    key,
+    email,
+    firstname,
+    productinfo
+  } = response;
 
-    return generatedHash === hash;
-  }
+  if (!hash) return false;
+
+  const formattedAmount = Number(amount).toFixed(2);
+
+  // FORCE ALL UDFs EMPTY (VERY IMPORTANT)
+  const hashString =
+    `${this.config.salt.trim()}|${status}|||||||||||` +
+    `${email}|${firstname}|${productinfo}|${formattedAmount}|${txnid}|${key}`;
+
+  const generatedHash = crypto
+    .createHash("sha512")
+    .update(hashString)
+    .digest("hex");
+
+  console.log("✅ Correct Hash String:", hashString);
+  console.log("🔴 Easebuzz Hash:", hash);
+  console.log("🟢 Generated Hash:", generatedHash);
+
+  return generatedHash === hash;
+}
 
   async verifyTransactionStatus(txnid: string): Promise<any> {
     const apiEndpoint = this.config.env === "test" 

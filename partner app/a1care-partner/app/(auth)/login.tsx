@@ -155,7 +155,7 @@ const LoginScreen = () => {
                 console.log('Server Error Data:', err.response.data);
             }
             if (err.message === 'Network Error') {
-                msg = "Network Error: Cannot reach A1Care server. Check your internet/URL.";
+                msg = "Network Error: Unable to reach A1Care server. Please check your internet connection or verify your URL.";
             }
 
             Toast.show({
