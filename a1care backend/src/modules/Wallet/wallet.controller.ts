@@ -148,15 +148,24 @@ export const handlePaymentResponse = asyncHandler(async (req, res) => {
 });
 
 export const addMoney = asyncHandler(async (req, res) => {
-    const userId = req.user?.id;
+    // If admin is adding money to a specific patient, they provide patientId in body
+    const targetUserId = req.body.userId || req.body.patientId || req.user?.id;
     const { amount, description } = req.body;
 
+    if (!targetUserId) throw new ApiError(400, "Target User ID is required");
     if (!amount || amount <= 0) throw new ApiError(400, "Invalid amount");
 
-    const { wallet } = await creditWalletAtomic(userId as string, amount, description || "Manual Admin Adjustment");
+    // Use a unique default description if none provided to avoid idempotency blocks on second manual add
+    const finalDescription = description || `Manual Adjustment (${new Date().toLocaleString()})`;
+
+    const { wallet, applied } = await creditWalletAtomic(targetUserId as string, amount, finalDescription);
+
+    if (!applied) {
+        throw new ApiError(400, "This adjustment has already been applied (Duplicate Description)");
+    }
 
     // ── New: Send Confirmation Email ───────────────────────────────────────
-    const patient = await Patient.findById(userId);
+    const patient = await Patient.findById(targetUserId);
     if (patient?.email) {
         await enqueueEmail({
             kind: "wallet_topup",

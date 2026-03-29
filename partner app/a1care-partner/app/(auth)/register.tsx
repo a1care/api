@@ -187,8 +187,30 @@ export default function RegisterScreen() {
 
     const handleRegister = async () => {
         const { bankDetails } = form;
-        if (!bankDetails.accountNumber || !bankDetails.ifscCode) {
-            Alert.alert("Banking Required", "Please provide valid settlement details in Step 3.");
+        
+        if (!bankDetails.accountHolderName || !bankDetails.accountNumber || !bankDetails.ifscCode || !bankDetails.bankName) {
+            Alert.alert("Banking Required", "Please provide all settlement details in Step 3.");
+            setStep(3);
+            return;
+        }
+
+        if (bankDetails.accountHolderName.length < 3) {
+            Alert.alert("Invalid Name", "Account holder name must be at least 3 characters.");
+            setStep(3);
+            return;
+        }
+        if (bankDetails.bankName.length < 3) {
+            Alert.alert("Invalid Bank", "Bank name must be at least 3 characters.");
+            setStep(3);
+            return;
+        }
+        if (bankDetails.accountNumber.length < 9) {
+            Alert.alert("Invalid Account", "Account number must be at least 9 characters.");
+            setStep(3);
+            return;
+        }
+        if (bankDetails.ifscCode.length !== 11) {
+            Alert.alert("Invalid IFSC", "IFSC code must be exactly 11 characters.");
             setStep(3);
             return;
         }
@@ -243,14 +265,19 @@ export default function RegisterScreen() {
                         
                         <View style={styles.formGroup}>
                             {config.fields.map(f => {
+                                const isAbout = f === "about";
                                 const isName = f === "name";
                                 const isNumber = ["workingHours", "serviceRadius", "homeConsultationFee", "onlineConsultationFee", "experience"].includes(f);
                                 
                                 return (
                                     <View key={f} style={styles.fieldItem}>
-                                        <Text style={styles.fieldLabel}>
-                                            {fieldLabels[f]} <Text style={styles.asterisk}>*</Text>
-                                        </Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Text style={styles.fieldLabel}>
+                                                {fieldLabels[f]} <Text style={styles.asterisk}>*</Text>
+                                            </Text>
+                                            {isName && <Text style={{ fontSize: 11, color: (form[f] ?? '').length > 45 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{(form[f] ?? '').length}/50</Text>}
+                                            {isAbout && <Text style={{ fontSize: 11, color: (form[f] ?? '').length > 230 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{(form[f] ?? '').length}/255</Text>}
+                                        </View>
                                         <TextInput
                                             style={[styles.fieldInput, f === "about" && styles.fieldArea]}
                                             placeholder={fieldLabels[f]}
@@ -260,10 +287,14 @@ export default function RegisterScreen() {
                                                 let filtered = v;
                                                 if (isName) filtered = v.replace(/[^a-zA-Z\s]/g, "");
                                                 if (isNumber) filtered = v.replace(/\D/g, "");
+                                                if (isName && filtered.length > 50) filtered = filtered.slice(0, 50);
+                                                if (isAbout && filtered.length > 255) filtered = filtered.slice(0, 255);
                                                 update(f, filtered);
                                             }}
                                             multiline={f === "about"}
                                             keyboardType={isNumber ? "number-pad" : "default"}
+                                            maxLength={isName ? 50 : isAbout ? 255 : undefined}
+                                            autoCapitalize={isName ? "words" : "none"}
                                         />
                                     </View>
                                 );

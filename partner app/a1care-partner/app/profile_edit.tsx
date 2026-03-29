@@ -232,22 +232,36 @@ export default function ProfileEditScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name <Text style={styles.asterisk}>*</Text></Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.label}>Full Name <Text style={styles.asterisk}>*</Text></Text>
+                            <Text style={{ fontSize: 11, color: formData.name?.length > 45 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{formData.name?.length || 0}/50</Text>
+                        </View>
                         <TextInput
                             style={styles.input}
                             value={formData.name}
-                            onChangeText={(text) => setFormData({ ...formData, name: text.replace(/[^a-zA-Z\s]/g, "") })}
+                            onChangeText={(text) => {
+                                const clean = text.replace(/[^a-zA-Z\s]/g, "");
+                                if (clean.length <= 50) setFormData({ ...formData, name: clean });
+                            }}
                             placeholder="Enter your name"
+                            maxLength={50}
+                            autoCapitalize="words"
                         />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Professional Bio (About)</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.label}>Professional Bio (About)</Text>
+                            <Text style={{ fontSize: 11, color: (formData.about?.length || 0) > 230 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{formData.about?.length || 0}/255</Text>
+                        </View>
                         <TextInput
                             style={[styles.input, styles.textArea]}
                             value={formData.about}
-                            onChangeText={(text) => setFormData({ ...formData, about: text })}
+                            onChangeText={(text) => {
+                                if (text.length <= 255) setFormData({ ...formData, about: text });
+                            }}
                             placeholder="Tell patients about your expertise..."
+                            maxLength={255}
                             multiline
                         />
                     </View>

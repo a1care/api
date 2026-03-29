@@ -25,10 +25,10 @@ const doctorValidation = z.object({
     businessName: z.string().optional(),
     gstNumber: z.string().optional(),
     bankDetails: z.object({
-        accountHolderName: z.string().optional(),
-        accountNumber: z.string().optional(),
-        ifscCode: z.string().optional(),
-        bankName: z.string().optional(),
+        accountHolderName: z.string().min(3, "Account holder name must be at least 3 characters").optional(),
+        accountNumber: z.string().min(9, "Account number must be at least 9 characters").max(20, "Account number too long").optional(),
+        ifscCode: z.string().length(11, "IFSC code must be exactly 11 characters").optional(),
+        bankName: z.string().min(3, "Bank name must be at least 3 characters").optional(),
         upiId: z.string().optional()
     }).optional()
 })

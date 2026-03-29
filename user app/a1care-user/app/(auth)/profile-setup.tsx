@@ -94,13 +94,17 @@ export default function OnboardingScreen() {
     }, [showThinking]);
 
     const handleComplete = async () => {
+        const nameRegex = /^[a-zA-Z\s]+$/;
         if (!name.trim()) {
-            Toast.show({
-                type: 'error',
-                text1: 'Required',
-                text2: 'Please enter your full name.',
-                position: 'top'
-            });
+            Toast.show({ type: 'error', text1: 'Required', text2: 'Please enter your full name.', position: 'top' });
+            return;
+        }
+        if (!nameRegex.test(name.trim())) {
+            Toast.show({ type: 'error', text1: 'Invalid Name', text2: 'Name can only contain letters and spaces.', position: 'top' });
+            return;
+        }
+        if (name.trim().length > 50) {
+            Toast.show({ type: 'error', text1: 'Name Too Long', text2: 'Full name cannot exceed 50 characters.', position: 'top' });
             return;
         }
 
@@ -213,13 +217,20 @@ export default function OnboardingScreen() {
                 <View style={{ gap: 16, marginTop: 8 }}>
                     {/* Name */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name <Text style={{ color: '#E74C3C' }}>*</Text></Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.label}>Full Name <Text style={{ color: '#E74C3C' }}>*</Text></Text>
+                            <Text style={{ fontSize: 11, color: name.length > 45 ? '#E74C3C' : '#9CB3C4', fontWeight: '600' }}>{name.length}/50</Text>
+                        </View>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your full name"
                             placeholderTextColor="#9CB3C4"
                             value={name}
-                            onChangeText={setName}
+                            onChangeText={(text) => {
+                                const clean = text.replace(/[^a-zA-Z\s]/g, '');
+                                if (clean.length <= 50) setName(clean);
+                            }}
+                            maxLength={50}
                             autoCapitalize="words"
                         />
                     </View>

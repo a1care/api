@@ -18,21 +18,41 @@ export const getMessagesByTicket = asyncHandler(async (req, res) => {
 export const sendMessage = asyncHandler(async (req, res) => {
     const { ticketId, bookingId, message, attachments } = req.body;
     const userId = req.user?.id;
-    const userRole = req.user?.role || (req.body.senderType === 'Staff' ? 'Staff' : 'User');
+    const role = req.user?.role;
+    
+    // Determine the sender type for DB storage
+    // 'Staff' means the message came from the Partner app
+    // 'User' means it came from the Patient app OR Admin Panel (from the other perspective)
+    let senderType: 'User' | 'Staff' = (role === 'admin' || role === 'super_admin' || !role) ? 'User' : 'Staff';
 
     let recipientId: string | undefined;
     let title = "New Message";
 
     if (ticketId) {
-        const ticket = await Ticket.findById(ticketId);
+        const ticket = await Ticket.findById(ticketId).lean();
         if (!ticket) throw new ApiError(404, "Ticket not found");
-        recipientId = (userRole === 'Staff') ? ticket.userId?.toString() : ticket.staffId?.toString();
-        title = `Ticket: ${ticket.subject}`;
+        
+        // If an admin is sending, the recipient is whoever is attached to the ticket
+        if (role === 'admin' || role === 'super_admin') {
+            recipientId = ticket.staffId?.toString() || ticket.userId?.toString();
+            senderType = 'User'; // Admin is responding as the "system/other"
+        } else {
+            // If a partner is sending, they want to message the admin (not handled here, admin checks inbox)
+            // or the patient (if bookingId). For tickets, partners just post to the thread.
+            recipientId = undefined; // Tickets are usually Partner <-> Admin
+        }
+        title = `Support: ${ticket.subject}`;
     } else if (bookingId) {
-        const appointment = await Appointment.findById(bookingId);
+        const appointment = await Appointment.findById(bookingId).lean();
         if (!appointment) throw new ApiError(404, "Appointment not found");
-        recipientId = (userRole === 'Staff') ? appointment.patientId?.toString() : appointment.doctorId?.toString();
-        title = `Appointment: ${appointment.startingTime}`;
+        
+        if (role === 'admin' || role === 'super_admin') {
+            // Admin intervened in a booking chat
+            recipientId = appointment.patientId?.toString(); // default to patient for now
+        } else {
+            recipientId = (senderType === 'Staff') ? appointment.patientId?.toString() : appointment.doctorId?.toString();
+        }
+        title = `Chat: ${appointment.startingTime}`;
     }
 
     const newMessage = await Message.create({
@@ -41,16 +61,30 @@ export const sendMessage = asyncHandler(async (req, res) => {
         message,
         attachments,
         senderId: userId,
-        senderType: userRole === 'Staff' ? 'Staff' : 'User',
+        senderType,
         readBy: [userId]
     });
 
     // Send Push Notification
     try {
         if (recipientId) {
-            const recipient = (userRole === 'Staff') 
-                ? await Patient.findById(recipientId) 
-                : await Doctor.findById(recipientId);
+            // Determine recipient model
+            let recipient: any = null;
+            if (ticketId) {
+                const ticket = await Ticket.findById(ticketId).lean();
+                if (ticket?.staffId && String(ticket.staffId) === recipientId) {
+                    recipient = await Doctor.findById(recipientId);
+                } else {
+                    recipient = await Patient.findById(recipientId);
+                }
+            } else if (bookingId) {
+                const appointment = await Appointment.findById(bookingId).lean();
+                if (appointment?.doctorId && String(appointment.doctorId) === recipientId) {
+                    recipient = await Doctor.findById(recipientId);
+                } else {
+                    recipient = await Patient.findById(recipientId);
+                }
+            }
             
             if (recipient?.fcmToken) {
                 const messaging = getMessaging();

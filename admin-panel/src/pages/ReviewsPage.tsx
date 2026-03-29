@@ -62,30 +62,40 @@ export default function ReviewsPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">User Feedback</h1>
-          <p className="text-slate-500 font-medium">Moderate and monitor platform reviews.</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            User Feedback
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+          </h1>
+          <p className="text-slate-500 font-medium">Moderate and monitor platform reviews across all services.</p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative group w-full md:w-80">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                <Search className="text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
+            </div>
             <input 
               type="text" 
-              placeholder="Search reviews..."
-              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 transition-all w-64"
+              placeholder="Filter by comment or user..."
+              className="w-full pl-12 pr-4 h-12 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-100/50 focus:border-blue-300 transition-all shadow-sm font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <select 
-            className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Hidden">Hidden</option>
-          </select>
+          <div className="relative">
+            <select 
+              className="appearance-none bg-white border border-slate-200 rounded-2xl pl-5 pr-12 h-12 text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:ring-4 focus:ring-blue-100/50 transition-all shadow-sm cursor-pointer"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="All">All Feedback</option>
+              <option value="Active">Published Only</option>
+              <option value="Hidden">Hidden Only</option>
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <Filter size={14} />
+            </div>
+          </div>
         </div>
       </header>
 

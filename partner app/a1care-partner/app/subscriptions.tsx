@@ -18,6 +18,14 @@ export default function SubscriptionsScreen() {
     const { user } = useAuthStore() as any;
     const role = user?.role || "doctor";
 
+    const formatValidity = (days: number) => {
+        if (!days) return "N/A";
+        if (days >= 36500) return "Lifetime";
+        if (days % 365 === 0) return `${days / 365} Year${days / 365 > 1 ? 's' : ''}`;
+        if (days % 30 === 0) return `${days / 30} Month${days / 30 > 1 ? 's' : ''}`;
+        return `${days} Days`;
+    };
+
     // Fetch Available Plans for this category
     const { data: plansData, isLoading: loadingPlans } = useQuery({
         queryKey: ["subscriptionPlans", role],
@@ -158,7 +166,7 @@ export default function SubscriptionsScreen() {
                                         </View>
                                         <View style={[styles.validityBox, plan.tier === "Premium" && { backgroundColor: "rgba(255,255,255,0.1)" }]}>
                                             <Text style={[styles.validityText, plan.tier === "Premium" && { color: "#FFF" }]}>
-                                                {plan.validityDays} Days Validity
+                                                {formatValidity(plan.validityDays)} Validity
                                             </Text>
                                         </View>
                                     </View>
@@ -244,7 +252,7 @@ export default function SubscriptionsScreen() {
                                         </View>
                                         <View style={[styles.validityBox, item.planId?.tier === "Premium" && { backgroundColor: "rgba(255,255,255,0.1)" }]}>
                                             <Text style={[styles.validityText, item.planId?.tier === "Premium" && { color: "#FFF" }]}>
-                                                Used for {item.planId?.validityDays} Days
+                                                {formatValidity(item.planId?.validityDays)}
                                             </Text>
                                         </View>
                                     </View>

@@ -39,16 +39,19 @@ interface Payout {
 
 export function PayoutsPage() {
     const queryClient = useQueryClient();
-    const [filter, setFilter] = useState("PENDING"); // Default to pending to focus core work
+    const [filter, setFilter] = useState("All"); 
     const [selectedPayout, setSelectedPayout] = useState<Payout | null>(null);
     const [adminNote, setAdminNote] = useState("");
+    const [isReconciling, setIsReconciling] = useState(false);
 
-    const { data: payouts, isLoading } = useQuery({
+    const { data: payouts, isLoading, isFetching } = useQuery({
         queryKey: ["admin_payouts", filter],
         queryFn: async () => {
             const res = await api.get(`/admin/payouts?status=${filter}`);
             return res.data.data as Payout[];
-        }
+        },
+        staleTime: 30000,
+        refetchOnWindowFocus: false
     });
 
     const updateStatusMutation = useMutation({
@@ -60,10 +63,12 @@ export function PayoutsPage() {
             toast.success("Settlement record finalized");
             setSelectedPayout(null);
             setAdminNote("");
-        }
+        },
+        onMutate: () => setIsReconciling(true),
+        onSettled: () => setIsReconciling(false)
     });
 
-    if (isLoading) return (
+    if (isLoading && !payouts) return (
         <div className="flex flex-col items-center justify-center p-20 gap-4">
             <Loader2 className="animate-spin text-blue-500" size={48} />
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Reconciling Ledger...</p>
@@ -76,7 +81,10 @@ export function PayoutsPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Financial Settlements</h1>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+                        Financial Settlements
+                        {isFetching && <Loader2 size={24} className="text-blue-500 animate-spin" />}
+                    </h1>
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
                         <Banknote size={16} className="text-blue-500" /> Authorized payouts for service expertise
                     </p>

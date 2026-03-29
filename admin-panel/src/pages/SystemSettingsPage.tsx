@@ -27,6 +27,10 @@ const DEFAULT_CONFIG: SystemConfig = {
         { platform: "ios", appLabel: "customer", appId: "1:742774308338:ios:9851205c6bcfd638d57f6b", apiKey: "AIzaSyDy87QysRYviXSwTTKCjmpM84DxAOc69zM", packageName: "com.a1care.customer.ios" },
         { platform: "ios", appLabel: "partner", appId: "1:742774308338:ios:d30961469549b8c8d57f6b", apiKey: "AIzaSyDy87QysRYviXSwTTKCjmpM84DxAOc69zM", packageName: "com.a1care.partner.ios" },
     ],
+    firebase: {
+        clientEmail: "",
+        privateKey: ""
+    },
     googleMapsApiKey: "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o",
     easebuzz: {
         merchantKey: "NQOKGR29D",
@@ -131,7 +135,7 @@ function FieldRow({ label, value, onChange, masked = false, id, note, type = "te
 export function SystemSettingsPage() {
     const [form, setForm] = useState<SystemConfig>(DEFAULT_CONFIG);
     const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
-    const [activeTab, setActiveTab] = useState<"website" | "project" | "clients" | "maps" | "easebuzz" | "email" | "twilio" | "aws" | "redis" | "zego">("website");
+    const [activeTab, setActiveTab] = useState<"website" | "project" | "clients" | "firebase" | "maps" | "easebuzz" | "email" | "twilio" | "aws" | "redis" | "zego">("website");
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ["system-config"],
@@ -192,6 +196,7 @@ export function SystemSettingsPage() {
         { key: "website" as const, label: "Firebase Web", icon: Globe },
         { key: "project" as const, label: "Firebase Project", icon: Cpu },
         { key: "clients" as const, label: "Mobile Apps", icon: Smartphone },
+        { key: "firebase" as const, label: "FCM Console", icon: Shield },
         { key: "maps" as const, label: "Google Maps", icon: Globe },
         { key: "easebuzz" as const, label: "Easebuzz", icon: CreditCard },
         { key: "email" as const, label: "Email (SMTP)", icon: Mail },
@@ -344,6 +349,43 @@ export function SystemSettingsPage() {
                                             </div>
                                         );
                                     })}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* ── Firebase Service Account ── */}
+                        {activeTab === "firebase" && (
+                            <section className="bg-[var(--card-bg)] rounded-[40px] p-10 lg:p-14 border border-[var(--border-color)] shadow-sm space-y-10">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center">
+                                        <Shield size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-[var(--text-main)]">FCM Service Account (Server-side)</h3>
+                                        <p className="text-sm font-medium text-[var(--text-muted)]">
+                                            Found in Firebase Console → Project Settings → Service Accounts.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid lg:grid-cols-1 gap-6">
+                                    <FieldRow 
+                                        id="fb-email" 
+                                        label="Client Email" 
+                                        value={form.firebase?.clientEmail || ""} 
+                                        onChange={(v) => setForm(p => ({ ...p, firebase: { ...p.firebase!, clientEmail: v } }))} 
+                                        note="e.g. firebase-adminsdk-xxxxx@project.iam.gserviceaccount.com"
+                                    />
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.18em] ml-1">Private Key</label>
+                                        <textarea 
+                                            className="w-full h-48 bg-[var(--bg-main)] border-none rounded-2xl p-5 text-[var(--text-main)] font-mono text-xs font-bold focus:ring-2 focus:ring-orange-200 transition-all"
+                                            value={form.firebase?.privateKey || ""}
+                                            onChange={(e) => setForm(p => ({ ...p, firebase: { ...p.firebase!, privateKey: e.target.value } }))}
+                                            placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+                                        />
+                                        <p className="text-[10px] text-[var(--text-muted)] ml-1">Paste the ENTIRE private_key string from your service account JSON file.</p>
+                                    </div>
                                 </div>
                             </section>
                         )}

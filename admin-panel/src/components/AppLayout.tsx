@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/store/auth";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Users,
@@ -29,7 +30,8 @@ import {
   Flame,
   Banknote,
   Receipt,
-  Package
+  Package,
+  X
 } from "lucide-react";
 
 const mainNav = [
@@ -45,12 +47,67 @@ const mainNav = [
 
 export function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const [servicesOpen, setServicesOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(true);
   const [appsOpen, setAppsOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("admin_theme") || "light");
+  
+  // Search / Command Palette State
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const searchItems = useMemo(() => [
+    { label: "Dashboard", to: "/", icon: "📊", cat: "General" },
+    { label: "Main Bookings", to: "/bookings", icon: "📅", cat: "Operations" },
+    { label: "OP Bookings", to: "/op-bookings", icon: "📋", cat: "Operations" },
+    { label: "Partner Revenue", to: "/partner-revenue-model", icon: "💰", cat: "Finance" },
+    { label: "Payout Management", to: "/payouts", icon: "🏦", cat: "Finance" },
+    { label: "KYC Verification", to: "/kyc-verification", icon: "🛡️", cat: "Audit" },
+    { label: "User Reviews", to: "/reviews", icon: "💬", cat: "User Engagement" },
+    { label: "Support Tickets", to: "/support-tickets", icon: "🎫", cat: "Support" },
+    { label: "Broadcast Notifications", to: "/notifications", icon: "🔔", cat: "Support" },
+    { label: "Patient Registry", to: "/manage-patients", icon: "👤", cat: "Users" },
+    { label: "Doctor Portfolio", to: "/manage-doctors", icon: "🩺", cat: "Users" },
+    { label: "Nurse Management", to: "/manage-nurses", icon: "🏥", cat: "Users" },
+    { label: "Ambulance Fleet", to: "/manage-ambulances", icon: "🚑", cat: "Users" },
+    { label: "Asset Rentals", to: "/manage-rentals", icon: "📦", cat: "Users" },
+    { label: "Service Catalog", to: "/service-management", icon: "📂", cat: "Services" },
+    { label: "Service Categories", to: "/service-categories", icon: "📁", cat: "Services" },
+    { label: "Health Packages", to: "/health-packages", icon: "📦", cat: "Services" },
+    { label: "System Config", to: "/manage-system-config", icon: "⚙️", cat: "Admin" },
+    { label: "Payment Audit Logs", to: "/payment-logs", icon: "🧾", cat: "Admin" },
+    { label: "Audit Logs", to: "/audit-logs", icon: "📜", cat: "Admin" },
+  ], []);
+
+  const filteredSearchItems = useMemo(() => {
+    if (!searchQuery) return searchItems;
+    const q = searchQuery.toLowerCase();
+    return searchItems.filter(item => 
+      item.label.toLowerCase().includes(q) || 
+      item.cat.toLowerCase().includes(q)
+    );
+  }, [searchQuery, searchItems]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(prev => !prev);
+      }
+      if (e.key === 'Escape') setShowSearch(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleNavigate = (to: string) => {
+    navigate(to);
+    setShowSearch(false);
+    setSearchQuery("");
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -239,9 +296,12 @@ export function AppLayout() {
         <header className="content-header h-20 backdrop-blur-xl border-b px-8 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3 bg-slate-100/80 dark:bg-white/5 border border-transparent focus-within:border-blue-500/30 focus-within:bg-white px-5 py-3 rounded-2xl text-slate-500 focus-within:ring-4 focus-within:ring-blue-500/5 transition-all min-w-[380px] group">
-                <Search size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors shrink-0" />
-                <input type="text" placeholder="Search telemetry, users or logs..." className="bg-transparent border-none text-sm font-semibold text-slate-700 dark:text-slate-200 focus:ring-0 placeholder:text-slate-400 h-auto p-0 w-full" style={{ paddingLeft: '8px' }} />
+              <div 
+                onClick={() => setShowSearch(true)}
+                className="flex items-center gap-3 bg-slate-100/80 dark:bg-white/5 border border-transparent hover:border-blue-500/30 px-5 py-3 rounded-2xl text-slate-500 transition-all min-w-[380px] group cursor-pointer"
+              >
+                <Search size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
+                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 w-full">Search modules (Ctrl+K)...</span>
                 <div className="flex items-center gap-1 opacity-40 shrink-0 bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-black">
                   <Command size={10} /> K
                 </div>
@@ -284,6 +344,75 @@ export function AppLayout() {
         <div className="page-body p-8 lg:p-12">
           <Outlet />
         </div>
+
+        {/* Global Search / Command Palette Modal */}
+        {showSearch && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+             <div onClick={() => setShowSearch(false)} className="absolute inset-0"></div>
+             <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 flex flex-col max-h-[70vh]">
+                <div className="p-6 border-b dark:border-slate-800 flex items-center gap-4">
+                   <Search size={22} className="text-blue-600" />
+                   <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="Search anything..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                   />
+                   <button onClick={() => setShowSearch(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-400 transition-all">
+                      <X size={20} />
+                   </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                   {filteredSearchItems.length > 0 ? (
+                      <div className="space-y-6">
+                         {Array.from(new Set(filteredSearchItems.map(i => i.cat))).map(cat => (
+                            <div key={cat} className="space-y-2">
+                               <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{cat}</p>
+                               <div className="grid gap-1">
+                                  {filteredSearchItems.filter(i => i.cat === cat).map((item) => (
+                                     <button 
+                                      key={item.to}
+                                      onClick={() => handleNavigate(item.to)}
+                                      className="flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-blue-50 dark:hover:bg-blue-600/10 group transition-all text-left"
+                                     >
+                                        <div className="flex items-center gap-4">
+                                           <span className="text-xl">{item.icon}</span>
+                                           <span className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.label}</span>
+                                        </div>
+                                        <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                                     </button>
+                                  ))}
+                               </div>
+                            </div>
+                         ))}
+                      </div>
+                   ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">
+                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                            <Search size={32} />
+                         </div>
+                         <p className="font-bold uppercase tracking-widest text-xs">No modules match your query</p>
+                      </div>
+                   )}
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-white/5 border-t dark:border-slate-800 flex items-center justify-between">
+                   <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                         <span className="px-1.5 py-0.5 bg-white dark:bg-white/10 rounded shadow-sm border dark:border-slate-700 text-slate-600 dark:text-slate-300">ESC</span> Close
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                         <span className="px-1.5 py-0.5 bg-white dark:bg-white/10 rounded shadow-sm border dark:border-slate-700 text-slate-600 dark:text-slate-300">↵</span> Navigate
+                      </div>
+                   </div>
+                   <p className="text-[10px] font-bold text-blue-500/60 uppercase tracking-widest">A1Care Intelligence Search</p>
+                </div>
+             </div>
+          </div>
+        )}
       </main>
     </div>
   );

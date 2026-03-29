@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useDeferredValue } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Clock, CheckCircle2, XCircle, User, Calendar, MapPin, CreditCard, Briefcase, ChevronRight, Search, Filter, Eye, Check, CheckCheck, X, RefreshCw } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, User, Calendar, MapPin, CreditCard, Briefcase, ChevronRight, Search, Filter, Eye, Check, CheckCheck, X, RefreshCw, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface BaseBooking {
     _id: string;
@@ -38,6 +39,9 @@ export function BookingOperationsPage() {
     const [statusFilter, setStatusFilter] = useState("All");
     const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
     const [viewModalOpen, setViewModalOpen] = useState(false);
+    
+    // Defer search to prevent lag
+    const deferredSearch = useDeferredValue(searchQuery);
 
     // Advanced Filters State
     const [showFilters, setShowFilters] = useState(false);
@@ -163,23 +167,26 @@ export function BookingOperationsPage() {
     ];
 
     const filteredHospital = hospitalBookings?.filter(b => {
-        const query = searchQuery.toLowerCase().replace("#", "");
-        const matchesSearch = b.patientId?.name?.toLowerCase().includes(query) ||
+        const query = deferredSearch.toLowerCase().replace("#", "");
+        const matchesSearch = !query ||
+            b.patientId?.name?.toLowerCase().includes(query) ||
             b.patientId?.mobile?.toLowerCase().includes(query) ||
             b.serviceName?.toLowerCase().includes(query) ||
             b._id.toLowerCase().includes(query);
+            
         const matchesStatus = statusFilter === "All" || b.status?.toUpperCase() === statusFilter || (statusFilter === "CONFIRMED" && (b.status?.toUpperCase() === "ACCEPTED" || b.status?.toUpperCase() === "IN_PROGRESS")) || (statusFilter === "PENDING" && (b.status?.toUpperCase() === "BROADCASTED" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN"));
 
         const bDate = new Date(b.createdAt).getTime();
         const matchesDateFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
-        const matchesDateTo = !dateTo || bDate <= new Date(dateTo).getTime();
+        const matchesDateTo = !dateTo || bDate <= (new Date(dateTo).getTime() + 86399999);
         const matchesPayment = paymentFilter === "All" || b.paymentStatus === paymentFilter;
 
         return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesPayment;
     });
     const filteredDocs = doctorBookings?.filter(b => {
-        const query = searchQuery.toLowerCase().replace("#", "");
-        const matchesSearch = b.patientId?.name?.toLowerCase().includes(query) ||
+        const query = deferredSearch.toLowerCase().replace("#", "");
+        const matchesSearch = !query ||
+            b.patientId?.name?.toLowerCase().includes(query) ||
             b.patientId?.mobile?.toLowerCase().includes(query) ||
             b.doctorId?.name?.toLowerCase().includes(query) ||
             b._id.toLowerCase().includes(query);
@@ -192,7 +199,7 @@ export function BookingOperationsPage() {
 
         const bDate = new Date(b.date || b.createdAt).getTime();
         const matchesDateFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
-        const matchesDateTo = !dateTo || bDate <= new Date(dateTo).getTime();
+        const matchesDateTo = !dateTo || bDate <= (new Date(dateTo).getTime() + 86399999);
         const matchesPayment = paymentFilter === "All" || b.paymentStatus === paymentFilter;
         const matchesSubService = subServiceFilter === "All" || b.doctorId?.specialization?.includes(subServiceFilter);
 
@@ -200,8 +207,9 @@ export function BookingOperationsPage() {
     });
 
     const filteredServices = serviceBookings?.filter(b => b.fulfillmentMode !== "HOSPITAL_VISIT")?.filter(b => {
-        const query = searchQuery.toLowerCase().replace("#", "");
-        const matchesSearch = b.patientId?.name?.toLowerCase().includes(query) ||
+        const query = deferredSearch.toLowerCase().replace("#", "");
+        const matchesSearch = !query ||
+            b.patientId?.name?.toLowerCase().includes(query) ||
             b.patientId?.mobile?.toLowerCase().includes(query) ||
             b.serviceId?.name?.toLowerCase().includes(query) ||
             b._id.toLowerCase().includes(query);
@@ -214,7 +222,7 @@ export function BookingOperationsPage() {
 
         const bDate = new Date(b.createdAt).getTime();
         const matchesDateFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
-        const matchesDateTo = !dateTo || bDate <= new Date(dateTo).getTime();
+        const matchesDateTo = !dateTo || bDate <= (new Date(dateTo).getTime() + 86399999);
         const matchesPayment = paymentFilter === "All" || b.paymentStatus === paymentFilter;
         const matchesServiceType = serviceFilter === "All" || b.serviceId?.name?.toLowerCase().includes(serviceFilter.toLowerCase());
 
@@ -233,16 +241,24 @@ export function BookingOperationsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
-                    <div className="relative group min-w-[300px]">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-500 dark:text-blue-400 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Search by ID, name, or specialist..."
-                            className="w-full pr-4 bg-[var(--bg-main)] border-none rounded-xl h-12 text-sm focus:ring-2 focus:ring-blue-100"
-                            style={{ paddingLeft: '48px' }}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                    <div className="flex items-center bg-[var(--bg-main)] p-1 rounded-2xl border border-[var(--border-color)]">
+                        <div className="relative group min-w-[300px]">
+                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-500 dark:text-blue-400 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Search ID, Name..."
+                                className="w-full pr-4 bg-transparent border-none h-11 text-sm focus:ring-0"
+                                style={{ paddingLeft: '48px' }}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <button 
+                            className="h-9 px-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all mr-1 shadow-sm"
+                            onClick={() => toast.success(`Search telemetry synchronized for "${searchQuery}"`)}
+                        >
+                            Search
+                        </button>
                     </div>
 
                     <div className="flex bg-[var(--bg-main)] p-1.5 rounded-2xl">

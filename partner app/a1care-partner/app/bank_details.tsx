@@ -58,7 +58,9 @@ export default function BankDetailsScreen() {
     });
 
     const handleSave = () => {
-        if (!form.accountHolderName || !form.accountNumber || !form.ifscCode || !form.bankName) {
+        const { accountHolderName, accountNumber, ifscCode, bankName } = form;
+        
+        if (!accountHolderName || !accountNumber || !ifscCode || !bankName) {
             Toast.show({
                 type: "error",
                 text1: "Missing Fields",
@@ -66,6 +68,24 @@ export default function BankDetailsScreen() {
             });
             return;
         }
+
+        if (accountHolderName.length < 3) {
+            Toast.show({ type: "error", text1: "Invalid Name", text2: "Account holder name must be at least 3 characters." });
+            return;
+        }
+        if (bankName.length < 3) {
+            Toast.show({ type: "error", text1: "Invalid Bank", text2: "Bank name must be at least 3 characters." });
+            return;
+        }
+        if (accountNumber.length < 9) {
+            Toast.show({ type: "error", text1: "Invalid Account", text2: "Account number must be at least 9 characters." });
+            return;
+        }
+        if (ifscCode.length !== 11) {
+            Toast.show({ type: "error", text1: "Invalid IFSC", text2: "IFSC code must be exactly 11 characters." });
+            return;
+        }
+        
         updateMutation.mutate(form);
     };
 

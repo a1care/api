@@ -1,8 +1,9 @@
 
 
 import { useState, useEffect } from "react";
-import { Search, Info, MessageSquare, AlertCircle, CheckCircle2, Ticket, ChevronRight } from "lucide-react";
+import { Search, Info, MessageSquare, AlertCircle, CheckCircle2, Ticket, ChevronRight, Send, X, Loader2 } from "lucide-react";
 import { api } from "../lib/api";
+import { toast } from "sonner";
 
 
 interface Ticket {
@@ -21,10 +22,24 @@ interface Ticket {
     createdAt: string;
 }
 
+interface Message {
+    _id: string;
+    senderType: "User" | "Staff";
+    message: string;
+    createdAt: string;
+}
+
 export function TicketsPage() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshQueue, setRefreshQueue] = useState(0);
+
+    // Chat State
+    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [replyMsg, setReplyMsg] = useState("");
+    const [sending, setSending] = useState(false);
+    const [fetchingMessages, setFetchingMessages] = useState(false);
 
     useEffect(() => {
         api.get("/tickets/all")
@@ -61,14 +76,51 @@ export function TicketsPage() {
         }
     };
 
+    const fetchMessages = async (ticketId: string) => {
+        setFetchingMessages(true);
+        try {
+            const res = await api.get(`/tickets/messages/${ticketId}`);
+            setMessages(res.data.data || []);
+        } catch (err) {
+            toast.error("Failed to fetch messages");
+        } finally {
+            setFetchingMessages(false);
+        }
+    };
+
+    const handleSendMessage = async () => {
+        if (!replyMsg.trim() || !selectedTicket) return;
+        setSending(true);
+        try {
+            await api.post("/tickets/messages/send", {
+                ticketId: selectedTicket._id,
+                message: replyMsg
+            });
+            setReplyMsg("");
+            fetchMessages(selectedTicket._id);
+        } catch (err) {
+            toast.error("Failed to send message");
+        } finally {
+            setSending(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedTicket) {
+            fetchMessages(selectedTicket._id);
+            const interval = setInterval(() => fetchMessages(selectedTicket._id), 5000);
+            return () => clearInterval(interval);
+        }
+    }, [selectedTicket]);
+
     if (loading) {
         return <div className="page-container p-6">Loading tickets...</div>;
     }
 
     const stats = {
         total: tickets.length,
-        active: tickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length,
-        resolved: tickets.filter(t => t.status === 'Resolved').length
+        active: tickets.filter(t => t.status?.toLowerCase() !== 'resolved' && t.status?.toLowerCase() !== 'closed').length,
+        resolved: tickets.filter(t => t.status?.toLowerCase() === 'resolved').length
     };
 
     return (
@@ -119,88 +171,181 @@ export function TicketsPage() {
 
             {/* Refined Management Interface */}
             <div className="card p-0 overflow-hidden shadow-2xl border-none" style={{ borderRadius: '32px' }}>
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="table-header-custom border-b border-[var(--border-color)] dark:border-slate-800">
-                            <th className="p-7">PARTNER NODE</th>
-                            <th className="p-7">CONTEXT & SUBJECT</th>
-                            <th className="p-7">TIER / TIMELINE</th>
-                            <th className="p-7">OPERATIONAL STATE</th>
-                            <th className="p-7 text-right">ACTION CHANNEL</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                        {tickets.map(t => (
-                            <tr key={t._id} className="hover:bg-[var(--bg-main)] dark:hover:bg-slate-900/40 transition-all duration-300">
-                                <td className="p-7">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-[var(--bg-main)] dark:bg-white/5 flex items-center justify-center font-black text-[#1A7FD4] shadow-sm transform group-hover:scale-110 transition-transform">
-                                            {t.staffId?.name?.charAt(0) || "U"}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-[var(--bg-main)] border-b border-[var(--border-color)] text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)]">
+                                <th className="px-6 py-4">Sno</th>
+                                <th className="px-6 py-4">Partner Node</th>
+                                <th className="px-6 py-4">Context & Subject</th>
+                                <th className="px-6 py-4">Operational State</th>
+                                <th className="px-6 py-4 text-center">Action Channel</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                            {tickets.map((t, index) => (
+                                <tr key={t._id} className="hover:bg-[var(--bg-main)] dark:hover:bg-slate-900/40 transition-all duration-300">
+                                    <td className="px-6 py-5 font-black text-slate-400 text-xs">
+                                        {(index + 1).toString().padStart(2, '0')}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-[var(--bg-main)] dark:bg-white/5 flex items-center justify-center font-black text-[#1A7FD4] shadow-sm">
+                                                {t.staffId?.name?.charAt(0) || "U"}
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-[var(--text-main)] dark:text-white text-sm">{t.staffId?.name || "Unknown Partner"}</p>
+                                                <p className="text-[10px] font-bold text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-widest mt-0.5">{t.staffId?.mobileNumber || "REF: INTERNAL"}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-black text-[var(--text-main)] dark:text-white text-sm">{t.staffId?.name || "Unknown Partner"}</p>
-                                            <p className="text-[10px] font-bold text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-widest mt-0.5">{t.staffId?.mobileNumber || "REF: INTERNAL"}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="p-7">
-                                    <h4 className="font-black text-[var(--text-main)] dark:text-slate-200 text-sm">{t.subject}</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs truncate font-medium tracking-tight opacity-80" title={t.description}>
-                                        {t.description}
-                                    </p>
-                                </td>
-                                <td className="p-7">
-                                    <div className={`text-[9px] inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-black uppercase tracking-[0.15em] mb-2 ${t.priority === 'High' ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/10' :
-                                        t.priority === 'Medium' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 dark:bg--500/10' :
-                                            'bg-[var(--bg-main)] text-[var(--text-muted)] dark:bg-slate-500/10'}`}>
-                                        <div className={`w-1 h-1 rounded-full animate-pulse ${t.priority === 'High' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : t.priority === 'Medium' ? 'bg-amber-50 dark:bg-amber-500/100' : 'bg-slate-500'}`}></div>
-                                        {t.priority}
-                                    </div>
-                                    <p className="text-[10px] text-[var(--text-muted)] font-bold block pl-1 lowercase tracking-widest opacity-60">
-                                        {new Date(t.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </td>
-                                <td className="p-7">
-                                    <span className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${t.status === 'Resolved' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 dark:bg--500/10' :
-                                        t.status === 'In Progress' ? 'bg-blue-50 dark:bg-blue-500/10 text-[#1A7FD4] dark:bg--500/10' :
-                                            'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg--500/10'
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <h4 className="font-black text-[var(--text-main)] dark:text-slate-200 text-sm">{t.subject}</h4>
+                                        <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs truncate font-medium tracking-tight opacity-80" title={t.description}>
+                                            {t.description}
+                                        </p>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <span className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${
+                                            t.status?.toLowerCase() === 'resolved' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                            t.status?.toLowerCase() === 'in progress' ? 'bg-blue-50 dark:bg-blue-500/10 text-[#1A7FD4]' :
+                                            t.status?.toLowerCase() === 'closed' ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
+                                            'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                         }`}>
-                                        <div className={`w-2 h-2 rounded-full ${t.status === 'Resolved' ? 'bg-emerald-50 dark:bg-emerald-500/100 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                            t.status === 'In Progress' ? 'bg-blue-50 dark:bg-blue-500/100 animate-pulse' :
-                                                'bg-amber-50 dark:bg-amber-500/100 animate-bounce'
+                                            <div className={`w-2 h-2 rounded-full ${
+                                                t.status?.toLowerCase() === 'resolved' ? 'bg-emerald-500' :
+                                                t.status?.toLowerCase() === 'in progress' ? 'bg-blue-500 animate-pulse' :
+                                                t.status?.toLowerCase() === 'closed' ? 'bg-slate-500' :
+                                                'bg-amber-500 animate-bounce'
                                             }`}></div>
-                                        {t.status}
-                                    </span>
-                                </td>
-                                <td className="p-7 text-right">
-                                    <select
-                                        value={t.status}
-                                        onChange={(e) => updateStatus(t._id, e.target.value)}
-                                        className="bg-[var(--bg-main)] dark:bg-white/5 border-none rounded-2xl px-5 py-3 text-[11px] font-black uppercase tracking-widest cursor-pointer shadow-sm hover:translate-y-[-2px] hover:shadow-lg transition-all outline-none text-[var(--text-muted)] dark:text-slate-200"
-                                    >
-                                        <option value="Pending">Queue</option>
-                                        <option value="In Progress">Process</option>
-                                        <option value="Resolved">Resolve</option>
-                                        <option value="Closed">Archive</option>
-                                    </select>
-                                </td>
-                            </tr>
-                        ))}
-                        {tickets.length === 0 && (
-                            <tr>
-                                <td colSpan={5} className="p-16 text-center">
-                                    <div className="flex flex-col items-center gap-4 opacity-40">
-                                        <div className="w-20 h-20 rounded-full bg-[var(--bg-main)] dark:bg-white/5 flex items-center justify-center">
-                                            <MessageSquare size={40} className="text-[var(--text-muted)]" />
+                                            {t.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-5 text-center">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <button 
+                                                onClick={() => setSelectedTicket(t)}
+                                                className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+                                                title="Intervene in Chat"
+                                            >
+                                                <MessageSquare size={16} />
+                                            </button>
+                                            <select
+                                                value={t.status}
+                                                onChange={(e) => updateStatus(t._id, e.target.value)}
+                                                className="bg-[var(--bg-main)] dark:bg-white/5 border-none rounded-2xl px-5 py-3 text-[11px] font-black uppercase tracking-widest cursor-pointer shadow-sm hover:translate-y-[-2px] hover:shadow-lg transition-all outline-none text-[var(--text-muted)] dark:text-slate-200"
+                                            >
+                                                <option value="Pending">Queue</option>
+                                                <option value="In Progress">Process</option>
+                                                <option value="Resolved">Resolve</option>
+                                                <option value="Closed">Archive</option>
+                                            </select>
                                         </div>
-                                        <p className="text-[var(--text-muted)] font-black text-sm tracking-[0.2em] uppercase">Operational Silence. No Tickets Found.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                                    </td>
+                                </tr>
+                            ))}
+                            {tickets.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="p-16 text-center">
+                                        <div className="flex flex-col items-center gap-4 opacity-40">
+                                            <div className="w-20 h-20 rounded-full bg-[var(--bg-main)] dark:bg-white/5 flex items-center justify-center">
+                                                <MessageSquare size={40} className="text-[var(--text-muted)]" />
+                                            </div>
+                                            <p className="text-[var(--text-muted)] font-black text-sm tracking-[0.2em] uppercase">Operational Silence. No Tickets Found.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            {/* Chat Intervention Modal */}
+            {selectedTicket && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col h-[80vh]">
+                        {/* Modal Header */}
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                    <MessageSquare size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900 dark:text-white line-clamp-1">{selectedTicket.subject}</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Support Intervention • {selectedTicket.staffId?.name || "Patient"}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedTicket(null)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Chat Messages */}
+                        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/30 dark:bg-slate-950/30">
+                            {fetchingMessages && messages.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full gap-4">
+                                    <Loader2 className="animate-spin text-blue-500" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing Thread...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="bg-blue-500/5 border border-blue-500/10 rounded-3xl p-6 mb-8 text-center space-y-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Original Inquiry</p>
+                                        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 italic">" {selectedTicket?.description} "</p>
+                                    </div>
+                                    
+                                    {messages.map((m) => {
+                                        const isMe = m.senderType === 'User';
+                                        return (
+                                            <div key={m._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] p-5 rounded-3xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white rounded-tl-none shadow-sm'}`}>
+                                                    <p className="text-sm font-medium leading-relaxed">{m.message}</p>
+                                                    <p className={`text-[8px] mt-2 font-bold uppercase tracking-widest ${isMe ? 'text-blue-100/60' : 'text-slate-400'}`}>
+                                                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {messages.length === 0 && (
+                                        <div className="flex flex-col items-center justify-center h-full opacity-30 py-20">
+                                            <Info size={40} className="mb-4" />
+                                            <p className="font-black uppercase tracking-widest text-xs">No active conversation yet</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+                            <div className="relative">
+                                <textarea 
+                                    className="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-3xl p-6 pr-20 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all resize-none min-h-[80px]"
+                                    placeholder="Type your intervention response..."
+                                    value={replyMsg}
+                                    onChange={(e) => setReplyMsg(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                />
+                                <button 
+                                    disabled={sending || !replyMsg.trim()}
+                                    onClick={handleSendMessage}
+                                    className="absolute right-3 bottom-3 w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 hover:bg-blue-500 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
+                                </button>
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-400 mt-4 uppercase tracking-[0.1em] text-center">Press Enter to send response • Esc to close</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

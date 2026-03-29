@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { DashboardOverview, DoctorPerformance, RecentActivity } from "@/types";
 import {
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [performanceSearch, setPerformanceSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"appointments" | "services">("appointments");
   const [sortField, setSortField] = useState<string>("stats.total");
@@ -203,7 +205,10 @@ export function DashboardPage() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global transaction stream</p>
                 </div>
               </div>
-              <button className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-slate-200">
+              <button 
+                onClick={() => navigate("/audit-logs")}
+                className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-slate-200"
+              >
                 Audit Full Protocol
               </button>
             </div>
@@ -284,6 +289,7 @@ export function DashboardPage() {
                icon={XCircle} 
                description="Payment reconciliation required."
                color="red"
+               link="/payment-logs"
              />
              <AlertItem 
                title="Payout Requests" 
@@ -321,7 +327,10 @@ export function DashboardPage() {
                      </div>
                   </div>
                 </div>
-                <button className="w-full mt-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95">
+                <button 
+                  onClick={() => navigate("/audit-health-vault")}
+                  className="w-full mt-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95"
+                >
                   Launch deep diagnostics
                 </button>
               </div>
@@ -352,7 +361,11 @@ export function DashboardPage() {
                 onChange={(e) => setPerformanceSearch(e.target.value)}
               />
             </div>
-            <button className="w-12 h-12 bg-slate-100 hover:bg-slate-200 rounded-2xl flex items-center justify-center text-slate-600 transition-all shadow-sm active:scale-95">
+            <button 
+              onClick={() => setPerformanceSearch("")}
+              className="w-12 h-12 bg-slate-100 hover:bg-slate-200 rounded-2xl flex items-center justify-center text-slate-600 transition-all shadow-sm active:scale-95"
+              title="Reset Filters"
+            >
                <Filter size={20} />
             </button>
           </div>
@@ -413,7 +426,10 @@ export function DashboardPage() {
                   </td>
                   <td className="p-6 text-center font-black text-slate-900">₹{doc.stats.revenue.toLocaleString()}</td>
                   <td className="p-6 text-right">
-                    <button className="h-10 w-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm transition-all shadow-sm">
+                    <button 
+                      onClick={() => navigate(`/manage-doctors?search=${encodeURIComponent(doc.name || "")}`)}
+                      className="h-10 w-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm transition-all shadow-sm"
+                    >
                       <Eye size={18} />
                     </button>
                   </td>

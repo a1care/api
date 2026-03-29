@@ -41,6 +41,7 @@ const LEVEL_CONFIG = {
 export function PaymentLogsPage() {
   const [search, setSearch] = useState("");
   const [selectedTxn, setSelectedTxn] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data: orders = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ["payment-orders"],
@@ -60,12 +61,21 @@ export function PaymentLogsPage() {
     enabled: !!selectedTxn,
   });
 
-  const filtered = orders.filter(o =>
-    !search ||
-    o.txnId.toLowerCase().includes(search.toLowerCase()) ||
-    (typeof o.userId === "object" && (o.userId?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      o.userId?.mobileNumber?.includes(search)))
-  );
+  const filtered = orders.filter(o => {
+    const s = search.toLowerCase();
+    const idMatches = (o.txnId || "").toLowerCase().includes(s);
+    const userMatches = typeof o.userId === "object" && (
+        (o.userId?.name || "").toLowerCase().includes(s) ||
+        (o.userId?.mobileNumber || "").includes(s)
+    );
+    
+    const matchesSearch = !search || idMatches || userMatches;
+    
+    const statusMatch = statusFilter === "ALL" || 
+                       (o.status || "").toUpperCase() === statusFilter.toUpperCase();
+    
+    return matchesSearch && statusMatch;
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -96,6 +106,32 @@ export function PaymentLogsPage() {
                 style={{ width: "100%", paddingLeft: 40, paddingRight: 16, height: 40, borderRadius: 12, background: "var(--bg-main)", border: "none", fontSize: 13, boxSizing: "border-box" }}
               />
             </div>
+          </div>
+
+          {/* Status Filter Tabs */}
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+            {["ALL", "SUCCESS", "FAILED", "PENDING", "VERIFICATION_PENDING"].map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 12,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  background: statusFilter === status ? "var(--text-main)" : "var(--bg-main)",
+                  color: statusFilter === status ? "white" : "var(--text-muted)",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                {status === "VERIFICATION_PENDING" ? "Verifying" : status}
+              </button>
+            ))}
           </div>
 
           {isLoading ? (

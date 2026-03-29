@@ -28,6 +28,25 @@ export const initFCM = async (): Promise<void> => {
         return;
     }
 
+    // NEW: Check dynamic system store (app-config.json) first
+    try {
+        const { readConfigStore } = await import("../modules/Admin/admin.controller.js");
+        const store = await readConfigStore();
+        if (store.system?.projectId && store.system?.firebase?.clientEmail && store.system?.firebase?.privateKey) {
+            fcmApp = admin.initializeApp({
+                credential: admin.credential.cert({
+                    projectId: store.system.projectId,
+                    clientEmail: store.system.firebase.clientEmail,
+                    privateKey: store.system.firebase.privateKey.replace(/\\n/g, "\n"),
+                }),
+            });
+            console.log("[FCM] Initialized from dynamic system configuration.");
+            return;
+        }
+    } catch (err) {
+        // Fall through to other methods
+    }
+
     // Option A: JSON file on disk (preferred for production)
     try {
         await fs.access(SERVICE_ACCOUNT_PATH);
@@ -57,9 +76,7 @@ export const initFCM = async (): Promise<void> => {
 
     console.warn(
         "[FCM] WARNING: Firebase Admin not initialized. " +
-        "Place firebase-service-account.json in data/ or set FIREBASE_PROJECT_ID, " +
-        "FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY env vars. " +
-        "Push notifications will be silently skipped."
+        "Please provide credentials in System Settings (Admin Panel) or place firebase-service-account.json in /data."
     );
 };
 

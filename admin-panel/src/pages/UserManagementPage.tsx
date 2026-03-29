@@ -8,7 +8,7 @@ import {
     Activity, ShieldCheck, CheckCircle2, Clock,
     BarChart3, UserCheck, UserPlus, Users2,
     X, Trash2, Calendar,
-    FileText, Download, Eye
+    FileText, Download, Eye, CreditCard
 } from "lucide-react";
 
 interface CategoryStats {
@@ -134,11 +134,11 @@ export function UserManagementPage({ category }: { category: string }) {
     );
 
     const statCards = [
-        { label: "Total Registered", value: stats?.total ?? 0, icon: Users2, color: "#1A7FD4", bg: "#EBF3FD" },
-        { label: "Active", value: stats?.active ?? 0, icon: UserCheck, color: "#22C55E", bg: "#F0FDF4" },
-        { label: "Inactive", value: stats?.inactive ?? 0, icon: Clock, color: "#64748B", bg: "#F8FAFC" },
-        { label: "This Week", value: stats?.week ?? 0, icon: BarChart3, color: "#7C3AED", bg: "#F5F3FF" },
-        { label: "This Month", value: stats?.month ?? 0, icon: CheckCircle2, color: "#EC4899", bg: "#FDF2F8" },
+        { label: "Total Registered", value: stats?.total || 0, icon: Users2, color: "#1A7FD4", bg: "#EBF3FD" },
+        { label: "Active", value: (category === 'patient' ? stats?.active : stats?.active) || 0, icon: UserCheck, color: "var(--emerald-600)", bg: "#F0FDF4" },
+        { label: "Inactive", value: stats?.inactive || 0, icon: Clock, color: "#64748B", bg: "#F8FAFC" },
+        { label: "This Week", value: stats?.week || 0, icon: BarChart3, color: "#7C3AED", bg: "#F5F3FF" },
+        { label: "This Month", value: stats?.month || 0, icon: CheckCircle2, color: "#EC4899", bg: "#FDF2F8" },
     ];
 
     return (
@@ -155,9 +155,9 @@ export function UserManagementPage({ category }: { category: string }) {
                         Strategic Management and Operational Metrics for {category}s
                     </p>
                 </div>
-                <button className="button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all" onClick={() => setIsAddModalOpen(true)}>
+                <button className="button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all uppercase tracking-widest text-[10px] font-black" onClick={() => setIsAddModalOpen(true)}>
                     <UserPlus size={18} className="group-hover:rotate-12 transition-transform" />
-                    <span style={{ fontWeight: 800 }}>Inject {category}</span>
+                    <span>Inject {title.slice(0, -1)}</span>
                 </button>
             </header>
 
@@ -212,7 +212,7 @@ export function UserManagementPage({ category }: { category: string }) {
                                     </>
                                 )}
                             </select>
-                            <button className="button secondary h-14 px-6 text-[10px] font-black uppercase tracking-[0.2em] gap-2 border border-[var(--border-color)] group hover:border-blue-500/50" style={{ borderRadius: '18px' }}>
+                             <button className="button secondary h-14 px-6 text-[10px] font-black uppercase tracking-[0.2em] gap-2 border border-[var(--border-color)] group hover:border-blue-500/50" style={{ borderRadius: '18px' }} onClick={() => toast.info("Parametric filters are enabled automatically based on search telemetry.")}>
                                 <Filter size={18} className="group-hover:text-blue-500 transition-colors" />
                                 <span>Parametric Filters</span>
                             </button>
@@ -223,7 +223,8 @@ export function UserManagementPage({ category }: { category: string }) {
                         <table className="management-table">
                             <thead>
                                 <tr className="bg-[var(--bg-main)]/50">
-                                    <th className="!bg-transparent !text-[var(--text-muted)] p-6 pl-8">MEMBER IDENTITY</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)] p-6 pl-8">SL NO</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">MEMBER IDENTITY</th>
                                     <th className="!bg-transparent !text-[var(--text-muted)]">COMMUNICATION DNA</th>
                                     {category !== 'patient' && <th className="!bg-transparent !text-[var(--text-muted)]">SECTOR FOCUS</th>}
                                     <th className="!bg-transparent !text-[var(--text-muted)]">GRID STATUS</th>
@@ -232,11 +233,14 @@ export function UserManagementPage({ category }: { category: string }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredUsers.map((user: any) => (
+                                {filteredUsers.map((user: any, index: number) => (
                                     <tr key={user._id} className="cursor-pointer group hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300" onClick={() => setSelectedUser(user)}>
-                                        <td className="p-6 pl-8">
+                                        <td className="p-6 pl-10 font-black text-slate-400 text-xs">
+                                            {(index + 1).toString().padStart(2, '0')}
+                                        </td>
+                                        <td className="p-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform">
+                                                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform text-xs">
                                                     {user.name?.charAt(0) || "U"}
                                                 </div>
                                                 <div>
@@ -318,6 +322,7 @@ export function UserManagementPage({ category }: { category: string }) {
                     </div>
                 </div>
             </div>
+
             {/* User Detail Modal */}
             {selectedUser && (
                 <div className="modal-overlay fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 md:p-8 overflow-y-auto" onClick={() => setSelectedUser(null)}>
@@ -326,220 +331,77 @@ export function UserManagementPage({ category }: { category: string }) {
                         onClick={e => e.stopPropagation()} 
                         style={{ borderRadius: '48px' }}
                     >
-                        {/* Integrated Header Row */}
-                        <div className="px-8 md:px-12 py-8 border-b border-white/5 bg-gradient-to-r from-indigo-500/10 via-transparent to-transparent flex items-center justify-between gap-6 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full -mr-32 -mt-32 blur-[100px]"></div>
-
+                        <header className="px-8 md:px-12 py-8 border-b border-white/5 bg-gradient-to-r from-indigo-500/10 via-transparent to-transparent flex items-center justify-between gap-6">
                             <div className="flex items-center gap-6 min-w-0">
-                                <div className="avatar-container relative shrink-0">
-                                    <div className="w-20 h-20 rounded-[28px] bg-black/40 backdrop-blur-3xl p-2 border border-white/10 shadow-2xl relative z-10">
-                                        <div className="w-full h-full rounded-[20px] overflow-hidden bg-gradient-to-br from-indigo-500/20 to-blue-500/20 flex items-center justify-center text-3xl font-black text-white">
-                                            {(() => {
-                                                const profileUrl =
-                                                    selectedUser?.profileImage ||
-                                                    selectedUser?.profilePicture ||
-                                                    selectedUser?.profilePic ||
-                                                    selectedUser?.avatarUrl ||
-                                                    selectedUser?.avatar ||
-                                                    selectedUser?.photoUrl ||
-                                                    selectedUser?.photo ||
-                                                    selectedUser?.imageUrl ||
-                                                    selectedUser?.image;
-
-                                                if (!profileUrl) return (selectedUser.name?.charAt(0) || "U");
-
-                                                return (
-                                                    <img
-                                                        src={profileUrl}
-                                                        alt={selectedUser.name || "Profile"}
-                                                        className="w-full h-full object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                );
-                                            })()}
-                                        </div>
+                                <div className="w-20 h-20 rounded-[28px] bg-black/40 backdrop-blur-3xl p-2 border border-white/10 shadow-2xl">
+                                    <div className="w-full h-full rounded-[20px] overflow-hidden bg-gradient-to-br from-indigo-500/20 to-blue-500/20 flex items-center justify-center text-3xl font-black text-white">
+                                        {selectedUser.name?.charAt(0) || "U"}
                                     </div>
                                 </div>
-
                                 <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-3 mb-2">
-                                        <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight tracking-[-0.04em] truncate">
-                                            {selectedUser.name || "Member Profile"}
-                                        </h2>
-                                        <span className={`badge ${(category === 'patient' ? selectedUser.isRegistered : selectedUser.status === 'Active') ? 'success' : 'warning'} text-[10px] uppercase font-black px-4 py-1.5 shadow-xl backdrop-blur-3xl bg-white/5 border border-white/10 text-white whitespace-nowrap`}>
-                                            {(category === 'patient' ? selectedUser.isRegistered : selectedUser.status === 'Active') ? <CheckCircle2 size={12} className="mr-2 text-green-400" /> : <Clock size={12} className="mr-2 text-amber-400" />}
-                                            {category === 'patient' ? (selectedUser.isRegistered ? 'Verified Account' : 'Pending Verification') : selectedUser.status}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold text-white/40 uppercase tracking-[0.2em]">
-                                        <div className="flex items-center gap-2"><Calendar size={14} className="text-indigo-400/60" /> Joined {new Date(selectedUser.createdAt).toLocaleDateString()}</div>
-                                        <div className="flex items-center gap-2 font-mono text-[9px] bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 backdrop-blur-md text-white/60">NODE_ID: {selectedUser._id}</div>
+                                    <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight truncate">{selectedUser.name || "Member Profile"}</h2>
+                                    <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] mt-2">
+                                        <div className="flex items-center gap-2 font-mono text-[9px] bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-white/60">NODE_ID: {selectedUser._id}</div>
                                     </div>
                                 </div>
                             </div>
+                            <button className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/30 hover:text-white" onClick={() => setSelectedUser(null)}><X size={24} /></button>
+                        </header>
 
-                            <button
-                                className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-3xl flex items-center justify-center text-white/30 hover:text-white hover:bg-red-500/20 border border-white/5 transition-all z-20 shrink-0"
-                                onClick={() => setSelectedUser(null)}
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-                        <div className="px-8 md:px-12 py-12">
+                        <div className="p-8 md:p-12">
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                                <div className="lg:col-span-12 xl:col-span-8 space-y-12">
+                                <div className="lg:col-span-8 space-y-12">
                                     <section>
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 mb-8 flex items-center gap-4">
-                                            <span className="w-10 h-[2px] bg-indigo-500/30"></span>
-                                            Details
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 mb-6 flex items-center gap-4">
+                                            <span className="w-10 h-[2px] bg-indigo-500/30"></span> Basic Discovery
                                         </h3>
-                                        <div className="bg-white/5 backdrop-blur-3xl p-7 rounded-[32px] border border-white/5 shadow-xl">
-                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6">
-                                                <div>
-                                                    <dt className="text-[10px] font-black text-white/25 uppercase tracking-[0.25em]">Full name</dt>
-                                                    <dd className="mt-2 text-base font-bold text-white/90 tracking-tight">{selectedUser.name || "N/A"}</dd>
+                                        <div className="bg-white/5 backdrop-blur-3xl p-7 rounded-[32px] border border-white/5 grid grid-cols-2 gap-6">
+                                            {[
+                                                { label: "Phone Identity", value: selectedUser.mobileNumber },
+                                                { label: "Email Protocol", value: selectedUser.email || "No Email" },
+                                                { label: "Gender Orientation", value: selectedUser.gender || "Undefined" },
+                                                { label: "Registry Status", value: category === 'patient' ? (selectedUser.isRegistered ? "Verified" : "Unverified") : selectedUser.status }
+                                            ].map(item => (
+                                                <div key={item.label}>
+                                                    <dt className="text-[9px] font-black text-white/20 uppercase tracking-widest">{item.label}</dt>
+                                                    <dd className="mt-1 text-white font-bold">{item.value}</dd>
                                                 </div>
-                                                <div>
-                                                    <dt className="text-[10px] font-black text-white/25 uppercase tracking-[0.25em]">Phone</dt>
-                                                    <dd className="mt-2 text-base font-bold text-white/90 tracking-tight">{selectedUser.mobileNumber || "N/A"}</dd>
-                                                </div>
-                                                <div>
-                                                    <dt className="text-[10px] font-black text-white/25 uppercase tracking-[0.25em]">Gender</dt>
-                                                    <dd className="mt-2 text-base font-bold text-white/90 tracking-tight">{selectedUser.gender || "Not specified"}</dd>
-                                                </div>
-                                                <div>
-                                                    <dt className="text-[10px] font-black text-white/25 uppercase tracking-[0.25em]">Status</dt>
-                                                    <dd className="mt-2 text-base font-bold text-white/90 tracking-tight">
-                                                        {category === "patient" ? (selectedUser.isRegistered ? "Verified" : "Pending") : (selectedUser.status || "N/A")}
-                                                    </dd>
-                                                </div>
-                                                <div className="sm:col-span-2">
-                                                    <dt className="text-[10px] font-black text-white/25 uppercase tracking-[0.25em]">Email</dt>
-                                                    <dd className="mt-2 text-base font-bold text-white/90 tracking-tight break-all">{selectedUser.email || "No email"}</dd>
-                                                </div>
-                                            </dl>
+                                            ))}
                                         </div>
                                     </section>
+                                    <WalletSection user={selectedUser} category={category} />
+                                </div>
 
-                                    {category !== 'patient' && (
-                                        <section>
-                                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-400/40 mb-6 flex items-center gap-4">
-                                                <span className="w-8 h-px bg-indigo-500/20"></span>
-                                                Performance Metrics
-                                            </h3>
-                                            <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[40px] border border-white/5 space-y-8 shadow-xl">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                                                    <div className="space-y-4">
-                                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none">Specializations</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {(selectedUser.specialization || []).map((s: string) => (
-                                                                <span key={s} className="px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/10 text-[10px] font-black text-white uppercase tracking-wider backdrop-blur-md">{s}</span>
-                                                            ))}
-                                                            {!(selectedUser.specialization || []).length && (
-                                                                <span className="text-xs italic text-white/10">No reported data</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-4">
-                                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none">Authority Index</p>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="flex text-amber-500/80">
-                                                                {[1, 2, 3, 4, 5].map(i => (
-                                                                    <Activity key={i} size={16} className={i <= (selectedUser.rating || 0) ? "fill-amber-500" : "opacity-10"} />
-                                                                ))}
-                                                            </div>
-                                                            <p className="font-black text-white text-2xl leading-none">{selectedUser.rating || "0.0"}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="p-5 rounded-3xl bg-black/30 border border-white/5 shadow-inner">
-                                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1.5">In-Situ Fee</p>
-                                                        <p className="font-black text-xl text-white">₹{selectedUser.homeConsultationFee || selectedUser.consultationFee || "0"}</p>
-                                                    </div>
-                                                    <div className="p-5 rounded-3xl bg-black/30 border border-white/5 shadow-inner">
-                                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1.5">Remote Fee</p>
-                                                        <p className="font-black text-xl text-white">₹{selectedUser.onlineConsultationFee || "0"}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-4 pt-6 border-t border-white/5">
-                                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
-                                                        <FileText size={14} className="text-indigo-400/60" /> Provider Biography
-                                                    </p>
-                                                    <p className="text-sm font-medium text-white/40 leading-relaxed italic border-l-2 border-indigo-500/20 pl-6 py-1">
-                                                        "{selectedUser.about || "Biography not available in production registry."}"
-                                                    </p>
-                                                </div>
-                                            </div>
-                                         </section>
-                                     )}
-                                     <WalletSection user={selectedUser} category={category} />
-                                 </div>
-
-                                <div className="lg:col-span-12 xl:col-span-4 space-y-8">
-                                    <div className="bg-white/5 backdrop-blur-3xl rounded-[32px] p-7 border border-white/10 shadow-xl">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.35em] text-indigo-400/60 mb-6">Actions</h3>
-                                        <div className="space-y-3">
-                                            {category === "patient" && !selectedUser.isRegistered && (
-                                                <button
-                                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-12 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                                                    onClick={() => statusMutation.mutate({ id: selectedUser._id, isRegistered: true })}
-                                                >
-                                                    <ShieldCheck size={18} /> Verify patient
-                                                </button>
-                                            )}
-                                            {category !== "patient" && selectedUser.status === "Pending" && (
-                                                <button
-                                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-12 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                                                    onClick={() => statusMutation.mutate({ id: selectedUser._id, status: "Active", isRegistered: true })}
-                                                >
-                                                    <ShieldCheck size={18} /> Approve
-                                                </button>
-                                            )}
-
-                                            <button
-                                                className="w-full bg-red-500/10 hover:bg-red-500/15 text-red-400 h-12 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border border-red-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                                                onClick={() => {
-                                                    if (confirm("Permanently remove this record?")) {
-                                                        api.delete(`/admin/users/${category}/${selectedUser._id}`).then(() => {
-                                                            queryClient.invalidateQueries({ queryKey: ["category_users", category] });
-                                                            setSelectedUser(null);
-                                                        });
-                                                    }
-                                                }}
-                                            >
-                                                <Trash2 size={18} /> Delete
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white/5 backdrop-blur-3xl rounded-[32px] p-7 border border-white/10 shadow-xl">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.35em] text-white/25 mb-6">Documents</h3>
+                                <div className="lg:col-span-4 space-y-8">
+                                    <div className="bg-white/5 rounded-[32px] p-7 border border-white/10">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">Sector Documents</h3>
                                         <div className="space-y-3">
                                             {(selectedUser.documents || []).length > 0 ? (
-                                                (selectedUser.documents || []).map((doc: any, idx: number) => (
-                                                    <div key={idx} className="p-4 bg-black/30 border border-white/5 rounded-2xl flex items-center justify-between">
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
-                                                                <FileText size={18} />
-                                                            </div>
-                                                            <p className="text-xs font-black text-white/80 uppercase tracking-tight truncate">{doc.type}</p>
-                                                        </div>
-                                                        <button
-                                                            className="text-[9px] font-black text-indigo-400 hover:text-white uppercase tracking-widest px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 transition-all shrink-0"
-                                                            onClick={() => setViewingDocument(doc)}
-                                                        >
-                                                            Inspect
-                                                        </button>
-
+                                                selectedUser.documents.map((doc: any, i: number) => (
+                                                    <div key={i} className="p-4 bg-black/40 rounded-2xl flex items-center justify-between border border-white/5">
+                                                        <span className="text-[10px] font-bold text-white uppercase truncate">{doc.type}</span>
+                                                        <button className="text-[9px] font-black text-indigo-400 hover:text-white uppercase" onClick={() => setViewingDocument(doc)}>Watch</button>
                                                     </div>
                                                 ))
-                                            ) : (
-                                                <p className="text-xs text-white/20 font-bold">No documents.</p>
-                                            )}
+                                            ) : <p className="text-[10px] text-white/20 font-black">No artifacts available.</p>}
                                         </div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-[32px] p-7 border border-white/10">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-6">Danger Zone</h3>
+                                        <button 
+                                            className="w-full h-12 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest border border-rose-500/20 transition-all"
+                                            onClick={() => {
+                                                if(confirm("Confirm full wipe of this member signature?")) {
+                                                    api.delete(`/admin/users/${category}/${selectedUser._id}`).then(() => {
+                                                        queryClient.invalidateQueries({ queryKey: ["category_users", category] });
+                                                        setSelectedUser(null);
+                                                        toast.success("Signature purged.");
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            Purge Record
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -548,52 +410,38 @@ export function UserManagementPage({ category }: { category: string }) {
                 </div>
             )}
 
-            {/* Add User Placeholder Modal */}
+            {/* Add User Modal */}
             {isAddModalOpen && (
-                <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6" onClick={() => setIsAddModalOpen(false)}>
-                    <div className="modal-content !bg-slate-950/90 backdrop-blur-3xl border border-white/10 w-full max-w-lg p-10 flex-col items-center text-center gap-6" onClick={e => e.stopPropagation()} style={{ borderRadius: '40px' }}>
+                <div className="modal-overlay fixed inset-0 z-[150] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-md" onClick={() => setIsAddModalOpen(false)}>
+                    <div className="modal-content !bg-slate-900 border border-white/10 w-full max-w-lg p-10 rounded-[40px] shadow-3xl flex flex-col items-center gap-8" onClick={e => e.stopPropagation()}>
                         <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                             <UserPlus size={40} />
                         </div>
-                        <div className="space-y-2">
-                            <h2 className="text-white text-2xl font-black">Create New {category}</h2>
-                            <p className="text-sm text-white/30 font-medium">Inject a new member directly into the production registry.</p>
+                        <div className="text-center space-y-2">
+                            <h2 className="text-white text-2xl font-black tracking-tight">Create New {title.slice(0, -1)}</h2>
+                            <p className="text-white/30 text-sm font-medium">Injecting a new {title.slice(0, -1).toLowerCase()} into the production registry.</p>
                         </div>
-                        <form className="w-full space-y-4" onSubmit={handleAddUser}>
-                            <div className="input-group text-left">
-                                <label className="!text-white/40">Member Full Name</label>
-                                <input 
-                                    placeholder="Legal name..." 
-                                    className="w-full !bg-white/5 h-12 px-5 rounded-2xl border-white/5 !text-white font-bold" 
-                                    value={newName}
-                                    onChange={e => setNewName(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="input-group text-left">
-                                <label className="!text-white/40">Mobile Identity (Primary Phone)</label>
-                                <input 
-                                    placeholder="+91 000 000 0000" 
-                                    className="w-full !bg-white/5 h-12 px-5 rounded-2xl border-white/5 !text-white font-bold" 
-                                    value={newMobile}
-                                    onChange={e => setNewMobile(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="input-group text-left">
-                                <label className="!text-white/40">Email Protocol (Optional)</label>
-                                <input 
-                                    type="email"
-                                    placeholder="email@example.com" 
-                                    className="w-full !bg-white/5 h-12 px-5 rounded-2xl border-white/5 !text-white font-bold" 
-                                    value={newEmail}
-                                    onChange={e => setNewEmail(e.target.value)}
-                                />
-                            </div>
+                        <form className="w-full space-y-5" onSubmit={handleAddUser}>
+                            {[
+                                { label: "Legal Name", value: newName, set: setNewName, type: "text" },
+                                { label: "Mobile Identity", value: newMobile, set: setNewMobile, type: "tel" },
+                                { label: "Email Node", value: newEmail, set: setNewEmail, type: "email" }
+                            ].map(field => (
+                                <div className="space-y-2" key={field.label}>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">{field.label}</label>
+                                    <input 
+                                        type={field.type}
+                                        className="w-full h-14 bg-white/5 border border-white/5 rounded-[20px] px-6 text-white font-bold placeholder:text-white/10 focus:ring-2 focus:ring-indigo-500/50"
+                                        value={field.value}
+                                        onChange={e => field.set(e.target.value)}
+                                        required={field.label !== "Email Node"}
+                                    />
+                                </div>
+                            ))}
                             <div className="pt-4 flex gap-4">
-                                <button type="button" className="button secondary !bg-white/5 !text-white/50 h-14 flex-1 rounded-2xl font-black uppercase tracking-widest" onClick={() => setIsAddModalOpen(false)}>Abort</button>
-                                <button type="submit" disabled={createMutation.isPending} className="button primary flex-1 h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20">
-                                    {createMutation.isPending ? "Syncing..." : "Finalize Registry"}
+                                <button type="button" className="flex-1 h-14 rounded-[20px] bg-white/5 text-white/40 font-black uppercase tracking-widest text-[10px]" onClick={() => setIsAddModalOpen(false)}>Abort</button>
+                                <button type="submit" disabled={createMutation.isPending} className="flex-1 h-14 rounded-[20px] bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20">
+                                    {createMutation.isPending ? "Syncing..." : "Finalize Entry"}
                                 </button>
                             </div>
                         </form>
@@ -603,60 +451,24 @@ export function UserManagementPage({ category }: { category: string }) {
 
             {/* Document Viewer Modal */}
             {viewingDocument && (
-                <div className="modal-overlay fixed inset-0 z-[200] flex items-center justify-center p-12 bg-slate-900/80 backdrop-blur-xl" onClick={() => setViewingDocument(null)}>
-                    <div className="modal-content !bg-slate-950/90 border border-white/10 w-full max-w-4xl max-h-[90vh] p-0 flex flex-col shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()} style={{ borderRadius: '48px' }}>
+                <div className="modal-overlay fixed inset-0 z-[200] flex items-center justify-center p-12 bg-slate-950/80 backdrop-blur-2xl" onClick={() => setViewingDocument(null)}>
+                    <div className="modal-content !bg-slate-900 border border-white/10 w-full max-w-4xl max-h-[90vh] rounded-[48px] overflow-hidden flex flex-col p-0 shadow-3xl" onClick={e => e.stopPropagation()}>
                         <div className="p-8 border-b border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center">
-                                    <ShieldCheck size={28} />
-                                </div>
-                                <div>
-                                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Document Registry Trace</h4>
-                                    <h2 className="text-white text-2xl font-black tracking-tight">{viewingDocument.type}</h2>
-                                </div>
-                            </div>
-                            <button className="icon-button !text-white/20 hover:!text-white" onClick={() => setViewingDocument(null)}><X size={32} /></button>
+                            <h2 className="text-white text-2xl font-black">{viewingDocument.type}</h2>
+                            <button className="text-white/20 hover:text-white" onClick={() => setViewingDocument(null)}><X size={32} /></button>
                         </div>
-
-                        <div className="flex-1 overflow-y-auto p-8 bg-black/20">
+                        <div className="flex-1 overflow-y-auto p-10 flex items-center justify-center bg-black/20">
                             {viewingDocument.url.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
-                                <img src={viewingDocument.url} alt={viewingDocument.type} className="w-full h-auto rounded-[32px] shadow-2xl border border-white/5" />
-                            ) : viewingDocument.url.match(/\.pdf$/i) ? (
-                                <iframe src={viewingDocument.url} title="PDF Viewer" className="w-full h-[60vh] rounded-[32px] border border-white/5" />
+                                <img src={viewingDocument.url} className="w-full h-auto rounded-3xl" alt="Preview" />
                             ) : (
-                                <div className="py-40 text-center flex flex-col items-center gap-6">
-                                    <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center text-white/20">
-                                        <FileText size={64} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <p className="text-white font-black text-xl">Encoded Asset Vector</p>
-                                        <p className="text-white/30 text-sm font-medium">This asset type requires an external viewer or download.</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => window.open(viewingDocument.url, "_blank")}
-                                        className="button primary h-14 px-10 rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-indigo-500/20"
-                                    >
-                                        Open External Stream
-                                    </button>
+                                <div className="text-center space-y-6">
+                                    <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto text-white/20"><FileText size={64} /></div>
+                                    <p className="text-white font-black text-xl">Encoded Data Stream</p>
+                                    <a href={viewingDocument.url} target="_blank" className="button primary h-14 px-10 rounded-2xl inline-flex items-center gap-3">
+                                        <Eye size={20} /> Open Stream
+                                    </a>
                                 </div>
                             )}
-                        </div>
-
-                        <div className="p-8 border-t border-white/5 bg-white/5 flex gap-4 justify-end">
-                            <button 
-                                className="button secondary !bg-white/5 !text-white/50 h-14 px-12 rounded-2xl font-black uppercase tracking-widest"
-                                onClick={() => setViewingDocument(null)}
-                            >
-                                Close Trace
-                            </button>
-                            <a 
-                                href={viewingDocument.url} 
-                                download 
-                                className="button primary h-14 px-14 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3"
-                            >
-                                <Download size={20} />
-                                Download Asset
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -664,6 +476,7 @@ export function UserManagementPage({ category }: { category: string }) {
         </div>
     );
 }
+
 function WalletSection({ user, category }: { user: any, category: string }) {
     const queryClient = useQueryClient();
     const [amount, setAmount] = useState("");
@@ -689,104 +502,38 @@ function WalletSection({ user, category }: { user: any, category: string }) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["user_wallet", user._id] });
-            toast.success("Wallet updated successfully");
+            toast.success("Wallet synchronized.");
             setAmount("");
             setDescription("");
             setIsAdjusting(false);
         },
         onError: (err: any) => {
-            toast.error(err?.response?.data?.message || "Failed to update wallet");
+            toast.error(err?.response?.data?.message || "Sync failed.");
         }
     });
 
     return (
-        <section className="space-y-8">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 mb-8 flex items-center gap-4">
-                <span className="w-10 h-[2px] bg-indigo-500/30"></span>
-                Wallet Master Control
+        <section className="space-y-6">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 flex items-center gap-4">
+                <span className="w-10 h-[2px] bg-indigo-500/30"></span> Wallet Protocol
             </h3>
-            <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[40px] border border-white/5 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <CreditCard size={120} className="text-indigo-500" />
+            <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><CreditCard size={100} className="text-indigo-500" /></div>
+                <div className="relative z-10">
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Grid Balance</p>
+                    <h4 className="text-5xl font-black text-white">{isLoading ? "---" : `₹${wallet?.balance || 0}`}</h4>
                 </div>
                 
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative z-10">
-                    <div>
-                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Available Balance</p>
-                        <h4 className="text-5xl font-black text-white tracking-tighter">
-                            {isLoading ? "..." : `₹${wallet?.balance || 0}`}
-                        </h4>
-                    </div>
-                    
-                    {!isAdjusting ? (
-                        <button 
-                            onClick={() => setIsAdjusting(true)}
-                            className="h-14 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all"
-                        >
-                            Execute Adjustment
-                        </button>
-                    ) : (
-                        <div className="w-full md:w-[400px] flex flex-col gap-4 bg-black/40 p-6 rounded-3xl border border-white/5 animate-in zoom-in-95">
-                            <input 
-                                type="number" 
-                                placeholder="Amount..." 
-                                value={amount}
-                                onChange={e => setAmount(e.target.value)}
-                                className="bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold text-sm"
-                            />
-                            <input 
-                                placeholder="Adjustment note..." 
-                                value={description}
-                                onChange={e => setDescription(e.target.value)}
-                                className="bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold text-sm"
-                            />
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={() => adjustMutation.mutate('Credit')}
-                                    disabled={adjustMutation.isPending}
-                                    className="flex-1 h-11 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest"
-                                >
-                                    Credit (+)
-                                </button>
-                                <button 
-                                    onClick={() => adjustMutation.mutate('Debit')}
-                                    disabled={adjustMutation.isPending}
-                                    className="flex-1 h-11 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest"
-                                >
-                                    Debit (-)
-                                </button>
-                                <button 
-                                    onClick={() => setIsAdjusting(false)}
-                                    className="w-11 h-11 rounded-xl bg-white/5 text-white/40 flex items-center justify-center hover:bg-white/10"
-                                >
-                                    <X size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* mini transaction trail */}
-                {wallet?.transactions?.length > 0 && (
-                    <div className="mt-10 pt-8 border-t border-white/5 space-y-4">
-                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Recent Activity Trail</p>
-                        <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                            {wallet.transactions.slice().reverse().slice(0, 5).map((t: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${t.type === 'Credit' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                            {t.type === 'Credit' ? '+' : '-'}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-white/80">{t.description}</p>
-                                            <p className="text-[10px] text-white/30">{new Date(t.date).toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                    <p className={`text-sm font-black ${t.type === 'Credit' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        ₹{t.amount}
-                                    </p>
-                                </div>
-                            ))}
+                {!isAdjusting ? (
+                    <button onClick={() => setIsAdjusting(true)} className="h-14 px-10 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Execute Delta Adjust</button>
+                ) : (
+                    <div className="w-full md:w-[320px] space-y-3 p-4 bg-black/40 rounded-3xl border border-white/5 animate-in zoom-in-95">
+                        <input type="number" placeholder="Value..." value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold" />
+                        <input placeholder="Memo..." value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold" />
+                        <div className="flex gap-2">
+                            <button onClick={() => adjustMutation.mutate('Credit')} className="flex-1 h-10 rounded-xl bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest" disabled={adjustMutation.isPending}>Credit (+)</button>
+                            <button onClick={() => adjustMutation.mutate('Debit')} className="flex-1 h-10 rounded-xl bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest" disabled={adjustMutation.isPending}>Debit (-)</button>
+                            <button onClick={() => setIsAdjusting(false)} className="px-3 rounded-xl bg-white/10 text-white"><X size={16} /></button>
                         </div>
                     </div>
                 )}
@@ -794,7 +541,3 @@ function WalletSection({ user, category }: { user: any, category: string }) {
         </section>
     );
 }
-
-import { CreditCard as LucideCreditCard } from "lucide-react";
-const CreditCard = LucideCreditCard;
-

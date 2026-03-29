@@ -128,10 +128,10 @@ const DoctorSchema = new Schema<DoctorDocument>(
       default: false
     },
     bankDetails: {
-      accountHolderName: String,
-      accountNumber: String,
-      ifscCode: String,
-      bankName: String,
+      accountHolderName: { type: String, minlength: [3, "Account holder name too short"] },
+      accountNumber: { type: String, minlength: [9, "Account number too short"], maxlength: [20, "Account number too long"] },
+      ifscCode: { type: String, length: [11, "IFSC must be 11 characters"] },
+      bankName: { type: String, minlength: [3, "Bank name too short"] },
       upiId: String
     },
     fcmToken: {

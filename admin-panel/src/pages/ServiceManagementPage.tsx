@@ -74,6 +74,7 @@ export function ServiceManagementPage() {
     // ── Mutations ──
     const createCatMutation = useMutation({
         mutationFn: async (formData: FormData) => {
+            if (!formData.get("name") || !formData.get("title")) throw new Error("Missing required fields: Internal Name and Display Title are mandatory.");
             const res = await api.post("/services/create", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
@@ -83,10 +84,10 @@ export function ServiceManagementPage() {
             queryClient.invalidateQueries({ queryKey: ["admin_categories"] });
             setIsCatModalOpen(false);
             setCatName(""); setCatTitle(""); setCatFile(null);
-            toast.success("Category published");
+            toast.success("Category published — Root node established");
         },
         onError: (err: any) => {
-            toast.error(err?.response?.data?.message || "Failed to publish category. Ensure image is attached and fields are valid.");
+            toast.error(err?.response?.data?.message || err.message || "Failed to publish category");
         }
     });
 

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useDeferredValue, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Clock, CheckCircle2, XCircle, Calendar, CreditCard, Search, Eye, Check, CheckCheck, X, Filter, ChevronDown, RefreshCw } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Calendar, CreditCard, Search, Eye, Check, CheckCheck, X, Filter, ChevronDown, RefreshCw, Loader2 } from "lucide-react";
 
 interface ServiceBooking {
     _id: string;
@@ -35,11 +35,13 @@ export function OPBookingsPage() {
     const [slotFilter, setSlotFilter] = useState("All");
 
     // Fetching Bookings
-    const { data: serviceBookings, isLoading: loadingServices } = useQuery({
-        queryKey: ["admin_service_bookings", searchQuery, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
+    const deferredSearch = useDeferredValue(searchQuery);
+
+    const { data: serviceBookings, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
+        queryKey: ["admin_service_bookings", deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
         queryFn: async () => {
             const params = new URLSearchParams();
-            if (searchQuery) params.append("search", searchQuery);
+            if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
@@ -74,7 +76,7 @@ export function OPBookingsPage() {
         updateStatusMutation.mutate({ id, status });
     };
 
-    if (loadingServices) return (
+    if (loadingServices && !serviceBookings) return (
         <div className="flex flex-col items-center justify-center p-20 space-y-4">
             <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             <p className="font-bold text-[var(--text-muted)] animate-pulse">Syncing operations desk...</p>
@@ -91,10 +93,29 @@ export function OPBookingsPage() {
     const completedCount = allTokens.filter(b => b.status?.toUpperCase() === "COMPLETED").length;
     const cancelledCount = allTokens.filter(b => b.status?.toUpperCase() === "CANCELLED").length;
 
+    // Local Filtering Fallback (ensures filters work even if backend params are partial)
+    const processedTokens = allTokens.filter(b => {
+        const query = deferredSearch.toLowerCase();
+        const matchesSearch = !query || 
+            b._id.toLowerCase().includes(query) || 
+            (b.patientId?.name || "").toLowerCase().includes(query) || 
+            (b.patientId?.mobile || "").toLowerCase().includes(query) ||
+            (b.serviceId?.name || "").toLowerCase().includes(query);
+
+        // Date Logic: dateTo should be inclusive of the full day
+        const bDate = new Date(b.date || b.createdAt).getTime();
+        const matchesFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
+        const matchesTo = !dateTo || bDate <= (new Date(dateTo).getTime() + 86399999); // Add 23h 59m 59s
+        
+        const matchesPayment = paymentFilter === "All" || b.paymentStatus === paymentFilter;
+        
+        return matchesSearch && matchesFrom && matchesTo && matchesPayment;
+    });
+
     // Filter displayed tokens based on selected statusFilter
     const filteredTokens = statusFilter === "All" 
-        ? allTokens 
-        : allTokens.filter(b => {
+        ? processedTokens 
+        : processedTokens.filter(b => {
             const s = b.status?.toUpperCase();
             if (statusFilter === "PENDING") return s === "PENDING" || s === "RETURNED_TO_ADMIN";
             return s === statusFilter;
@@ -147,7 +168,9 @@ export function OPBookingsPage() {
             {/* Filters Row */}
             <div className="flex flex-row items-center gap-4">
                 <div className="relative flex-1">
-                    <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 z-10">
+                        {fetchingServices ? <Loader2 size={18} className="text-blue-500 animate-spin" /> : <Search size={18} className="text-[var(--text-muted)]" />}
+                    </div>
                     <input
                         type="text"
                         placeholder="Search by Order ID, Service..."

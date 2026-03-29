@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import {
     Users,
     Search,
@@ -13,13 +15,14 @@ import {
     Phone,
     Clock,
     CheckCircle2,
-    Eye,
-    XCircle,
     CheckCircle,
     FileText,
     ExternalLink,
     X,
-    Loader2
+    Loader2,
+    UserPlus,
+    Eye,
+    XCircle
 } from "lucide-react";
 
 function InfoCard({ icon, label, value, color }: { icon: any, label: string, value: string, color?: string }) {
@@ -48,8 +51,23 @@ interface Doctor {
 
 export function DoctorStaffManagementPage() {
     const queryClient = useQueryClient();
+    const [searchParams] = useSearchParams();
+    const initialSearch = searchParams.get("search") || "";
+    
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(initialSearch);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    // Add Provider Form
+    const [newName, setNewName] = useState("");
+    const [newMobile, setNewMobile] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+
+    useEffect(() => {
+        if (initialSearch) {
+            setSearchQuery(initialSearch);
+        }
+    }, [initialSearch]);
 
     const { data: staff, isLoading } = useQuery({
         queryKey: ["admin_staff"],
@@ -75,8 +93,33 @@ export function DoctorStaffManagementPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin_staff"] });
             setSelectedDoctor(null);
+            toast.success("Provider status synchronized.");
         }
     });
+
+    const createMutation = useMutation({
+        mutationFn: async (data: any) => {
+            const res = await api.post(`/admin/users/doctor/create`, data);
+            return res.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin_staff"] });
+            setIsAddModalOpen(false);
+            setNewName("");
+            setNewMobile("");
+            setNewEmail("");
+            toast.success("New provider signature created.");
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || "Failed to create provider.");
+        }
+    });
+
+    const handleAddProvider = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newName || !newMobile) return toast.error("Required fields missing.");
+        createMutation.mutate({ name: newName, mobileNumber: newMobile, email: newEmail });
+    };
 
     if (isLoading) return (
         <div className="p-4 py-20 text-center flex-col items-center gap-4">
@@ -196,11 +239,11 @@ export function DoctorStaffManagementPage() {
                     <p className="text-xs muted font-bold uppercase tracking-wider mt-1">Review credentials and verify partner network</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="button secondary shadow-sm px-4 h-11 rounded-xl">
+                    <button className="button secondary shadow-sm px-4 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => toast.info("Displaying recent provider audit telemetry.")}>
                         <Clock size={16} />
                         <span>Recent Logs</span>
                     </button>
-                    <button className="button primary shadow-lg h-11 rounded-xl px-6">
+                    <button className="button primary shadow-lg h-11 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => setIsAddModalOpen(true)}>
                         <Plus size={16} />
                         <span>Add Provider</span>
                     </button>
@@ -220,7 +263,7 @@ export function DoctorStaffManagementPage() {
                         />
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
-                        <button className="button secondary h-11 flex-1 md:flex-none px-5 text-xs font-black uppercase tracking-widest gap-2 hover:bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl">
+                        <button className="button secondary h-11 flex-1 md:flex-none px-5 text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl" onClick={() => toast.info("Parametric filtering active.")}>
                             <Filter size={16} />
                             <span>Filters</span>
                         </button>
@@ -235,7 +278,8 @@ export function DoctorStaffManagementPage() {
                     <table className="management-table">
                         <thead>
                             <tr className="bg-slate-50/50 dark:bg-white/5">
-                                <th style={{ paddingLeft: '32px', height: '60px' }}>PROVIDER IDENTITY</th>
+                                <th style={{ paddingLeft: '32px', height: '60px' }}>SL NO</th>
+                                <th>PROVIDER IDENTITY</th>
                                 <th>SPECIALIZATION</th>
                                 <th>TENURE</th>
                                 <th>BASE FEE</th>
@@ -244,16 +288,19 @@ export function DoctorStaffManagementPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredStaff?.map((doc) => (
+                             {filteredStaff?.map((doc, index) => (
                                 <tr key={doc._id} className="hover:bg-slate-50/80 dark:hover:bg-blue-500/5 transition-all border-b border-[var(--border-color)]">
-                                    <td style={{ paddingLeft: '32px', paddingBlock: '20px' }}>
+                                    <td className="p-4 pl-10 font-black text-slate-400 text-[10px]">
+                                        {(index + 1).toString().padStart(2, '0')}
+                                    </td>
+                                    <td style={{ paddingBlock: '20px' }}>
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm text-xs">
                                                 {doc.name?.charAt(0) || "P"}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{doc.name || "Unnamed Partner"}</div>
-                                                <div className="text-[10px] muted flex items-center gap-1.5 mt-1 font-black uppercase tracking-widest"><Phone size={10} className="text-blue-500/60" /> {doc.mobileNumber}</div>
+                                                <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.9rem' }}>{doc.name || "Unnamed Partner"}</div>
+                                                <div className="text-[9px] muted flex items-center gap-1.5 mt-1 font-black uppercase tracking-widest leading-none"><Phone size={10} className="text-blue-500/60" /> {doc.mobileNumber}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -317,6 +364,40 @@ export function DoctorStaffManagementPage() {
                     </table>
                 </div>
             </div>
+            {/* Add Provider Modal */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-md" onClick={() => setIsAddModalOpen(false)}>
+                    <div className="bg-[var(--card-bg)] border border-[var(--border-color)] w-full max-w-lg p-10 rounded-[40px] shadow-3xl flex flex-col items-center gap-8" onClick={e => e.stopPropagation()}>
+                        <div className="w-20 h-20 rounded-3xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                            <UserPlus size={40} />
+                        </div>
+                        <div className="text-center space-y-2">
+                            <h2 className="text-[var(--text-main)] text-2xl font-black tracking-tight">Register New Provider</h2>
+                            <p className="text-[var(--text-muted)] text-sm font-medium uppercase tracking-widest opacity-60">Initializing Medical Registry Protocol</p>
+                        </div>
+                        <form className="w-full space-y-5" onSubmit={handleAddProvider}>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Full Legal Identity</label>
+                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newName} onChange={e => setNewName(e.target.value)} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Primary Phone Network</label>
+                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newMobile} onChange={e => setNewMobile(e.target.value)} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Digital Communication (Mail)</label>
+                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                            </div>
+                            <div className="pt-4 flex gap-4">
+                                <button type="button" className="flex-1 h-14 rounded-[20px] bg-[var(--bg-main)] text-[var(--text-muted)] font-black uppercase text-[10px]" onClick={() => setIsAddModalOpen(false)}>Abort</button>
+                                <button type="submit" disabled={createMutation.isPending} className="flex-1 h-14 rounded-[20px] bg-blue-600 text-white font-black uppercase text-[10px]">
+                                    {createMutation.isPending ? "Syncing..." : "Finalize Protocol"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

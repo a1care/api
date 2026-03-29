@@ -18,6 +18,8 @@ import { RoleModel } from "../roles/role.model.js";
 import HospitalBooking from "../Bookings/hospitalBooking.model.js";
 import Ticket from "../Tickets/ticket.model.js";
 import { ChildServiceModel } from "../Services/childService.model.js";
+import { adminListOrders, adminGetLogsForTxn } from "../Payments/payment.controller.js";
+import { Order } from "../Payments/payment.model.js";
 import { creditWalletAtomic } from "../Wallet/wallet.controller.js";
 import WalletModel from "../Wallet/wallet.model.js";
 import ReviewModel from "../Reviews/review.model.js";
@@ -60,6 +62,11 @@ type SystemConfig = {
   storageBucket: string;
   // Mobile clients
   clients: MobileFirebaseClient[];
+  // Server-side Service Account for FCM
+  firebase: {
+    clientEmail: string;
+    privateKey: string;
+  };
   googleMapsApiKey: string;
   maintenanceMode: boolean; // Added
   // Dynamic Settings
@@ -142,6 +149,10 @@ const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
       packageName: "com.a1care.partner.ios"
     }
   ],
+  firebase: {
+    clientEmail: "",
+    privateKey: ""
+  },
   googleMapsApiKey: "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o",
   maintenanceMode: false,
   easebuzz: {
@@ -1196,6 +1207,10 @@ export const updateSystemConfig = asyncHandler(async (req, res) => {
     projectNumber: normalizeStr(body.projectNumber, current.projectNumber),
     projectId: normalizeStr(body.projectId, current.projectId),
     storageBucket: normalizeStr(body.storageBucket, current.storageBucket),
+    firebase: {
+      clientEmail: normalizeStr(body.firebase?.clientEmail, current.firebase?.clientEmail || ""),
+      privateKey: normalizeStr(body.firebase?.privateKey, current.firebase?.privateKey || "")
+    },
     clients: mergedClients,
     googleMapsApiKey: normalizeStr(body.googleMapsApiKey, current.googleMapsApiKey),
     maintenanceMode: Boolean(body.maintenanceMode ?? current.maintenanceMode), // Added
@@ -1266,7 +1281,7 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
     todayServices,
     revenueData,
     ticketCount,
-    failedPayments
+    failedPaymentsCount
   ] = await Promise.all([
     Patient.countDocuments(),
     Doctor.countDocuments(),
@@ -1286,10 +1301,7 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
       serviceRequestModel.aggregate([{ $match: { status: "COMPLETED", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$price" } } }]), // Fix: should be startOfMonth? I'll use startOfMonth
     ]),
     Ticket.countDocuments({ status: "Pending" }),
-    Promise.all([
-       doctorAppointmentModel.countDocuments({ paymentStatus: "FAILED" }),
-       serviceRequestModel.countDocuments({ paymentStatus: "FAILED" })
-    ])
+    Order.countDocuments({ status: "FAILED" })
   ]);
 
   // Fix the index for monthly service revenue
@@ -1331,7 +1343,7 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
     alerts: {
       pendingVerifications,
       openTickets: ticketCount,
-      failedPayments: failedPayments[0] + failedPayments[1]
+      failedPayments: failedPaymentsCount
     }
   }));
 });

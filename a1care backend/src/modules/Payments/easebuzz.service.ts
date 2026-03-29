@@ -107,19 +107,30 @@ export class EasebuzzService {
 
   if (!hash) return false;
 
+  const udf1 = (response.udf1 || "").toString().trim();
+  const udf2 = (response.udf2 || "").toString().trim();
+  const udf3 = (response.udf3 || "").toString().trim();
+  const udf4 = (response.udf4 || "").toString().trim();
+  const udf5 = (response.udf5 || "").toString().trim();
+  const udf6 = (response.udf6 || "").toString().trim();
+  const udf7 = (response.udf7 || "").toString().trim();
+  const udf8 = (response.udf8 || "").toString().trim();
+  const udf9 = (response.udf9 || "").toString().trim();
+  const udf10 = (response.udf10 || "").toString().trim();
+
   const formattedAmount = Number(amount).toFixed(2);
 
-  // FORCE ALL UDFs EMPTY (VERY IMPORTANT)
+  // Response hash order: salt|status|udf10|udf9|udf8|udf7|udf6|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key
   const hashString =
-    `${this.config.salt.trim()}|${status}|||||||||||` +
-    `${email}|${firstname}|${productinfo}|${formattedAmount}|${txnid}|${key}`;
+    `${this.config.salt.trim()}|${status}|${udf10}|${udf9}|${udf8}|${udf7}|${udf6}|${udf5}|${udf4}|${udf3}|${udf2}|${udf1}|` +
+    `${email}|${firstname}|${productinfo}|${formattedAmount}|${txnid.trim()}|${key.trim()}`;
 
   const generatedHash = crypto
     .createHash("sha512")
     .update(hashString)
     .digest("hex");
 
-  console.log("✅ Correct Hash String:", hashString);
+  console.log("✅ Hash String for Verification:", hashString);
   console.log("🔴 Easebuzz Hash:", hash);
   console.log("🟢 Generated Hash:", generatedHash);
 

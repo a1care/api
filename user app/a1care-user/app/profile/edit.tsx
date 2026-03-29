@@ -94,13 +94,17 @@ export default function ProfileEditScreen() {
     };
 
     const handleSave = () => {
+        const nameRegex = /^[a-zA-Z\s]+$/;
         if (!name.trim()) {
-            Toast.show({
-                type: 'error',
-                text1: 'Name Required',
-                text2: 'Please enter your full name.',
-                position: 'top'
-            });
+            Toast.show({ type: 'error', text1: 'Name Required', text2: 'Please enter your full name.', position: 'top' });
+            return;
+        }
+        if (!nameRegex.test(name.trim())) {
+            Toast.show({ type: 'error', text1: 'Invalid Name', text2: 'Name can only contain letters and spaces.', position: 'top' });
+            return;
+        }
+        if (name.trim().length > 50) {
+            Toast.show({ type: 'error', text1: 'Name Too Long', text2: 'Full name cannot exceed 50 characters.', position: 'top' });
             return;
         }
 
@@ -165,12 +169,20 @@ export default function ProfileEditScreen() {
                 </View>
 
                 <View style={styles.formSection}>
-                    <Text style={styles.label}>Full Name <Text style={{ color: '#E74C3C' }}>*</Text></Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={styles.label}>Full Name <Text style={{ color: '#E74C3C' }}>*</Text></Text>
+                        <Text style={{ fontSize: 11, color: name.length > 45 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{name.length}/50</Text>
+                    </View>
                     <TextInput
                         style={styles.input}
                         value={name}
-                        onChangeText={setName}
+                        onChangeText={(text) => {
+                            const clean = text.replace(/[^a-zA-Z\s]/g, '');
+                            if (clean.length <= 50) setName(clean);
+                        }}
                         placeholder="Enter your name"
+                        maxLength={50}
+                        autoCapitalize="words"
                     />
 
                     <Text style={styles.label}>Email Address <Text style={{ color: '#E74C3C' }}>*</Text></Text>

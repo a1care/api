@@ -15,6 +15,7 @@ import { BookingOperationsPage } from "@/pages/BookingOperationsPage";
 import { OPBookingsPage } from "@/pages/OPBookingsPage";
 import { DoctorStaffManagementPage } from "@/pages/DoctorStaffManagementPage";
 import { TicketsPage } from "@/pages/TicketsPage";
+import { NotificationsPage } from "@/pages/NotificationsPage";
 import { SubscriptionManagementPage } from "@/pages/SubscriptionManagementPage";
 import { PayoutsPage } from "@/pages/PayoutsPage";
 import ReviewsPage from "./pages/ReviewsPage";
@@ -63,7 +64,7 @@ export default function App() {
             <Route path="/bookings" element={<BookingOperationsPage />} />
             <Route path="/op-bookings" element={<OPBookingsPage />} />
             <Route path="/support-tickets" element={<TicketsPage />} />
-            <Route path="/notifications" element={<ModulePlaceholderPage title="Broadcast Notifications" description="Send operational announcements to users/providers." />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/reports" element={<ModulePlaceholderPage title="Reports" description="View business and operational metrics." />} />
 
             {/* Super Admin Restricted */}

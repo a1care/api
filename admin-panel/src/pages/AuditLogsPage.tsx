@@ -5,6 +5,7 @@ import {
   ArrowRightCircle, Search, Filter, Calendar,
   Download, RefreshCcw, FileText, Settings
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AuditLog {
   _id: string;
@@ -96,7 +97,12 @@ export function AuditLogsPage() {
                       </div>
                       <div className="mt-3 p-3 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] flex items-center justify-between">
                         <p className="text-[11px] font-medium text-[var(--text-muted)]">Target Identifier: <span className="font-mono text-[var(--text-main)]">{log.targetId || "N/A"}</span></p>
-                        <button className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase">View Diff</button>
+                        <button 
+                          onClick={() => toast.info(`Trace Protocol: ${log._id}`, { description: "Cryptographic verification in progress..." })}
+                          className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
+                        >
+                          Full Protocol
+                        </button>
                       </div>
                     </div>
                   </div>

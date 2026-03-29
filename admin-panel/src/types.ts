@@ -96,6 +96,10 @@ export interface SystemConfig {
   projectId: string;
   storageBucket: string;
   clients: MobileFirebaseClient[];
+  firebase?: {
+    clientEmail: string;
+    privateKey: string;
+  };
   googleMapsApiKey: string;
   easebuzz: {
     merchantKey: string;
