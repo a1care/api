@@ -6,6 +6,7 @@ import doctorAppointmentModel from "../../Bookings/doctorAppointment.model.js";
 import blockTimeModel, { doctoBlockTimeValidations } from "./blockTime.model.js";
 import doctorAvailabilityModel from "./doctorAvailability.model.js";
 import doctorAvailabilityValidation from "./doctorAvailable.schema.js";
+import doctorModel from "../doctor.model.js";
 import mongoose from "mongoose";
 
 export const createDoctorAvailability = asyncHandler(async (req, res) => {
@@ -74,16 +75,39 @@ export const availableSlotByDoctorId = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid date format. Use YYYY-MM-DD");
   }
 
-  // 3️⃣ Fetch doctor availability
-  const checkingSlot = await doctorAvailabilityModel.findOne({
+  // 3️⃣ Fetch doctor availability or fallback to doctorModel workingHours
+  let checkingSlot = await doctorAvailabilityModel.findOne({
     doctorId: new mongoose.Types.ObjectId(doctorId)
   });
 
-  if (!checkingSlot) {
-    return res.status(200).json(new ApiResponse(200, "Create availablility...", checkingSlot));
-  }
+  let startingTime, endingTime, slotDuration;
 
-  const { startingTime, endingTime, slotDuration } = checkingSlot as any;
+  if (checkingSlot) {
+    ({ startingTime, endingTime, slotDuration } = checkingSlot as any);
+  } else {
+    // 🏷️ Fallback: Check doctorModel workingHours
+    const doctor = await doctorModel.findById(doctorId);
+    if (!doctor || !doctor.workingHours) {
+      return res.status(200).json(new ApiResponse(200, "No availability or working hours set", []));
+    }
+
+    const rawHours = doctor.workingHours.replace(/\D/g, ""); // "0918" or "09001800"
+    
+    if (rawHours.length === 4) {
+      // Format: 0917 -> 09:00, 17:00
+      startingTime = `${rawHours.slice(0, 2)}:00`;
+      endingTime = `${rawHours.slice(2, 4)}:00`;
+    } else if (rawHours.length >= 8) {
+      // Format: 09001800 -> 09:00, 18:00
+      startingTime = `${rawHours.slice(0, 2)}:${rawHours.slice(2, 4)}`;
+      endingTime = `${rawHours.slice(4, 6)}:${rawHours.slice(6, 8)}`;
+    } else {
+      // Default fallback if parsing fails
+      startingTime = "09:00";
+      endingTime = "17:00";
+    }
+    slotDuration = 30; // Default 30 min slots
+  }
 
   // 4️⃣ Generate all slots
   const slots = generateSlots({

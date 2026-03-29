@@ -34,7 +34,9 @@ import {
   getAdminRecentActivity,
   getAdminPayouts,
   updateAdminPayoutStatus,
-  getHealthVaultAudit
+  getHealthVaultAudit,
+  getUserWalletBalance,
+  adjustUserWallet
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -82,6 +84,8 @@ adminRoutes.get("/user-stats/:category", protectAdmin, requireAdminRole(["admin"
 adminRoutes.get("/user-list/:category", protectAdmin, requireAdminRole(["admin", "super_admin"]), listUsersByCategory);
 adminRoutes.get("/users/:category/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserDetails);
 adminRoutes.put("/users/:category/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateUserStatus);
+adminRoutes.get("/users/:category/:userId/wallet-balance", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserWalletBalance);
+adminRoutes.post("/users/:category/:userId/wallet-adjust", protectAdmin, requireAdminRole(["admin", "super_admin"]), adjustUserWallet);
 adminRoutes.delete("/users/:category/:id", protectAdmin, requireAdminRole(["super_admin"]), deleteUser);
 
 adminRoutes.get("/bookings/doctors", protectAdmin, requireAdminRole(["admin", "super_admin"]), getDoctorBookings);

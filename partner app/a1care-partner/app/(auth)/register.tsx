@@ -97,58 +97,91 @@ export default function RegisterScreen() {
     }, [token]);
 
     const handlePickDocument = async (docType: string) => {
-        try {
-            let result: any;
-            let file: any;
-
-            if (docType === "Selfie") {
-                const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                if (status !== 'granted') {
-                    Alert.alert("Permission Required", "Camera access is needed for selfies.");
-                    return;
+        const handleImage = async (camera: boolean) => {
+            try {
+                let result: any;
+                if (camera) {
+                    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                    if (status !== 'granted') return Alert.alert("Permission", "Camera access needed.");
+                    result = await ImagePicker.launchCameraAsync({
+                        allowsEditing: true, aspect: [1, 1], quality: 0.7,
+                        cameraType: ImagePicker.CameraType.front,
+                    });
+                } else {
+                    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (status !== 'granted') return Alert.alert("Permission", "Gallery access needed.");
+                    result = await ImagePicker.launchImageLibraryAsync({
+                        allowsEditing: true, aspect: [1, 1], quality: 0.7,
+                    });
                 }
-                result = await ImagePicker.launchCameraAsync({
-                    allowsEditing: true,
-                    aspect: [1, 1],
-                    quality: 0.7,
-                    cameraType: ImagePicker.CameraType.front,
-                });
+
                 if (result.canceled) return;
                 const asset = result.assets[0];
-                file = {
+                await uploadFile(docType, {
                     uri: asset.uri,
                     name: `selfie_${Date.now()}.jpg`,
                     mimeType: 'image/jpeg'
-                };
-            } else {
-                result = await DocumentPicker.getDocumentAsync({ type: ["image/*", "application/pdf"] });
+                });
+            } catch (err) {
+                console.error("Image pick error", err);
+            }
+        };
+
+        const handleDoc = async () => {
+            try {
+                const result = await DocumentPicker.getDocumentAsync({ type: ["image/*", "application/pdf"] });
                 if (result.canceled) return;
                 const asset = result.assets[0];
-                file = {
+                await uploadFile(docType, {
                     uri: asset.uri,
                     name: asset.name,
                     mimeType: asset.mimeType || 'image/jpeg'
-                };
+                });
+            } catch (err) {
+                console.error("Doc pick error", err);
             }
+        };
 
+        if (docType === "Selfie") {
+            Alert.alert("Upload Selfie", "Choose a source", [
+                { text: "Camera", onPress: () => handleImage(true) },
+                { text: "Gallery", onPress: () => handleImage(false) },
+                { text: "Cancel", style: "cancel" }
+            ]);
+        } else {
+            handleDoc();
+        }
+    };
+
+    const uploadFile = async (docType: string, file: any) => {
+        try {
             setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: "", uploading: true }]);
 
             const formData = new FormData();
+            // In React Native, FormData needs this specific structure
             formData.append('document', {
-                uri: Platform.OS === 'ios' ? file.uri.replace('file://', '') : file.uri,
+                uri: file.uri,
                 name: file.name,
                 type: file.mimeType,
             } as any);
 
             const res = await api.post("/doctor/auth/upload-document", formData, {
-                headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+                headers: { 
+                    'Content-Type': 'multipart/form-data', 
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json'
+                }
             });
 
-            setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: res.data.data.url, uploading: false }]);
-
-        } catch (err) {
-            Alert.alert("Upload Failed", "Could not upload document. Try again.");
+            if (res.data?.success || res.data?.data?.url) {
+                setDocuments(prev => [...prev.filter(d => d.type !== docType), { type: docType, url: res.data.data.url, uploading: false }]);
+            } else {
+                throw new Error("Invalid server response");
+            }
+        } catch (err: any) {
+            console.error("Upload error details:", err?.response?.data || err.message);
             setDocuments(prev => prev.filter(d => d.type !== docType));
+            Alert.alert("Upload Failed", "Could not upload document. Please try again.");
         }
     };
 
@@ -291,7 +324,7 @@ export default function RegisterScreen() {
                             <TextInput style={styles.fieldInput} placeholder="Account Number *" keyboardType="number-pad" value={form.bankDetails.accountNumber} onChangeText={v => updateBank('accountNumber', v.replace(/\D/g, ""))} />
                             <TextInput style={styles.fieldInput} placeholder="IFSC Code *" autoCapitalize="characters" value={form.bankDetails.ifscCode} onChangeText={v => updateBank('ifscCode', v)} />
                             <TextInput style={styles.fieldInput} placeholder="Bank Name *" value={form.bankDetails.bankName} onChangeText={v => updateBank('bankName', v)} />
-                            <TextInput style={styles.fieldInput} placeholder="Account Holder Name *" value={form.bankDetails.accountHolderName} onChangeText={v => updateBank('accountHolderName', v)} />
+                            <TextInput style={styles.fieldInput} placeholder="Account Holder Name *" value={form.bankDetails.accountHolderName} onChangeText={v => updateBank('accountHolderName', v.replace(/[^a-zA-Z\s]/g, ""))} />
                         </View>
 
                         <TouchableOpacity onPress={handleRegister} style={[styles.mainActionBtn, { backgroundColor: '#1E293B', marginTop: 24 }]}>

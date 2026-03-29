@@ -161,8 +161,16 @@ export const registerStaff = asyncHandler(async (req, res) => {
   const parsed = doctorValidation.partial().safeParse(req.body);
 
   if (!parsed.success) {
-    console.error("Validation Error Details:", JSON.stringify(parsed.error.format(), null, 2));
-    throw new ApiError(400, "Validation failed!");
+    const errorDetails = parsed.error.format();
+    console.error("Validation Error Details:", JSON.stringify(errorDetails, null, 2));
+    
+    // Extract a readable error message
+    const firstError = Object.entries(errorDetails).find(([key, val]) => key !== '_errors');
+    const message = firstError 
+      ? `Validation failed for: ${firstError[0]}` 
+      : "Validation failed! Please check all required fields.";
+
+    throw new ApiError(400, message);
   }
 
   const findStaff = await doctorModel.findById(staffId);
@@ -181,6 +189,16 @@ export const registerStaff = asyncHandler(async (req, res) => {
       updateData[field] = req.body[field];
     }
   });
+
+  // 🔄 Handle 'experience' (years) -> 'startExperience' (Date) mapping
+  if (req.body.experience !== undefined) {
+    const expYears = parseInt(String(req.body.experience));
+    if (!isNaN(expYears)) {
+      const date = new Date();
+      date.setFullYear(date.getFullYear() - expYears);
+      updateData.startExperience = date;
+    }
+  }
 
   console.log("DEBUG: Final updateData:", JSON.stringify(updateData, null, 2));
 

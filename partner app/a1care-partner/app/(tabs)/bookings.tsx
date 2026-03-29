@@ -207,7 +207,10 @@ export default function BookingsScreen() {
                                     </View>
                                     <View style={styles.detailItem}>
                                         <CreditCard size={16} color="#2D935C" />
-                                        <Text style={[styles.detailText, { fontWeight: '800', color: '#1E293B' }]}>₹{b.totalAmount || 0}</Text>
+                                        <View>
+                                            <Text style={[styles.detailText, { fontWeight: '800', color: '#1E293B' }]}>₹{b.totalAmount || 0}</Text>
+                                            {b.paymentMode === 'OFFLINE' && <Text style={{ fontSize: 8, color: '#F59E0B', fontWeight: '900' }}>CASH PAYMENT</Text>}
+                                         </View>
                                     </View>
                                 </View>
 

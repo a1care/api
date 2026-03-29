@@ -39,15 +39,13 @@ export default function CreateTicketScreen() {
             priority: 'Medium', // default priority
         }),
         onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['tickets'] });
+            router.replace('/support');
             Toast.show({
                 type: 'success',
                 text1: 'Ticket Created',
-                text2: 'Your support ticket has been created. We will get back to you shortly.',
+                text2: 'Your support ticket has been created and logged.',
                 position: 'top',
-                onHide: () => {
-                    qc.invalidateQueries({ queryKey: ['tickets'] });
-                    router.back();
-                }
             });
         },
         onError: (err: any) => {

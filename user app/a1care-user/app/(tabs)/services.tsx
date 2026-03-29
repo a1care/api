@@ -29,11 +29,17 @@ type DrillLevel = 'services' | 'sub' | 'child';
 
 // ─── Service icon emoji map ───────────────────────────────────────────────────
 const SERVICE_ICONS: Record<number, string> = {
-    0: '🏥', 1: '💉', 2: '🩺', 3: '🧪', 4: '💊', 5: '🚑',
-    6: '🧬', 7: '🫀', 8: '🦷', 9: '👁️',
+    0: '🏥', 1: '💉', 2: '🚑', 3: '🧪', 4: '💊', 5: '🩺',
+    6: '🧬', 7: '🫀', 8: '🧪', 9: '👁️',
 };
 
-function serviceEmoji(idx: number) {
+function serviceEmoji(name: string, idx: number) {
+    const n = (name || '').toLowerCase();
+    if (n.includes('ambulance') || n.includes('emergency')) return '🚑';
+    if (n.includes('nurse') || n.includes('nursing')) return '🩺';
+    if (n.includes('lab') || n.includes('test')) return '🧪';
+    if (n.includes('doctor') || n.includes('consult')) return '👨‍⚕️';
+    if (n.includes('diagnostic')) return '🏥';
     return SERVICE_ICONS[idx % 10] ?? '⚕️';
 }
 
@@ -59,10 +65,10 @@ function ServiceRow({
     return (
         <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.88}>
             <View style={styles.rowIcon}>
-                {imageUrl ? (
-                    <Image source={{ uri: imageUrl }} style={{ width: 32, height: 32, borderRadius: 8 }} />
+                {imageUrl && imageUrl.trim().length > 0 ? (
+                    <Image source={{ uri: imageUrl }} style={{ width: 36, height: 36, borderRadius: 10 }} />
                 ) : (
-                    <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                    <Text style={{ fontSize: 28 }}>{emoji}</Text>
                 )}
             </View>
             <View style={styles.rowContent}>
@@ -296,7 +302,7 @@ export default function ServicesScreen() {
                         filteredServices.map((s, idx) => (
                             <View key={s._id} style={{ opacity: fastTrackLoading === s._id ? 0.6 : 1 }}>
                                 <ServiceRow
-                                    emoji={serviceEmoji(idx)}
+                                    emoji={serviceEmoji(s.name, idx)}
                                     imageUrl={s.imageUrl}
                                     name={s.name}
                                     subtitle={fastTrackLoading === s._id ? 'Directing...' : (s.title ?? s.type ?? undefined)}
@@ -335,10 +341,10 @@ export default function ServicesScreen() {
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                                         <View style={styles.childIconBg}>
-                                            {s.imageUrl ? (
+                                            {s.imageUrl && s.imageUrl.trim().length > 0 ? (
                                                 <Image source={{ uri: s.imageUrl }} style={{ width: 44, height: 44, borderRadius: 12 }} />
                                             ) : (
-                                                <Text style={{ fontSize: 32 }}>{serviceEmoji(idx)}</Text>
+                                                <Text style={{ fontSize: 36 }}>{serviceEmoji(s.name, idx)}</Text>
                                             )}
                                         </View>
                                         <View style={{ flex: 1 }}>

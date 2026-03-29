@@ -473,11 +473,10 @@ export function UserManagementPage({ category }: { category: string }) {
                                                     </p>
                                                 </div>
                                             </div>
-                                        </section>
-                                    )}
-
-
-                                </div>
+                                         </section>
+                                     )}
+                                     <WalletSection user={selectedUser} category={category} />
+                                 </div>
 
                                 <div className="lg:col-span-12 xl:col-span-4 space-y-8">
                                     <div className="bg-white/5 backdrop-blur-3xl rounded-[32px] p-7 border border-white/10 shadow-xl">
@@ -665,3 +664,137 @@ export function UserManagementPage({ category }: { category: string }) {
         </div>
     );
 }
+function WalletSection({ user, category }: { user: any, category: string }) {
+    const queryClient = useQueryClient();
+    const [amount, setAmount] = useState("");
+    const [description, setDescription] = useState("");
+    const [isAdjusting, setIsAdjusting] = useState(false);
+
+    const { data: wallet, isLoading } = useQuery({
+        queryKey: ["user_wallet", user._id],
+        queryFn: async () => {
+            const res = await api.get(`/admin/users/${category}/${user._id}/wallet-balance`);
+            return res.data.data;
+        }
+    });
+
+    const adjustMutation = useMutation({
+        mutationFn: async (type: 'Credit' | 'Debit') => {
+            const res = await api.post(`/admin/users/${category}/${user._id}/wallet-adjust`, {
+                amount: parseFloat(amount),
+                description,
+                type
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["user_wallet", user._id] });
+            toast.success("Wallet updated successfully");
+            setAmount("");
+            setDescription("");
+            setIsAdjusting(false);
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || "Failed to update wallet");
+        }
+    });
+
+    return (
+        <section className="space-y-8">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 mb-8 flex items-center gap-4">
+                <span className="w-10 h-[2px] bg-indigo-500/30"></span>
+                Wallet Master Control
+            </h3>
+            <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[40px] border border-white/5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <CreditCard size={120} className="text-indigo-500" />
+                </div>
+                
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative z-10">
+                    <div>
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Available Balance</p>
+                        <h4 className="text-5xl font-black text-white tracking-tighter">
+                            {isLoading ? "..." : `₹${wallet?.balance || 0}`}
+                        </h4>
+                    </div>
+                    
+                    {!isAdjusting ? (
+                        <button 
+                            onClick={() => setIsAdjusting(true)}
+                            className="h-14 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all"
+                        >
+                            Execute Adjustment
+                        </button>
+                    ) : (
+                        <div className="w-full md:w-[400px] flex flex-col gap-4 bg-black/40 p-6 rounded-3xl border border-white/5 animate-in zoom-in-95">
+                            <input 
+                                type="number" 
+                                placeholder="Amount..." 
+                                value={amount}
+                                onChange={e => setAmount(e.target.value)}
+                                className="bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold text-sm"
+                            />
+                            <input 
+                                placeholder="Adjustment note..." 
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                                className="bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold text-sm"
+                            />
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => adjustMutation.mutate('Credit')}
+                                    disabled={adjustMutation.isPending}
+                                    className="flex-1 h-11 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Credit (+)
+                                </button>
+                                <button 
+                                    onClick={() => adjustMutation.mutate('Debit')}
+                                    disabled={adjustMutation.isPending}
+                                    className="flex-1 h-11 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Debit (-)
+                                </button>
+                                <button 
+                                    onClick={() => setIsAdjusting(false)}
+                                    className="w-11 h-11 rounded-xl bg-white/5 text-white/40 flex items-center justify-center hover:bg-white/10"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* mini transaction trail */}
+                {wallet?.transactions?.length > 0 && (
+                    <div className="mt-10 pt-8 border-t border-white/5 space-y-4">
+                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Recent Activity Trail</p>
+                        <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                            {wallet.transactions.slice().reverse().slice(0, 5).map((t: any, idx: number) => (
+                                <div key={idx} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${t.type === 'Credit' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                            {t.type === 'Credit' ? '+' : '-'}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-white/80">{t.description}</p>
+                                            <p className="text-[10px] text-white/30">{new Date(t.date).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <p className={`text-sm font-black ${t.type === 'Credit' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        ₹{t.amount}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
+import { CreditCard as LucideCreditCard } from "lucide-react";
+const CreditCard = LucideCreditCard;
+

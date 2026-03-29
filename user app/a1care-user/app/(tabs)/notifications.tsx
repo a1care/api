@@ -59,13 +59,7 @@ function timeAgo(dateStr: string) {
 }
 
 // Fallback data if API is empty
-const DUMMY_FALLBACK: any[] = [
-    {
-        _id: 'd1', title: 'Welcome to A1care! 🎉',
-        body: 'Complete your profile to get personalized health tracking and offers.',
-        refType: 'Auth', isRead: false, createdAt: new Date().toISOString(),
-    }
-];
+const DUMMY_FALLBACK: any[] = [];
 
 export default function NotificationsScreen() {
     const qc = useQueryClient();

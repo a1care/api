@@ -1506,3 +1506,61 @@ export const getHealthVaultAudit = asyncHandler(async (req, res) => {
     recentRecords
   }));
 });
+
+export const getUserWalletBalance = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const wallet = await WalletModel.findOne({ userId });
+  return res.status(200).json(new ApiResponse(200, "Wallet balance fetched", { 
+    balance: wallet?.balance || 0,
+    transactions: wallet?.transactions || []
+  }));
+});
+
+export const adjustUserWallet = asyncHandler(async (req, res) => {
+  const { category, userId } = req.params;
+  const { amount, description, type } = req.body; // type: 'Credit' | 'Debit'
+
+  if (!amount || isNaN(amount)) throw new ApiError(400, "Invalid amount");
+
+  const user = category === 'patient' 
+    ? await Patient.findById(userId) 
+    : await Doctor.findById(userId);
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  const wallet = await WalletModel.findOneAndUpdate(
+    { userId: user._id },
+    { $setOnInsert: { userId: user._id, balance: 0, transactions: [] } },
+    { upsert: true, new: true }
+  );
+
+  if (type === 'Credit') {
+    wallet.balance += amount;
+  } else {
+    wallet.balance -= amount;
+  }
+
+  // Ensure balance doesn't go negative if Debit
+  if (wallet.balance < 0) wallet.balance = 0;
+
+  wallet.transactions.push({
+    amount,
+    type,
+    description: description || `Manual adjustment by admin`,
+    date: new Date(),
+  } as any);
+
+  await wallet.save();
+
+  // Create Audit Log
+  await AuditLog.create({
+    actorAdminId: (req as any).user?.id,
+    actorRole: (req as any).user?.role,
+    action: "WALLET_ADJUSTED",
+    targetType: category === 'patient' ? "Patient" : "Doctor",
+    targetId: String(user._id),
+    metadata: { amount, type, newBalance: wallet.balance, description }
+  });
+
+  return res.status(200).json(new ApiResponse(200, "Wallet adjusted successfully", wallet));
+});
