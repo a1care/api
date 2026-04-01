@@ -25,7 +25,7 @@ type PushManyJob = {
 const connection = getQueueRedisConnection();
 const queue =
   connection && process.env.ENABLE_QUEUE === "true"
-    ? new Queue("a1care:communications", { connection })
+    ? new Queue("a1care-communications", { connection })
     : null;
 
 export async function enqueuePush(payload: PushPayload) {

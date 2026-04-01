@@ -4,12 +4,12 @@
     "slug": "a1care-partner",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon.jpeg",
     "newArchEnabled": true,
     "userInterfaceStyle": "light",
     "scheme": "a1care-partner",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash-icon.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#EBF5FB"
     },
@@ -20,7 +20,7 @@
     "android": {
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.jpeg",
         "backgroundColor": "#EBF5FB"
       },
       "package": "com.a1care.partner",

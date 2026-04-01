@@ -49,15 +49,19 @@ export const initFCM = async (): Promise<void> => {
 
     // Option A: JSON file on disk (preferred for production)
     try {
+        console.log(`[FCM] Checking for service account at: ${SERVICE_ACCOUNT_PATH}`);
         await fs.access(SERVICE_ACCOUNT_PATH);
         const raw = await fs.readFile(SERVICE_ACCOUNT_PATH, "utf-8");
         const serviceAccount = JSON.parse(raw);
         fcmApp = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
         });
-        console.log("[FCM] Initialized from service-account JSON.");
+        console.log("------------------------------------------");
+        console.log("[FCM] SUCCESS: Firebase Admin Initialized!");
+        console.log("------------------------------------------");
         return;
-    } catch {
+    } catch (err: any) {
+        console.log(`[FCM] Option A failed: ${err.message}`);
         // file not found — fall through to env-vars
     }
 

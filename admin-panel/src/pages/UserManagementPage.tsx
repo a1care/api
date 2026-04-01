@@ -528,8 +528,8 @@ function WalletSection({ user, category }: { user: any, category: string }) {
                     <button onClick={() => setIsAdjusting(true)} className="h-14 px-10 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Execute Delta Adjust</button>
                 ) : (
                     <div className="w-full md:w-[320px] space-y-3 p-4 bg-black/40 rounded-3xl border border-white/5 animate-in zoom-in-95">
-                        <input type="number" placeholder="Value..." value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold" />
-                        <input placeholder="Memo..." value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-white/5 border-none h-11 px-4 rounded-xl text-white font-bold" />
+                        <input type="number" placeholder="Enter Amount to Credit/Debit..." value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-white border border-white/10 h-12 px-5 rounded-2xl text-slate-900 font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" />
+                        <input placeholder="Transaction Memo (e.g., Bonus, Refund)..." value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-white border border-white/10 h-12 px-5 rounded-2xl text-slate-900 font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" />
                         <div className="flex gap-2">
                             <button onClick={() => adjustMutation.mutate('Credit')} className="flex-1 h-10 rounded-xl bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest" disabled={adjustMutation.isPending}>Credit (+)</button>
                             <button onClick={() => adjustMutation.mutate('Debit')} className="flex-1 h-10 rounded-xl bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest" disabled={adjustMutation.isPending}>Debit (-)</button>

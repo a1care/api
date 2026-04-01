@@ -1547,22 +1547,23 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
   );
 
   if (type === 'Credit') {
-    wallet.balance += amount;
+    wallet.balance += Number(amount);
   } else {
-    wallet.balance -= amount;
+    wallet.balance -= Number(amount);
   }
 
   // Ensure balance doesn't go negative if Debit
   if (wallet.balance < 0) wallet.balance = 0;
 
   wallet.transactions.push({
-    amount,
-    type,
+    amount: Number(amount),
+    type: type as "Credit" | "Debit",
     description: description || `Manual adjustment by admin`,
     date: new Date(),
   } as any);
 
   await wallet.save();
+
 
   // Create Audit Log
   await AuditLog.create({

@@ -62,14 +62,48 @@ function AuthGuard() {
     useEffect(() => {
         if (token) {
             requestUserPermission();
+
+            // Foreground listener
             const unsubscribe = messaging().onMessage(async remoteMessage => {
                 Alert.alert(
                     remoteMessage.notification?.title || "New Update",
                     remoteMessage.notification?.body || "Tap to view details"
                 );
             });
+
+            // If the app is in dynamic state but backgrounded, and the user taps the notification
+            messaging().onNotificationOpenedApp(remoteMessage => {
+                console.log('Notification caused app to open from background:', remoteMessage.notification);
+                if (remoteMessage.data?.screen) {
+                    router.push(remoteMessage.data.screen as any);
+                }
+            });
+
+            // If the app was completely closed and is opened from a notification
+            messaging()
+                .getInitialNotification()
+                .then(remoteMessage => {
+                    if (remoteMessage) {
+                        console.log('Notification caused app to open from quit state:', remoteMessage.notification);
+                        if (remoteMessage.data?.screen) {
+                            setTimeout(() => {
+                                router.push(remoteMessage.data?.screen as any);
+                            }, 500);
+                        }
+                    }
+                });
+
             return unsubscribe;
         }
+    }, [token]);
+
+    useEffect(() => {
+        if (!token) return;
+        return messaging().onTokenRefresh(fcmToken => {
+            if (fcmToken) {
+                api.put('/doctor/auth/fcm-token', { fcmToken });
+            }
+        });
     }, [token]);
 
     useEffect(() => {

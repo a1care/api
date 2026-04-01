@@ -43,6 +43,7 @@ const mainNav = [
   { to: "/kyc-verification", label: "KYC Verification", icon: ShieldCheck },
   { to: "/reviews", label: "User Reviews", icon: MessageSquare },
   { to: "/support-tickets", label: "Tickets", icon: Ticket },
+  { to: "/notifications", label: "Broadcast", icon: Bell },
 ];
 
 export function AppLayout() {

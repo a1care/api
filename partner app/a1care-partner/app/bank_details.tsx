@@ -123,7 +123,7 @@ export default function BankDetailsScreen() {
                                     value={form.accountHolderName}
                                     onChangeText={(v) => setForm(prev => ({ ...prev, accountHolderName: v }))}
                                     placeholder="e.g. John Doe"
-                                    placeholderTextColor="#94A3B8"
+                                    placeholderTextColor="#000000"
                                 />
                             </View>
 
@@ -134,7 +134,7 @@ export default function BankDetailsScreen() {
                                     value={form.bankName}
                                     onChangeText={(v) => setForm(prev => ({ ...prev, bankName: v }))}
                                     placeholder="e.g. HDFC Bank"
-                                    placeholderTextColor="#94A3B8"
+                                    placeholderTextColor="#000000"
                                 />
                             </View>
 
@@ -146,7 +146,7 @@ export default function BankDetailsScreen() {
                                         value={form.accountNumber}
                                         onChangeText={(v) => setForm(prev => ({ ...prev, accountNumber: v }))}
                                         placeholder="0000 0000 0000"
-                                        placeholderTextColor="#94A3B8"
+                                        placeholderTextColor="#000000"
                                         keyboardType="numeric"
                                     />
                                 </View>
@@ -159,7 +159,7 @@ export default function BankDetailsScreen() {
                                     value={form.ifscCode}
                                     onChangeText={(v) => setForm(prev => ({ ...prev, ifscCode: v.toUpperCase() }))}
                                     placeholder="HDFC0000123"
-                                    placeholderTextColor="#94A3B8"
+                                    placeholderTextColor="#000000"
                                     autoCapitalize="characters"
                                 />
                             </View>
@@ -171,7 +171,7 @@ export default function BankDetailsScreen() {
                                     value={form.upiId}
                                     onChangeText={(v) => setForm(prev => ({ ...prev, upiId: v }))}
                                     placeholder="e.g. john@okaxis"
-                                    placeholderTextColor="#94A3B8"
+                                    placeholderTextColor="#000000"
                                 />
                             </View>
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     inputGroup: { gap: 10 },
     label: { fontSize: 14, fontWeight: "700", color: "#475569", marginLeft: 4 },
     input: {
-        height: 60, backgroundColor: "#FFF", borderRadius: 18, paddingHorizontal: 20, fontSize: 16, color: "#1E293B",
+        height: 60, backgroundColor: "#FFF", borderRadius: 18, paddingHorizontal: 20, fontSize: 16, color: "#000000",
         borderWidth: 1.5, borderColor: "#F1F5F9", elevation: 2, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 8
     },
     saveBtn: {

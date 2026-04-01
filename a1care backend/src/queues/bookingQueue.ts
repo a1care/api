@@ -5,7 +5,7 @@ import { runBroadcastToAll, BROADCAST_DELAY_MS } from "../modules/Bookings/servi
 const connection = getQueueRedisConnection();
 const bookingQueue =
   connection && process.env.ENABLE_QUEUE === "true"
-    ? new Queue("a1care:bookings", { connection })
+    ? new Queue("a1care-bookings", { connection })
     : null;
 
 /**

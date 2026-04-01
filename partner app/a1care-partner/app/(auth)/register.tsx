@@ -281,7 +281,7 @@ export default function RegisterScreen() {
                                         <TextInput
                                             style={[styles.fieldInput, f === "about" && styles.fieldArea]}
                                             placeholder={fieldLabels[f]}
-                                            placeholderTextColor="#94A3B8"
+                                            placeholderTextColor="#000000"
                                             value={form[f] ?? ""}
                                             onChangeText={v => {
                                                 let filtered = v;
@@ -352,10 +352,22 @@ export default function RegisterScreen() {
                         </View>
 
                         <View style={styles.formGroup}>
-                            <TextInput style={styles.fieldInput} placeholder="Account Number *" keyboardType="number-pad" value={form.bankDetails.accountNumber} onChangeText={v => updateBank('accountNumber', v.replace(/\D/g, ""))} />
-                            <TextInput style={styles.fieldInput} placeholder="IFSC Code *" autoCapitalize="characters" value={form.bankDetails.ifscCode} onChangeText={v => updateBank('ifscCode', v)} />
-                            <TextInput style={styles.fieldInput} placeholder="Bank Name *" value={form.bankDetails.bankName} onChangeText={v => updateBank('bankName', v)} />
-                            <TextInput style={styles.fieldInput} placeholder="Account Holder Name *" value={form.bankDetails.accountHolderName} onChangeText={v => updateBank('accountHolderName', v.replace(/[^a-zA-Z\s]/g, ""))} />
+                            <View style={styles.fieldItem}>
+                                <Text style={styles.fieldLabel}>Account Number <Text style={styles.asterisk}>*</Text></Text>
+                                <TextInput style={styles.fieldInput} placeholder="0000 0000 0000" placeholderTextColor="#000000" keyboardType="number-pad" value={form.bankDetails.accountNumber} onChangeText={v => updateBank('accountNumber', v.replace(/\D/g, ""))} />
+                            </View>
+                            <View style={styles.fieldItem}>
+                                <Text style={styles.fieldLabel}>IFSC Code <Text style={styles.asterisk}>*</Text></Text>
+                                <TextInput style={styles.fieldInput} placeholder="HDFC0000123" placeholderTextColor="#000000" autoCapitalize="characters" value={form.bankDetails.ifscCode} onChangeText={v => updateBank('ifscCode', v)} />
+                            </View>
+                            <View style={styles.fieldItem}>
+                                <Text style={styles.fieldLabel}>Bank Name <Text style={styles.asterisk}>*</Text></Text>
+                                <TextInput style={styles.fieldInput} placeholder="e.g. HDFC Bank" placeholderTextColor="#000000" value={form.bankDetails.bankName} onChangeText={v => updateBank('bankName', v)} />
+                            </View>
+                            <View style={styles.fieldItem}>
+                                <Text style={styles.fieldLabel}>Account Holder Name <Text style={styles.asterisk}>*</Text></Text>
+                                <TextInput style={styles.fieldInput} placeholder="e.g. John Doe" placeholderTextColor="#000000" value={form.bankDetails.accountHolderName} onChangeText={v => updateBank('accountHolderName', v.replace(/[^a-zA-Z\s]/g, ""))} />
+                            </View>
                         </View>
 
                         <TouchableOpacity onPress={handleRegister} style={[styles.mainActionBtn, { backgroundColor: '#1E293B', marginTop: 24 }]}>
@@ -392,7 +404,7 @@ const styles = StyleSheet.create({
     fieldItem: { gap: 8 },
     fieldLabel: { fontSize: 13, fontWeight: '800', color: '#475569', marginLeft: 4 },
     asterisk: { color: "#EF4444" },
-    fieldInput: { height: 60, backgroundColor: '#FFF', borderRadius: 20, paddingHorizontal: 20, fontSize: 16, color: '#1E293B', borderWidth: 1.5, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 10 },
+    fieldInput: { height: 60, backgroundColor: '#FFF', borderRadius: 20, paddingHorizontal: 20, fontSize: 16, color: '#000000', borderWidth: 1.5, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 10 },
     fieldArea: { height: 120, textAlignVertical: 'top', paddingTop: 18 },
     mainActionBtn: { height: 64, backgroundColor: '#2D935C', borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 12, elevation: 8, shadowColor: '#2D935C', shadowOpacity: 0.3, shadowRadius: 10 },
     mainActionText: { color: '#FFF', fontSize: 18, fontWeight: '800' },

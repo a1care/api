@@ -133,6 +133,12 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                     status: "Active",
                     fcmToken: { $exists: true, $ne: null },
                 }).select("_id fcmToken");
+                console.log(`[Push] Found ${matchingPartners.length} matching active partners for role(s): ${allowedRoleIds}`);
+                if (matchingPartners.length > 0) {
+                    console.log(`[Push] Partner IDs to notify: ${matchingPartners.map(p => p._id).join(', ')}`);
+                } else {
+                    console.warn(`[Push] NO ACTIVE PARTNERS FOUND with roles: ${allowedRoleIds}`);
+                }
 
                 await enqueuePushToMany(
                     matchingPartners.map((p) => ({

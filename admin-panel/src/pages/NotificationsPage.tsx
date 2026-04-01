@@ -48,13 +48,10 @@ export function NotificationsPage() {
         throw new Error("Payload configuration error: Invalid JSON structure.");
       }
 
-      // Backend role normalization: 'partners' should target 'doctor' category as primary
-      const broadcastAudience = audience === "partners" ? "doctor" : audience;
-
       const res = await api.post("/admin/notifications/broadcast", {
         title,
         body,
-        audience: broadcastAudience,
+        audience,
         recipientId: audience === "individual" ? recipientId : undefined,
         recipientType: audience === "individual" ? recipientType : undefined,
         data

@@ -10,7 +10,7 @@ if (!connection || process.env.ENABLE_QUEUE !== "true") {
 }
 
 new Worker(
-  "a1care:bookings",
+  "a1care-bookings",
   async (job) => {
     if (job.name === "broadcast_service_to_all") {
       const { serviceRequestId } = job.data as { serviceRequestId: string };
