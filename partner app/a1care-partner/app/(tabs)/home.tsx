@@ -48,7 +48,9 @@ export default function HomeScreen() {
     const { data: bookings = [], isLoading: loadingStats, refetch: refetchStats, isRefetching } = useQuery({
         queryKey: ["homeStats"],
         queryFn: async () => {
-            const res = await api.get("/appointment/patient/appointments/pending");
+            const res = await api.get("/appointment/provider/feed", {
+                params: { status: "Pending" }
+            });
             return res.data.data || [];
         }
     });

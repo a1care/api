@@ -67,7 +67,18 @@ function AuthGuard() {
             const unsubscribe = messaging().onMessage(async remoteMessage => {
                 Alert.alert(
                     remoteMessage.notification?.title || "New Update",
-                    remoteMessage.notification?.body || "Tap to view details"
+                    remoteMessage.notification?.body || "Tap View to see details",
+                    [
+                        {
+                            text: "View",
+                            onPress: () => {
+                                if (remoteMessage.data?.screen) {
+                                    router.push(remoteMessage.data.screen as any);
+                                }
+                            }
+                        },
+                        { text: "Dismiss", style: "cancel" }
+                    ]
                 );
             });
 
