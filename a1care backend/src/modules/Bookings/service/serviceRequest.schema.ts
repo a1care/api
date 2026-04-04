@@ -19,7 +19,7 @@ const serviceRequestValiation = z.object({
     healthPackageId: objectId.optional(),
     userId: objectId,
     roleId: z.array(objectId).optional(),
-    status: z.enum(["PENDING", "ACCEPTED", "CANCELLED"]).optional(),
+    status: z.enum(["PENDING", "BROADCASTED", "ACCEPTED", "CANCELLED"]).optional(),
     addressId: objectId.optional(),
     fulfillmentMode: z.enum([
         "HOME_VISIT",

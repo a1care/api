@@ -41,7 +41,9 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
         fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
-        ...(hospitalFirst ? { notifiedHospitalAt: new Date() } : { broadcastedAt: new Date() }),
+        ...(hospitalFirst
+            ? { notifiedHospitalAt: new Date() }
+            : { status: "BROADCASTED", broadcastedAt: new Date() }),
     };
     const parsed = serviceRequestValiation.safeParse(payload);
     if (!parsed.success) {
