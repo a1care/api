@@ -60,7 +60,7 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     const parsed = serviceAcceptanceValidation.safeParse(payload);
     if (!parsed.success) {
         console.error("Acceptance Validation failed!", parsed.error);
-        throw new ApiError(401, `Validation failed: ${parsed.error.errors[0].message}`);
+        throw new ApiError(401, `Validation failed: ${parsed.error.issues[0]?.message || "Invalid acceptance payload"}`);
     }
 
     // 4. Update request status
