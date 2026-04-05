@@ -18,15 +18,7 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     if (!providerId) throw new ApiError(401, "Unauthorized");
     if (!serviceRequestId) throw new ApiError(400, "serviceRequestId is required");
 
-    const payload = { ...req.body, serviceRequestId, providerId };
-
-    const parsed = serviceAcceptanceValidation.safeParse(payload);
-    if (!parsed.success) {
-        console.error("Validation failed!", parsed.error);
-        throw new ApiError(401, "Validation failed!");
-    }
-
-    // Subscription Check
+    // 1. Check Subscription
     const activeSub = await PartnerSubscription.findOne({
         partnerId: providerId,
         status: "Active",
@@ -36,27 +28,54 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Active subscription required to accept jobs.");
     }
 
+    // 2. Fetch Service Request and Provider Details
     const serviceRequestDetails = await serviceRequestModel
         .findById(serviceRequestId)
         .populate("userId");
 
-    if (!serviceRequestDetails || serviceRequestDetails.status !== "PENDING") {
-        throw new ApiError(404, "Service Request not found or already accepted");
+    if (!serviceRequestDetails) {
+        throw new ApiError(404, "Service Request not found");
     }
 
-    // Update request status
+    // Check if wait time for hospital (notifiedHospitalAt) has passed if someone else than the hospital is accepting
+    // For now, let's just check the state
+    if (serviceRequestDetails.status !== "PENDING" && serviceRequestDetails.status !== "BROADCASTED") {
+        throw new ApiError(404, "Service Request already accepted or cancelled");
+    }
+
+    const provider = await DoctorModel.findById(providerId);
+    if (!provider) throw new ApiError(404, "Provider not found");
+
+    // 3. Build Payload for validation
+    const payload = {
+        ...req.body,
+        serviceRequestId: String(serviceRequestId),
+        providerId: String(providerId),
+        patientId: String(serviceRequestDetails.userId?._id || serviceRequestDetails.userId),
+        price: Number(serviceRequestDetails.price),
+        roleId: provider.roleId ? String(provider.roleId) : undefined,
+        status: "ACCEPTED"
+    };
+
+    const parsed = serviceAcceptanceValidation.safeParse(payload);
+    if (!parsed.success) {
+        console.error("Acceptance Validation failed!", parsed.error);
+        throw new ApiError(401, `Validation failed: ${parsed.error.errors[0].message}`);
+    }
+
+    // 4. Update request status
     await serviceRequestModel.findByIdAndUpdate(serviceRequestId, {
         $set: { status: "ACCEPTED", assignedProviderId: new mongoose.Types.ObjectId(providerId!) },
     });
 
-    // Create acceptance record
+    // 5. Create acceptance record
     const newAcceptance = new serviceAcceptanceModal(parsed.data);
     await newAcceptance.save();
 
     // ── Push: notify the customer their booking was accepted ─────────────────
     try {
         const patient = await Patient.findById((serviceRequestDetails.userId as any)?._id).select("fcmToken name");
-        const provider = await DoctorModel.findById(providerId).select("name");
+        const providerName = provider.name || "A provider";
 
         if (patient) {
             await enqueuePush({
@@ -64,7 +83,7 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
                 recipientType: "patient",
                 fcmToken: patient.fcmToken ?? null,
                 title: "✅ Provider Accepted!",
-                body: `${provider?.name ?? "A provider"} has accepted your booking.`,
+                body: `${providerName} has accepted your booking.`,
                 data: { screen: "bookings", bookingId: serviceRequestId },
                 refType: "ServiceRequest",
                 refId: new mongoose.Types.ObjectId(serviceRequestId),
@@ -83,10 +102,19 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
     const { requestId } = req.params;
     if (!requestId) throw new ApiError(401, "Request id not found");
 
+    const serviceRequestDetails = await serviceRequestModel.findById(requestId);
+    if (!serviceRequestDetails) throw new ApiError(404, "Service request not found");
+
+    const provider = await DoctorModel.findById(providerId);
+    if (!provider) throw new ApiError(404, "Provider not found");
+
     const payload = {
         ...req.body,
-        providerId,
-        serviceRequestId: requestId,
+        providerId: String(providerId),
+        serviceRequestId: String(requestId),
+        patientId: String(serviceRequestDetails.userId),
+        price: Number(serviceRequestDetails.price),
+        roleId: String(provider.roleId || ""),
         status: "REJECTED",
     };
 
