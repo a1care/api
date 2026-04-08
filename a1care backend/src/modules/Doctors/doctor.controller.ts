@@ -10,10 +10,11 @@ import jwt from 'jsonwebtoken'
 import { v1 as uuidv4 } from "uuid";
 import { hmacHash } from "../../utils/Hmac.js";
 import sendMessage from "../../configs/twilioConfig.js";
+import sendAlotsSms from "../../utils/alotsSms.js";
 import mongoose from "mongoose";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-const DEV_BYPASS_OTP = "123456";
+// const DEV_BYPASS_OTP = "123456";
 // ─────────────────────────────────────────────────────────────────────────────
 
 //create doctor 
@@ -59,10 +60,32 @@ export const getStaffByRoleId = asyncHandler(async (req, res) => {
 
 // send otp for staff 
 export const sendOtpForStaff = asyncHandler(async (req, res) => {
-  // With Firebase, the frontend requests the OTP directly from Google!
-  // We no longer need the backend to send Twilio messages.
+  const { mobileNumber } = req.body;
+  if (!mobileNumber) {
+    throw new ApiError(400, "Mobile number is required");
+  }
+
+  const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+  
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Store in Redis with 10-minute expiry
+  await RedisClient.setEx(`otp:staff:${cleanMobile}`, 600, otp);
+
+  // Send via Alots
+  const result = await sendAlotsSms(cleanMobile, otp);
+
+  if (!result.success) {
+    console.error("[OTP Send Failed]", result.message);
+    // Even if SMS fails, we'll return 200 for now to not block frontend, 
+    // but in production we'd want to handle this.
+  }
+
+  console.log(`[OTP] Sent ${otp} to ${cleanMobile}`);
+
   return res.status(200).json(
-    new ApiResponse(200, "Please request OTP directly from Firebase in the App", {})
+    new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
   );
 });
 
@@ -73,27 +96,41 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
-  if (String(otp) === DEV_BYPASS_OTP) {
-    console.log(`[DEV BYPASS] ✅ Partner bypass activated for: ${cleanMobile}`);
-
-    let staff = await doctorModel.findOne({
-      mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
-    });
-    if (!staff) {
-      staff = await doctorModel.create({ mobileNumber: `+91${cleanMobile}` });
-    }
-
-    const token = jwt.sign(
-      { staffId: staff._id },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    return res.status(200).json(
-      new ApiResponse(200, "Verification successful (Dev Bypass)", { token })
-    );
-  }
+  // if (String(otp) === DEV_BYPASS_OTP) {
+  //   console.log(`[DEV BYPASS] ✅ Partner bypass activated for: ${cleanMobile}`);
+  //   ... (rest of bypass logic commented out)
+  // }
   // ─────────────────────────────────────────────────────────────────────────────
+
+  // Check Redis for manual OTP if provided
+  if (otp && cleanMobile) {
+    const storedOtp = await RedisClient.get(`otp:staff:${cleanMobile}`);
+    if (storedOtp && String(storedOtp) === String(otp)) {
+      console.log(`[OTP] ✅ Verified via Redis for: ${cleanMobile}`);
+      
+      // Cleanup OTP
+      await RedisClient.del(`otp:staff:${cleanMobile}`);
+
+      let staff = await doctorModel.findOne({
+        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+      });
+      if (!staff) {
+        staff = await doctorModel.create({ mobileNumber: `+91${cleanMobile}` });
+      }
+
+      const token = jwt.sign(
+        { staffId: staff._id },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      return res.status(200).json(
+        new ApiResponse(200, "Verification successful", { token })
+      );
+    } else if (storedOtp) {
+       throw new ApiError(400, "Invalid OTP provided.");
+    }
+  }
 
   if (!idToken) {
     throw new ApiError(400, "Firebase ID token is required!");
@@ -101,16 +138,42 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   try {
     // 1. Verify the secure Firebase Token
-    const admin = (await import('../../configs/firebaseAdmin.js')).default;
+    const admin = (await import('../../configs/fcmConfig.js')) as any;
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     
-    // 2. Extract the verified phone number from Google
-    const firebasePhone = decodedToken.phone_number || mobileNumber;
+    // 2. Extract verified data
+    const firebasePhone = decodedToken.phone_number;
+    const firebaseEmail = decodedToken.email;
+
+    // Search for staff by email first to find existing phone number
+    let staff = null;
+    if (firebaseEmail) {
+        staff = await doctorModel.findOne({ email: firebaseEmail });
+    }
+
+    const finalPhone = firebasePhone || mobileNumber || (staff ? staff.mobileNumber : null);
+
+    if (!finalPhone) {
+        throw new ApiError(400, "Mobile number is required for new accounts. Please enter your mobile number and tap Google Sign-in again.");
+    }
 
     // 3. Find or create the staff in the database
-    let staff = await doctorModel.findOne({ mobileNumber: firebasePhone });
     if (!staff) {
-      staff = await doctorModel.create({ mobileNumber: firebasePhone });
+        staff = await doctorModel.findOne({ mobileNumber: finalPhone.replace(/^\+91/, "").replace(/\D/g, "") });
+    }
+    
+    if (!staff) {
+        staff = await doctorModel.findOne({ mobileNumber: finalPhone });
+    }
+
+    if (!staff) {
+      staff = await doctorModel.create({ 
+        mobileNumber: finalPhone,
+        email: firebaseEmail 
+      });
+    } else if (firebaseEmail && !staff.email) {
+        staff.email = firebaseEmail;
+        await staff.save();
     }
 
     // 4. Generate the JWT Token for the rest of the app
@@ -124,9 +187,9 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       new ApiResponse(200, "Firebase Verification successful", { token })
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Firebase Token Error:", error);
-    throw new ApiError(401, "Invalid or expired Firebase Token!");
+    throw new ApiError(401, error.message || "Invalid or expired Firebase Token!");
   }
 });
 

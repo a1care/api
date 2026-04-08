@@ -1,30 +1,44 @@
 env: load .env
-env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID
+env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
 Starting Metro Bundler
 Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
-Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 52.7% ( 868/1196)
-Android Bundled 6388ms node_modules\expo-router\entry.js (3634 modules)
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  1.0% (1/1)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 44/117)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 33.4% (197/381)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 48.9% (428/612)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 50.6% (643/938)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 53.2% ( 839/1169)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 58.2% ( 984/1290)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.3% (1144/3071)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.3% (1354/3233)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.3% (1869/3243)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.3% (2487/3244)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91.4% (3118/3262)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.0% (3286/3336)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.8% (3610/3632)
+Android Bundled 52133ms node_modules\expo-router\entry.js (3645 modules)
 Writing bundle output to: android/app/src/main/assets/index.android.bundle
 Copying 65 asset files
 Done writing bundle output
+Starting a Gradle Daemon, 1 busy and 12 stopped Daemons could not be reused, use --status for details
 > Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors UP-TO-DATE
 > Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources UP-TO-DATE
-> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
-> Task :gradle-plugin:shared:compileJava NO-SOURCE
-> Task :gradle-plugin:shared:processResources NO-SOURCE
-> Task :gradle-plugin:shared:classes UP-TO-DATE
-> Task :gradle-plugin:shared:jar UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
 > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
 > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
 > Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
 > Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
 > Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
@@ -33,8 +47,8 @@ Done writing bundle output
 > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
 > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar UP-TO-DATE
-> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :expo-module-gradle-plugin:pluginDescriptors UP-TO-DATE
 > Task :expo-module-gradle-plugin:processResources UP-TO-DATE
@@ -42,12 +56,12 @@ Done writing bundle output
 > Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
 > Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-plugin:processResources UP-TO-DATE
-> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
 > Task :expo-gradle-plugin:expo-autolinking-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
 > Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
 > Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
 > Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
-> Task :expo-gradle-plugin:expo-autolinking-plugin:jar UP-TO-DATE
 > Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
 > Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
 > Task :expo-module-gradle-plugin:compileKotlin UP-TO-DATE
@@ -64,14 +78,6 @@ Done writing bundle output
   - ndk:         [32m27.1.12297006[0m
   - kotlin:      [32m2.1.20[0m
   - ksp:         [32m2.1.20-2.0.1[0m
-The Daemon will expire after the build after running out of JVM Metaspace.
-The project memory settings are likely not configured or are configured to an insufficient value.
-The daemon will restart for the next build, which may increase subsequent build times.
-These settings can be adjusted by setting 'org.gradle.jvmargs' in 'gradle.properties'.
-The currently configured max heap space is '2 GiB' and the configured max metaspace is '512 MiB'.
-For more information on how to set these values, please refer to https://docs.gradle.org/8.14.3/userguide/build_environment.html#sec:configuring_jvm_memory in the Gradle documentation.
-To disable this warning, set 'org.gradle.daemon.performance.disable-logging=true'.
-Daemon will be stopped at the end of the build after running out of JVM Metaspace
 
 > Configure project :expo
 
@@ -125,137 +131,178 @@ Using expo modules
 :react-native-firebase_messaging:android.minSdk using custom value: 24
 :react-native-firebase_messaging:reactNativeAndroidDir C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native
 
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :react-native-firebase_app:preBuild UP-TO-DATE
 > Task :react-native-firebase_messaging:preBuild UP-TO-DATE
 > Task :react-native-firebase_auth:preBuild UP-TO-DATE
-> Task :react-native-firebase_app:preBuild UP-TO-DATE
-> Task :expo-modules-core:preBuild UP-TO-DATE
 > Task :expo:generatePackagesList UP-TO-DATE
 > Task :expo:preBuild UP-TO-DATE
-> Task :agora-react-native-rtm:generateCodegenSchemaFromJavaScript UP-TO-DATE
 > Task :react-native-gesture-handler:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :react-native-agora:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateCodegenSchemaFromJavaScript UP-TO-DATE
 > Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :react-native-webview:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-agora:generateCodegenSchemaFromJavaScript UP-TO-DATE
 > Task :react-native-svg:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :agora-react-native-rtm:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :agora-react-native-rtm:preBuild UP-TO-DATE
-> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
-> Task :agora-react-native-rtm:preReleaseBuild UP-TO-DATE
+> Task :agora-react-native-rtm:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-webview:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :app:generateAutolinkingNewArchitectureFiles UP-TO-DATE
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-google-signin_google-signin:preBuild UP-TO-DATE
 > Task :expo:preReleaseBuild UP-TO-DATE
+> Task :expo:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-svg:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-svg:preBuild UP-TO-DATE
+> Task :expo-modules-core:preReleaseBuild UP-TO-DATE
+> Task :expo:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-firebase_app:preReleaseBuild UP-TO-DATE
 > Task :react-native-gesture-handler:generateCodegenArtifactsFromSchema UP-TO-DATE
 > Task :react-native-gesture-handler:preBuild UP-TO-DATE
-> Task :expo-modules-core:preReleaseBuild UP-TO-DATE
+> Task :react-native-firebase_auth:preReleaseBuild UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-firebase_app:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-firebase_messaging:preReleaseBuild UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-firebase_messaging:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-firebase_auth:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-firebase_messaging:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-webview:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-google-signin_google-signin:preReleaseBuild UP-TO-DATE
+> Task :react-native-webview:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:preReleaseBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preReleaseBuild UP-TO-DATE
+> Task :agora-react-native-rtm:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :agora-react-native-rtm:preBuild UP-TO-DATE
+> Task :agora-react-native-rtm:preReleaseBuild UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preReleaseBuild UP-TO-DATE
+> Task :react-native-google-signin_google-signin:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-svg:preReleaseBuild UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-svg:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-webview:preReleaseBuild UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-screens:preReleaseBuild UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-svg:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-svg:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-google-signin_google-signin:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :react-native-agora:generateCodegenArtifactsFromSchema UP-TO-DATE
 > Task :react-native-agora:preBuild UP-TO-DATE
 > Task :react-native-agora:preReleaseBuild UP-TO-DATE
-> Task :expo:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :agora-react-native-rtm:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :expo:mergeReleaseNativeLibs NO-SOURCE
-> Task :agora-react-native-rtm:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-webview:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :react-native-webview:preBuild UP-TO-DATE
-> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :app:generateAutolinkingNewArchitectureFiles UP-TO-DATE
-> Task :react-native-async-storage_async-storage:preReleaseBuild UP-TO-DATE
-> Task :react-native-safe-area-context:preBuild UP-TO-DATE
-> Task :agora-react-native-rtm:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-firebase_app:preReleaseBuild UP-TO-DATE
-> Task :expo:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-firebase_auth:preReleaseBuild UP-TO-DATE
-> Task :app:generateAutolinkingPackageList UP-TO-DATE
-> Task :agora-react-native-rtm:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
-> Task :react-native-async-storage_async-storage:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-firebase_auth:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-firebase_app:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :app:generateCodegenArtifactsFromSchema SKIPPED
-> Task :react-native-firebase_auth:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-firebase_app:mergeReleaseNativeLibs NO-SOURCE
-> Task :agora-react-native-rtm:generateReleaseResValues UP-TO-DATE
-> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-firebase_auth:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :app:generateReactNativeEntryPoint UP-TO-DATE
-> Task :react-native-firebase_messaging:preReleaseBuild UP-TO-DATE
-> Task :react-native-gesture-handler:preReleaseBuild UP-TO-DATE
-> Task :react-native-safe-area-context:preReleaseBuild UP-TO-DATE
-> Task :agora-react-native-rtm:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-gesture-handler:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-webview:preReleaseBuild UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-firebase_app:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-gesture-handler:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :react-native-agora:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-agora:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-agora:copyReleaseJniLibsProjectOnly UP-TO-DATE
 > Task :react-native-webview:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :agora-react-native-rtm:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-safe-area-context:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :react-native-screens:preBuild UP-TO-DATE
-> Task :react-native-screens:preReleaseBuild UP-TO-DATE
+> Task :react-native-agora:mergeReleaseJniLibFolders UP-TO-DATE
 > Task :react-native-webview:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-async-storage_async-storage:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-svg:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :react-native-svg:preBuild UP-TO-DATE
-> Task :react-native-svg:preReleaseBuild UP-TO-DATE
-> Task :react-native-firebase_messaging:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :agora-react-native-rtm:generateReleaseResources UP-TO-DATE
-> Task :react-native-async-storage_async-storage:generateReleaseResValues UP-TO-DATE
-> Task :react-native-safe-area-context:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-gesture-handler:generateReleaseBuildConfig UP-TO-DATE
+> Task :agora-react-native-rtm:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-agora:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-google-signin_google-signin:generateReleaseBuildConfig UP-TO-DATE
 > Task :react-native-webview:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-svg:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-webview:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :react-native-svg:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-safe-area-context:generateReleaseResValues UP-TO-DATE
-> Task :react-native-async-storage_async-storage:generateReleaseResources UP-TO-DATE
-> Task :react-native-gesture-handler:generateReleaseResValues UP-TO-DATE
-> Task :react-native-webview:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-safe-area-context:generateReleaseResources UP-TO-DATE
-> Task :react-native-svg:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-webview:generateReleaseResValues UP-TO-DATE
-> Task :react-native-firebase_app:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-gesture-handler:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :agora-react-native-rtm:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-async-storage_async-storage:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateReleaseResValues UP-TO-DATE
+> Task :react-native-agora:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-google-signin_google-signin:generateReleaseResources UP-TO-DATE
+> Task :react-native-gesture-handler:generateReleaseBuildConfig UP-TO-DATE
 > Task :react-native-svg:generateReleaseBuildConfig UP-TO-DATE
+> Task :app:generateAutolinkingPackageList UP-TO-DATE
+> Task :agora-react-native-rtm:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-safe-area-context:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-gesture-handler:generateReleaseResValues UP-TO-DATE
+> Task :react-native-google-signin_google-signin:packageReleaseResources UP-TO-DATE
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
 > Task :react-native-svg:generateReleaseResValues UP-TO-DATE
-> Task :react-native-firebase_app:generateReleaseResValues UP-TO-DATE
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
 > Task :react-native-gesture-handler:generateReleaseResources UP-TO-DATE
-> Task :agora-react-native-rtm:packageReleaseResources UP-TO-DATE
-> Task :react-native-async-storage_async-storage:packageReleaseResources UP-TO-DATE
-> Task :react-native-firebase_app:generateReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :react-native-svg:generateReleaseResources UP-TO-DATE
-> Task :react-native-safe-area-context:packageReleaseResources UP-TO-DATE
-> Task :react-native-webview:generateReleaseResources UP-TO-DATE
-> Task :react-native-async-storage_async-storage:parseReleaseLocalResources UP-TO-DATE
-> Task :agora-react-native-rtm:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-safe-area-context:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-webview:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateReactNativeEntryPoint UP-TO-DATE
+> Task :agora-react-native-rtm:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseBuildConfig UP-TO-DATE
 > Task :react-native-gesture-handler:packageReleaseResources UP-TO-DATE
 > Task :react-native-svg:packageReleaseResources UP-TO-DATE
-> Task :react-native-firebase_app:packageReleaseResources UP-TO-DATE
-> Task :agora-react-native-rtm:generateReleaseRFile UP-TO-DATE
-> Task :react-native-gesture-handler:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-firebase_app:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-webview:generateReleaseBuildConfig UP-TO-DATE
+> Task :agora-react-native-rtm:generateReleaseResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseResValues UP-TO-DATE
+> Task :react-native-webview:generateReleaseResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseResources UP-TO-DATE
+> Task :agora-react-native-rtm:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-webview:generateReleaseResources UP-TO-DATE
+> Task :agora-react-native-rtm:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:packageReleaseResources UP-TO-DATE
 > Task :react-native-webview:packageReleaseResources UP-TO-DATE
+> Task :agora-react-native-rtm:generateReleaseResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseResources UP-TO-DATE
 > Task :react-native-svg:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-webview:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-gesture-handler:generateReleaseRFile UP-TO-DATE
-> Task :react-native-firebase_app:generateReleaseRFile UP-TO-DATE
-> Task :react-native-gesture-handler:javaPreCompileRelease UP-TO-DATE
-> Task :react-native-firebase_app:javaPreCompileRelease UP-TO-DATE
-> Task :react-native-async-storage_async-storage:generateReleaseRFile UP-TO-DATE
-> Task :react-native-async-storage_async-storage:javaPreCompileRelease UP-TO-DATE
-> Task :react-native-svg:generateReleaseRFile UP-TO-DATE
-> Task :react-native-webview:generateReleaseRFile UP-TO-DATE
-> Task :react-native-firebase_auth:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-svg:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-safe-area-context:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-google-signin_google-signin:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-gesture-handler:parseReleaseLocalResources UP-TO-DATE
+> Task :agora-react-native-rtm:packageReleaseResources UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateReleaseRFile UP-TO-DATE
 > Task :react-native-safe-area-context:generateReleaseRFile UP-TO-DATE
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
+> Task :react-native-reanimated:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-webview:parseReleaseLocalResources UP-TO-DATE
+> Task :agora-react-native-rtm:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-webview:generateReleaseRFile UP-TO-DATE
+> Task :react-native-gesture-handler:generateReleaseRFile UP-TO-DATE
+> Task :react-native-svg:generateReleaseRFile UP-TO-DATE
+> Task :react-native-async-storage_async-storage:packageReleaseResources UP-TO-DATE
+> Task :react-native-svg:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-gesture-handler:javaPreCompileRelease UP-TO-DATE
+> Task :agora-react-native-rtm:generateReleaseRFile UP-TO-DATE
+> Task :react-native-firebase_app:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseRFile UP-TO-DATE
+> Task :react-native-firebase_app:generateReleaseResValues UP-TO-DATE
+> Task :react-native-async-storage_async-storage:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-firebase_app:generateReleaseResources UP-TO-DATE
+> Task :react-native-firebase_app:packageReleaseResources UP-TO-DATE
+> Task :react-native-firebase_app:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-firebase_app:generateReleaseRFile UP-TO-DATE
+> Task :react-native-firebase_app:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-worklets:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
+
+> Task :expo-constants:createExpoConfig
+The NODE_ENV environment variable is required but was not specified. Ensure the project is bundled with Expo CLI or NODE_ENV is set. Using only .env.local and .env
+
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
+> Task :react-native-worklets:preBuild
+> Task :react-native-worklets:preReleaseBuild
+> Task :react-native-reanimated:assertWorkletsVersionTask
+> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-reanimated:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs UP-TO-DATE
+> Task :react-native-reanimated:preBuild
+> Task :react-native-reanimated:preReleaseBuild
+> Task :react-native-reanimated:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-reanimated:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-reanimated:generateReleaseResValues UP-TO-DATE
+> Task :react-native-reanimated:generateReleaseResources UP-TO-DATE
+> Task :react-native-reanimated:packageReleaseResources UP-TO-DATE
+> Task :react-native-reanimated:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-reanimated:generateReleaseRFile UP-TO-DATE
+> Task :react-native-reanimated:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-firebase_auth:generateReleaseBuildConfig UP-TO-DATE
 > Task :react-native-firebase_auth:generateReleaseResValues UP-TO-DATE
 > Task :react-native-firebase_auth:generateReleaseResources UP-TO-DATE
 > Task :react-native-firebase_auth:packageReleaseResources UP-TO-DATE
@@ -267,420 +314,331 @@ Using expo modules
 > Task :react-native-firebase_messaging:generateReleaseResources UP-TO-DATE
 > Task :react-native-firebase_messaging:packageReleaseResources UP-TO-DATE
 > Task :react-native-firebase_messaging:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-firebase_messaging:generateReleaseRFile UP-TO-DATE
-> Task :react-native-firebase_messaging:javaPreCompileRelease UP-TO-DATE
-> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :expo:generateReleaseBuildConfig UP-TO-DATE
-> Task :expo:generateReleaseResValues UP-TO-DATE
-> Task :expo:generateReleaseResources UP-TO-DATE
-> Task :expo:packageReleaseResources UP-TO-DATE
-> Task :expo:parseReleaseLocalResources UP-TO-DATE
-> Task :expo:generateReleaseRFile UP-TO-DATE
-> Task :expo:javaPreCompileRelease UP-TO-DATE
-> Task :agora-react-native-rtm:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_app:compileReleaseJavaWithJavac UP-TO-DATE
 > Task :react-native-async-storage_async-storage:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-svg:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-firebase_messaging:generateReleaseRFile UP-TO-DATE
+> Task :react-native-firebase_app:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-svg:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-firebase_messaging:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :agora-react-native-rtm:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_app:bundleLibRuntimeToDirRelease UP-TO-DATE
 > Task :agora-react-native-rtm:mergeReleaseShaders UP-TO-DATE
 > Task :agora-react-native-rtm:compileReleaseShaders NO-SOURCE
 > Task :agora-react-native-rtm:generateReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_app:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-svg:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-firebase_app:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-svg:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :agora-react-native-rtm:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-async-storage_async-storage:bundleLibRuntimeToDirRelease UP-TO-DATE
 > Task :agora-react-native-rtm:javaPreCompileRelease UP-TO-DATE
 > Task :react-native-agora:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-firebase_app:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :expo:generateReleaseBuildConfig UP-TO-DATE
 > Task :react-native-agora:generateReleaseResValues UP-TO-DATE
+> Task :expo:generateReleaseResValues UP-TO-DATE
 > Task :react-native-agora:generateReleaseResources UP-TO-DATE
-> Task :react-native-agora:packageReleaseResources UP-TO-DATE
 > Task :agora-react-native-rtm:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :expo:generateReleaseResources UP-TO-DATE
 > Task :agora-react-native-rtm:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-agora:parseReleaseLocalResources UP-TO-DATE
-> Task :agora-react-native-rtm:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :agora-react-native-rtm:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-agora:generateReleaseRFile UP-TO-DATE
-> Task :agora-react-native-rtm:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-agora:javaPreCompileRelease UP-TO-DATE
-> Task :react-native-svg:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :agora-react-native-rtm:processReleaseManifest UP-TO-DATE
-> Task :agora-react-native-rtm:processReleaseJavaRes NO-SOURCE
-> Task :agora-react-native-rtm:mergeReleaseJavaResource UP-TO-DATE
-> Task :agora-react-native-rtm:syncReleaseLibJars UP-TO-DATE
-> Task :agora-react-native-rtm:writeReleaseAarMetadata UP-TO-DATE
-> Task :agora-react-native-rtm:bundleReleaseAar UP-TO-DATE
-> Task :react-native-agora:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-firebase_messaging:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-firebase_auth:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-firebase_messaging:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-safe-area-context:compileReleaseKotlin UP-TO-DATE
-> Task :react-native-firebase_auth:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-agora:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-safe-area-context:javaPreCompileRelease UP-TO-DATE
-> Task :react-native-webview:compileReleaseKotlin UP-TO-DATE
-> Task :react-native-webview:javaPreCompileRelease UP-TO-DATE
-> Task :expo:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-agora:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-async-storage_async-storage:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-firebase_app:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-firebase_auth:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-firebase_messaging:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-gesture-handler:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-svg:writeReleaseAarMetadata UP-TO-DATE
-> Task :expo:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-agora:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-async-storage_async-storage:extractDeepLinksRelease UP-TO-DATE
-> Task :expo:processReleaseManifest UP-TO-DATE
-> Task :react-native-agora:processReleaseManifest UP-TO-DATE
-> Task :react-native-async-storage_async-storage:processReleaseManifest UP-TO-DATE
-> Task :react-native-firebase_app:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-firebase_auth:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-firebase_messaging:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-webview:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-firebase_app:processReleaseManifest UP-TO-DATE
-> Task :react-native-gesture-handler:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-safe-area-context:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-webview:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-gesture-handler:processReleaseManifest UP-TO-DATE
-> Task :react-native-firebase_auth:processReleaseManifest UP-TO-DATE
-> Task :react-native-webview:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-firebase_messaging:processReleaseManifest UP-TO-DATE
-> Task :react-native-svg:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-webview:extractDeepLinksRelease UP-TO-DATE
-> Task :expo:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-webview:processReleaseManifest UP-TO-DATE
-> Task :react-native-agora:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-async-storage_async-storage:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-firebase_app:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-firebase_auth:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-firebase_messaging:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-gesture-handler:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-webview:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-agora:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-async-storage_async-storage:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-firebase_messaging:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-firebase_auth:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-webview:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-safe-area-context:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-agora:prepareReleaseArtProfile UP-TO-DATE
-> Task :expo:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-svg:processReleaseManifest UP-TO-DATE
-> Task :react-native-safe-area-context:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-async-storage_async-storage:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-safe-area-context:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-svg:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-firebase_app:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-firebase_messaging:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-firebase_auth:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-gesture-handler:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-svg:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-safe-area-context:processReleaseManifest UP-TO-DATE
-> Task :react-native-firebase_auth:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-async-storage_async-storage:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-safe-area-context:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-webview:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-safe-area-context:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-webview:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-safe-area-context:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-safe-area-context:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-firebase_messaging:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-firebase_app:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-agora:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-svg:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :expo:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseShaders UP-TO-DATE
-> Task :expo:compileReleaseShaders NO-SOURCE
-> Task :react-native-async-storage_async-storage:compileReleaseShaders NO-SOURCE
-> Task :expo:generateReleaseAssets UP-TO-DATE
-> Task :react-native-async-storage_async-storage:generateReleaseAssets UP-TO-DATE
-> Task :react-native-agora:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseAssets UP-TO-DATE
-> Task :expo:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_app:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-agora:compileReleaseShaders NO-SOURCE
-> Task :react-native-agora:generateReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_app:compileReleaseShaders NO-SOURCE
-> Task :react-native-firebase_app:generateReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_auth:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-gesture-handler:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-firebase_auth:compileReleaseShaders NO-SOURCE
-> Task :react-native-firebase_auth:generateReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_messaging:compileReleaseShaders NO-SOURCE
-> Task :react-native-firebase_messaging:generateReleaseAssets UP-TO-DATE
-> Task :react-native-agora:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-gesture-handler:compileReleaseShaders NO-SOURCE
-> Task :react-native-gesture-handler:generateReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_app:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_auth:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-svg:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-gesture-handler:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-svg:compileReleaseShaders NO-SOURCE
-> Task :react-native-svg:generateReleaseAssets UP-TO-DATE
-> Task :react-native-agora:processReleaseJavaRes NO-SOURCE
-> Task :react-native-async-storage_async-storage:processReleaseJavaRes NO-SOURCE
-> Task :react-native-webview:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-webview:compileReleaseShaders NO-SOURCE
-> Task :react-native-webview:generateReleaseAssets UP-TO-DATE
-> Task :react-native-safe-area-context:compileReleaseShaders NO-SOURCE
-> Task :react-native-safe-area-context:generateReleaseAssets UP-TO-DATE
-> Task :react-native-firebase_app:processReleaseJavaRes NO-SOURCE
-> Task :react-native-firebase_auth:processReleaseJavaRes NO-SOURCE
-> Task :react-native-svg:mergeReleaseAssets UP-TO-DATE
-> Task :expo:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-firebase_messaging:processReleaseJavaRes NO-SOURCE
-> Task :react-native-webview:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-agora:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-svg:processReleaseJavaRes NO-SOURCE
-> Task :react-native-async-storage_async-storage:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-agora:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :expo:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-webview:processReleaseJavaRes UP-TO-DATE
-> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :expo:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-agora:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-firebase_app:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-safe-area-context:processReleaseJavaRes UP-TO-DATE
-> Task :react-native-async-storage_async-storage:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :expo:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-firebase_auth:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-firebase_app:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-firebase_messaging:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-firebase_app:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-firebase_auth:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-firebase_messaging:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-agora:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-firebase_auth:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-firebase_messaging:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-agora:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-agora:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-async-storage_async-storage:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-async-storage_async-storage:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-worklets:assertMinimalReactNativeVersionTask
-> Task :react-native-worklets:assertNewArchitectureEnabledTask SKIPPED
-> Task :react-native-firebase_auth:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
-> Task :react-native-reanimated:assertNewArchitectureEnabledTask SKIPPED
-> Task :react-native-firebase_auth:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-firebase_auth:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :react-native-async-storage_async-storage:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-agora:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-firebase_messaging:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-firebase_app:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-firebase_app:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-async-storage_async-storage:bundleReleaseAar UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-agora:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-firebase_app:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-firebase_messaging:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-firebase_auth:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-firebase_app:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-agora:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-firebase_app:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-firebase_auth:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-agora:bundleReleaseAar UP-TO-DATE
-> Task :react-native-firebase_app:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-firebase_auth:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-firebase_messaging:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :react-native-firebase_app:bundleReleaseAar UP-TO-DATE
-> Task :react-native-firebase_auth:bundleReleaseAar UP-TO-DATE
-> Task :react-native-firebase_messaging:bundleReleaseAar UP-TO-DATE
-> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
-> Task :react-native-worklets:preBuild
-> Task :react-native-worklets:preReleaseBuild
-> Task :app:buildKotlinToolingMetadata UP-TO-DATE
-> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :react-native-async-storage_async-storage:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-agora:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-firebase_app:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-firebase_messaging:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :agora-react-native-rtm:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-firebase_auth:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-reanimated:assertWorkletsVersionTask
-> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript UP-TO-DATE
-> Task :app:createBundleReleaseJsAndAssets UP-TO-DATE
-> Task :app:processReleaseGoogleServices UP-TO-DATE
-> Task :react-native-gesture-handler:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-gesture-handler:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-safe-area-context:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-safe-area-context:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-safe-area-context:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-safe-area-context:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-safe-area-context:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-safe-area-context:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-safe-area-context:bundleReleaseAar UP-TO-DATE
-> Task :react-native-safe-area-context:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :agora-react-native-rtm:mergeReleaseResources UP-TO-DATE
+> Task :react-native-agora:packageReleaseResources UP-TO-DATE
 
 > Task :expo-constants:createExpoConfig
-The NODE_ENV environment variable is required but was not specified. Ensure the project is bundled with Expo CLI or NODE_ENV is set. Using only .env.local and .env
 env: load .env
-env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID
+env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
 
+> Task :agora-react-native-rtm:mergeReleaseConsumerProguardFiles UP-TO-DATE
 > Task :expo-constants:preBuild
+> Task :app:preBuild
+> Task :app:preReleaseBuild
+> Task :agora-react-native-rtm:prepareLintJarForPublish UP-TO-DATE
 > Task :expo-constants:preReleaseBuild
+> Task :expo:packageReleaseResources UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :agora-react-native-rtm:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-agora:parseReleaseLocalResources UP-TO-DATE
+> Task :agora-react-native-rtm:processReleaseManifest UP-TO-DATE
+> Task :expo:generateReleaseRFile UP-TO-DATE
+> Task :react-native-agora:generateReleaseRFile UP-TO-DATE
+> Task :expo:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-agora:javaPreCompileRelease UP-TO-DATE
+> Task :agora-react-native-rtm:processReleaseJavaRes NO-SOURCE
+> Task :agora-react-native-rtm:mergeReleaseJavaResource UP-TO-DATE
 > Task :expo-constants:mergeReleaseJniLibFolders UP-TO-DATE
 > Task :expo-constants:mergeReleaseNativeLibs NO-SOURCE
-> Task :react-native-agora:mergeReleaseResources UP-TO-DATE
-> Task :react-native-firebase_app:mergeReleaseResources UP-TO-DATE
-> Task :react-native-reanimated:generateCodegenArtifactsFromSchema UP-TO-DATE
-> Task :react-native-firebase_messaging:mergeReleaseResources UP-TO-DATE
+> Task :agora-react-native-rtm:syncReleaseLibJars UP-TO-DATE
+> Task :agora-react-native-rtm:writeReleaseAarMetadata UP-TO-DATE
 > Task :expo-constants:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-svg:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :agora-react-native-rtm:bundleReleaseAar UP-TO-DATE
 > Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :expo-constants:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-firebase_auth:mergeReleaseResources UP-TO-DATE
 > Task :expo-constants:generateReleaseResValues UP-TO-DATE
-> Task :react-native-async-storage_async-storage:mergeReleaseResources UP-TO-DATE
 > Task :expo-constants:generateReleaseResources UP-TO-DATE
 > Task :expo-constants:packageReleaseResources UP-TO-DATE
 > Task :expo-constants:parseReleaseLocalResources UP-TO-DATE
 > Task :expo-constants:generateReleaseRFile UP-TO-DATE
 > Task :expo-constants:javaPreCompileRelease UP-TO-DATE
+> Task :expo:writeReleaseAarMetadata UP-TO-DATE
 > Task :expo-constants:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs UP-TO-DATE
-> Task :react-native-reanimated:preBuild
-> Task :app:preBuild
-> Task :app:preReleaseBuild
-> Task :react-native-reanimated:preReleaseBuild
-> Task :app:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :expo-modules-core:configureCMakeRelWithDebInfo[arm64-v8a]
-> Task :react-native-screens:configureCMakeRelWithDebInfo[arm64-v8a]
-> Task :react-native-worklets:configureCMakeRelWithDebInfo[arm64-v8a]
-> Task :react-native-reanimated:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-reanimated:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-safe-area-context:mergeReleaseResources UP-TO-DATE
-> Task :react-native-reanimated:generateReleaseResValues UP-TO-DATE
-> Task :react-native-reanimated:generateReleaseResources UP-TO-DATE
-> Task :react-native-firebase_app:verifyReleaseResources UP-TO-DATE
-> Task :react-native-firebase_app:assembleRelease UP-TO-DATE
-> Task :react-native-reanimated:packageReleaseResources UP-TO-DATE
-> Task :react-native-reanimated:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-reanimated:generateReleaseRFile UP-TO-DATE
-> Task :react-native-reanimated:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-firebase_app:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-gesture-handler:writeReleaseAarMetadata UP-TO-DATE
 > Task :react-native-reanimated:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-svg:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo:extractDeepLinksRelease UP-TO-DATE
+> Task :expo:processReleaseManifest UP-TO-DATE
+> Task :expo-constants:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-constants:processReleaseManifest UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processReleaseManifest UP-TO-DATE
+> Task :react-native-firebase_app:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-firebase_app:processReleaseManifest UP-TO-DATE
+> Task :react-native-gesture-handler:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-gesture-handler:processReleaseManifest UP-TO-DATE
 > Task :react-native-reanimated:extractDeepLinksRelease UP-TO-DATE
 > Task :react-native-reanimated:processReleaseManifest UP-TO-DATE
-> Task :react-native-reanimated:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-reanimated:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-reanimated:compileReleaseShaders NO-SOURCE
-> Task :react-native-reanimated:generateReleaseAssets UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-reanimated:processReleaseJavaRes NO-SOURCE
-> Task :expo-constants:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-reanimated:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-reanimated:prepareLintJarForPublish UP-TO-DATE
-> Task :expo-constants:processReleaseManifest UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-async-storage_async-storage:verifyReleaseResources UP-TO-DATE
-> Task :react-native-async-storage_async-storage:assembleRelease UP-TO-DATE
+> Task :react-native-svg:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-svg:processReleaseManifest UP-TO-DATE
+> Task :expo:compileReleaseLibraryResources UP-TO-DATE
 > Task :expo-constants:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-svg:stripReleaseDebugSymbols NO-SOURCE
-> Task :react-native-webview:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-async-storage_async-storage:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-firebase_app:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-gesture-handler:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-reanimated:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-svg:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :expo:prepareReleaseArtProfile UP-TO-DATE
 > Task :expo-constants:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-svg:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-webview:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-svg:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-webview:compileReleaseKotlin UP-TO-DATE
+> Task :react-native-async-storage_async-storage:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-webview:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseKotlin UP-TO-DATE
+> Task :react-native-firebase_app:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-safe-area-context:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-agora:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-agora:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :agora-react-native-rtm:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-firebase_messaging:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-firebase_messaging:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :react-native-gesture-handler:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-google-signin_google-signin:compileReleaseKotlin UP-TO-DATE
+> Task :react-native-google-signin_google-signin:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-reanimated:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-firebase_messaging:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-firebase_auth:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-svg:prepareReleaseArtProfile UP-TO-DATE
+> Task :app:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :react-native-firebase_messaging:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-agora:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-firebase_auth:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :react-native-firebase_messaging:processReleaseManifest UP-TO-DATE
+> Task :react-native-firebase_auth:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-google-signin_google-signin:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-agora:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-firebase_auth:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-webview:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-firebase_messaging:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-google-signin_google-signin:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-firebase_auth:processReleaseManifest UP-TO-DATE
+> Task :react-native-firebase_auth:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-firebase_messaging:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:processReleaseManifest UP-TO-DATE
+> Task :react-native-google-signin_google-signin:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-firebase_messaging:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-google-signin_google-signin:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-firebase_auth:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-firebase_auth:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-firebase_auth:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :react-native-safe-area-context:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-firebase_messaging:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:processReleaseManifest UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-webview:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :react-native-webview:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-webview:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-safe-area-context:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-webview:processReleaseManifest UP-TO-DATE
+> Task :react-native-webview:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-webview:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-webview:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-webview:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :agora-react-native-rtm:mergeReleaseResources UP-TO-DATE
+> Task :react-native-worklets:configureCMakeRelWithDebInfo[arm64-v8a]
 > Task :expo-constants:mergeReleaseShaders UP-TO-DATE
 > Task :expo-constants:compileReleaseShaders NO-SOURCE
-> Task :react-native-webview:extractDeepLinksForAarRelease UP-TO-DATE
 > Task :expo-constants:generateReleaseAssets UP-TO-DATE
-> Task :react-native-worklets:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :react-native-svg:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-firebase_app:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :expo-modules-core:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :app:buildKotlinToolingMetadata UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-agora:processReleaseManifest UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseShaders UP-TO-DATE
 > Task :expo-constants:mergeReleaseAssets UP-TO-DATE
-> Task :expo-constants:stripReleaseDebugSymbols NO-SOURCE
-> Task :expo-constants:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-svg:extractReleaseAnnotations UP-TO-DATE
-> Task :expo-constants:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-svg:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :expo-constants:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-svg:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :expo-constants:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-svg:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-svg:mergeReleaseJavaResource UP-TO-DATE
-> Task :expo-constants:mergeReleaseResources UP-TO-DATE
-> Task :react-native-webview:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-svg:syncReleaseLibJars UP-TO-DATE
-> Task :expo-constants:verifyReleaseResources UP-TO-DATE
-> Task :react-native-webview:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-svg:bundleReleaseAar UP-TO-DATE
-> Task :react-native-webview:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-webview:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-svg:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-webview:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-webview:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-safe-area-context:verifyReleaseResources UP-TO-DATE
-> Task :react-native-safe-area-context:assembleRelease UP-TO-DATE
-> Task :react-native-webview:bundleReleaseAar UP-TO-DATE
-> Task :react-native-agora:verifyReleaseResources UP-TO-DATE
-> Task :react-native-agora:assembleRelease UP-TO-DATE
-> Task :react-native-firebase_messaging:verifyReleaseResources UP-TO-DATE
-> Task :react-native-firebase_messaging:assembleRelease UP-TO-DATE
-> Task :react-native-firebase_auth:verifyReleaseResources UP-TO-DATE
-> Task :react-native-firebase_auth:assembleRelease UP-TO-DATE
-> Task :react-native-worklets:configureCMakeRelWithDebInfo[x86]
-> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]
-> Task :react-native-screens:buildCMakeRelWithDebInfo[arm64-v8a]
-> Task :agora-react-native-rtm:verifyReleaseResources UP-TO-DATE
-> Task :agora-react-native-rtm:assembleRelease UP-TO-DATE
-> Task :agora-react-native-rtm:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-webview:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :app:checkReleaseDuplicateClasses UP-TO-DATE
-> Task :agora-react-native-rtm:bundleLibRuntimeToDirRelease UP-TO-DATE
 > Task :app:generateReleaseBuildConfig UP-TO-DATE
-> Task :agora-react-native-rtm:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-firebase_app:compileReleaseShaders NO-SOURCE
+> Task :expo:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-firebase_app:generateReleaseAssets UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-worklets:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :react-native-async-storage_async-storage:compileReleaseShaders NO-SOURCE
+> Task :react-native-async-storage_async-storage:generateReleaseAssets UP-TO-DATE
+> Task :react-native-firebase_auth:compileReleaseShaders NO-SOURCE
+> Task :react-native-firebase_auth:generateReleaseAssets UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-agora:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-gesture-handler:compileReleaseShaders NO-SOURCE
+> Task :react-native-gesture-handler:generateReleaseAssets UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-google-signin_google-signin:compileReleaseShaders NO-SOURCE
+> Task :react-native-google-signin_google-signin:generateReleaseAssets UP-TO-DATE
+> Task :react-native-agora:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseShaders NO-SOURCE
+> Task :react-native-safe-area-context:generateReleaseAssets UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-svg:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-svg:compileReleaseShaders NO-SOURCE
+> Task :react-native-svg:generateReleaseAssets UP-TO-DATE
+> Task :react-native-svg:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-webview:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-webview:compileReleaseShaders NO-SOURCE
+> Task :react-native-webview:generateReleaseAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processReleaseJavaRes NO-SOURCE
+> Task :react-native-webview:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-firebase_app:processReleaseJavaRes NO-SOURCE
+> Task :react-native-firebase_auth:processReleaseJavaRes NO-SOURCE
+> Task :react-native-google-signin_google-signin:processReleaseJavaRes UP-TO-DATE
+> Task :react-native-reanimated:mergeReleaseShaders UP-TO-DATE
+> Task :expo:compileReleaseShaders NO-SOURCE
+> Task :expo:generateReleaseAssets UP-TO-DATE
+> Task :react-native-firebase_messaging:compileReleaseShaders NO-SOURCE
+> Task :react-native-firebase_messaging:generateReleaseAssets UP-TO-DATE
+> Task :react-native-svg:processReleaseJavaRes NO-SOURCE
+> Task :react-native-agora:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-reanimated:compileReleaseShaders NO-SOURCE
+> Task :react-native-safe-area-context:processReleaseJavaRes UP-TO-DATE
+> Task :react-native-reanimated:generateReleaseAssets UP-TO-DATE
+> Task :expo-constants:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-agora:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :expo-constants:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-webview:processReleaseJavaRes UP-TO-DATE
+> Task :react-native-agora:mergeReleaseShaders UP-TO-DATE
+> Task :expo-constants:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-agora:compileReleaseShaders NO-SOURCE
+> Task :react-native-agora:generateReleaseAssets UP-TO-DATE
+> Task :expo-constants:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-agora:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-agora:processReleaseJavaRes NO-SOURCE
+> Task :expo-constants:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-agora:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-agora:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-reanimated:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-agora:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-reanimated:processReleaseJavaRes NO-SOURCE
+> Task :expo-constants:mergeReleaseResources UP-TO-DATE
+> Task :react-native-firebase_app:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-constants:verifyReleaseResources UP-TO-DATE
+> Task :react-native-firebase_auth:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-screens:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-agora:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-firebase_app:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-firebase_auth:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-firebase_auth:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-agora:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-firebase_messaging:processReleaseJavaRes NO-SOURCE
+> Task :react-native-agora:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-firebase_messaging:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-firebase_app:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :expo:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-agora:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-firebase_messaging:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-firebase_messaging:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-gesture-handler:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-agora:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-firebase_auth:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_messaging:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-gesture-handler:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-google-signin_google-signin:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-agora:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-firebase_auth:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-worklets:configureCMakeRelWithDebInfo[x86]
+> Task :react-native-google-signin_google-signin:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-google-signin_google-signin:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-firebase_auth:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-firebase_auth:bundleReleaseAar UP-TO-DATE
+> Task :react-native-firebase_messaging:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-google-signin_google-signin:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-firebase_messaging:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-firebase_messaging:bundleReleaseAar UP-TO-DATE
 > Task :react-native-worklets:configureCMakeRelWithDebInfo[x86_64]
 > Task :react-native-worklets:generateJsonModelRelease
-> Task :agora-react-native-rtm:compileReleaseLibraryResources UP-TO-DATE
-> Task :agora-react-native-rtm:extractDeepLinksRelease UP-TO-DATE
-> Task :agora-react-native-rtm:bundleLibRuntimeToJarRelease UP-TO-DATE
 > Task :react-native-worklets:prefabReleaseConfigurePackage UP-TO-DATE
-> Task :app:generateReleaseResValues
+> Task :react-native-async-storage_async-storage:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_app:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-reanimated:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-async-storage_async-storage:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-async-storage_async-storage:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleReleaseAar UP-TO-DATE
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-firebase_app:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-firebase_app:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseJavaResource UP-TO-DATE
 > Task :expo-modules-core:configureCMakeRelWithDebInfo[armeabi-v7a]
-> Task :react-native-screens:configureCMakeRelWithDebInfo[armeabi-v7a]
-> Task :react-native-svg:mergeReleaseResources UP-TO-DATE
-> Task :app:generateReleaseResources
-> Task :react-native-screens:buildCMakeRelWithDebInfo[armeabi-v7a]
+> Task :react-native-firebase_app:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-firebase_app:bundleReleaseAar UP-TO-DATE
+> Task :react-native-screens:buildCMakeRelWithDebInfo[arm64-v8a]
 > Task :expo-modules-core:buildCMakeRelWithDebInfo[armeabi-v7a]
-> Task :react-native-svg:verifyReleaseResources UP-TO-DATE
-> Task :react-native-svg:assembleRelease UP-TO-DATE
-> Task :react-native-screens:configureCMakeRelWithDebInfo[x86]
-> Task :react-native-webview:mergeReleaseResources UP-TO-DATE
-> Task :expo-modules-core:configureCMakeRelWithDebInfo[x86]
 > Task :react-native-worklets:buildCMakeRelWithDebInfo[arm64-v8a][worklets]
-> Task :react-native-webview:verifyReleaseResources UP-TO-DATE
-> Task :react-native-webview:assembleRelease UP-TO-DATE
-> Task :react-native-screens:buildCMakeRelWithDebInfo[x86]
-> Task :expo-modules-core:buildCMakeRelWithDebInfo[x86]
-> Task :react-native-screens:configureCMakeRelWithDebInfo[x86_64]
-> Task :expo-modules-core:configureCMakeRelWithDebInfo[x86_64]
+> Task :expo-modules-core:configureCMakeRelWithDebInfo[x86]
+> Task :react-native-screens:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :react-native-async-storage_async-storage:mergeReleaseResources UP-TO-DATE
+> Task :react-native-firebase_messaging:mapReleaseSourceSetPaths UP-TO-DATE
 > Task :react-native-worklets:buildCMakeRelWithDebInfo[armeabi-v7a][worklets]
-> Task :react-native-screens:buildCMakeRelWithDebInfo[x86_64]
-> Task :react-native-screens:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-screens:mergeReleaseNativeLibs UP-TO-DATE
-> Task :react-native-screens:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :react-native-screens:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-screens:generateReleaseResValues UP-TO-DATE
-> Task :react-native-screens:generateReleaseResources UP-TO-DATE
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[x86]
+> Task :expo-modules-core:configureCMakeRelWithDebInfo[x86_64]
+> Task :react-native-screens:buildCMakeRelWithDebInfo[armeabi-v7a]
+> Task :react-native-firebase_app:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-firebase_messaging:mergeReleaseResources UP-TO-DATE
+> Task :react-native-screens:configureCMakeRelWithDebInfo[x86]
 > Task :expo-modules-core:buildCMakeRelWithDebInfo[x86_64]
 > Task :expo-modules-core:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-screens:packageReleaseResources UP-TO-DATE
-> Task :react-native-screens:parseReleaseLocalResources UP-TO-DATE
 > Task :expo-modules-core:mergeReleaseNativeLibs UP-TO-DATE
-> Task :react-native-screens:generateReleaseRFile UP-TO-DATE
 > Task :expo-modules-core:copyReleaseJniLibsProjectOnly UP-TO-DATE
 > Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :expo-modules-core:generateReleaseBuildConfig UP-TO-DATE
@@ -689,509 +647,444 @@ env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_FIRE
 > Task :expo-modules-core:packageReleaseResources UP-TO-DATE
 > Task :expo-modules-core:parseReleaseLocalResources UP-TO-DATE
 > Task :expo-modules-core:generateReleaseRFile UP-TO-DATE
-> Task :expo:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-firebase_app:mergeReleaseResources UP-TO-DATE
+> Task :agora-react-native-rtm:verifyReleaseResources
+> Task :app:createBundleReleaseJsAndAssets
+> Task :react-native-agora:bundleReleaseAar
+> Task :react-native-firebase_auth:mapReleaseSourceSetPaths
+> Task :react-native-google-signin_google-signin:mergeReleaseGeneratedProguardFiles
+> Task :react-native-reanimated:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :react-native-async-storage_async-storage:verifyReleaseResources
 > Task :react-native-worklets:buildCMakeRelWithDebInfo[x86][worklets]
+> Task :react-native-firebase_messaging:verifyReleaseResources
+> Task :react-native-screens:buildCMakeRelWithDebInfo[x86]
+> Task :expo-modules-core:compileReleaseKotlin
+> Task :expo:mapReleaseSourceSetPaths
+> Task :react-native-google-signin_google-signin:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-agora:bundleReleaseAar UP-TO-DATE
+> Task :agora-react-native-rtm:verifyReleaseResources UP-TO-DATE
+> Task :agora-react-native-rtm:assembleRelease UP-TO-DATE
+> Task :agora-react-native-rtm:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :agora-react-native-rtm:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :agora-react-native-rtm:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :agora-react-native-rtm:compileReleaseLibraryResources UP-TO-DATE
+> Task :agora-react-native-rtm:extractDeepLinksRelease UP-TO-DATE
+> Task :agora-react-native-rtm:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-google-signin_google-signin:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-google-signin_google-signin:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-google-signin_google-signin:bundleReleaseAar UP-TO-DATE
+> Task :react-native-firebase_auth:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-agora:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-async-storage_async-storage:verifyReleaseResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:assembleRelease UP-TO-DATE
+> Task :react-native-safe-area-context:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-safe-area-context:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-safe-area-context:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-firebase_messaging:verifyReleaseResources UP-TO-DATE
+> Task :react-native-firebase_app:verifyReleaseResources UP-TO-DATE
+> Task :react-native-firebase_app:assembleRelease UP-TO-DATE
+> Task :react-native-firebase_messaging:assembleRelease UP-TO-DATE
+> Task :react-native-safe-area-context:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-svg:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-webview:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-svg:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :expo:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-webview:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-svg:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-webview:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-svg:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-svg:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-svg:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-svg:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-svg:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-safe-area-context:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-safe-area-context:bundleReleaseAar UP-TO-DATE
+> Task :react-native-svg:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-svg:bundleReleaseAar UP-TO-DATE
+> Task :react-native-safe-area-context:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-svg:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :expo-modules-core:compileReleaseKotlin UP-TO-DATE
+> Task :react-native-webview:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-firebase_auth:mergeReleaseResources UP-TO-DATE
+> Task :react-native-webview:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-webview:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-webview:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-webview:mergeReleaseJavaResource UP-TO-DATE
+> Task :expo-modules-core:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-webview:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-webview:bundleReleaseAar UP-TO-DATE
+> Task :react-native-agora:mergeReleaseResources UP-TO-DATE
+> Task :react-native-google-signin_google-signin:mergeReleaseResources UP-TO-DATE
+> Task :react-native-webview:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-svg:mergeReleaseResources UP-TO-DATE
+> Task :react-native-agora:verifyReleaseResources UP-TO-DATE
+> Task :react-native-agora:assembleRelease UP-TO-DATE
+> Task :react-native-webview:mergeReleaseResources UP-TO-DATE
+> Task :react-native-firebase_auth:verifyReleaseResources UP-TO-DATE
+> Task :react-native-firebase_auth:assembleRelease UP-TO-DATE
+> Task :react-native-webview:verifyReleaseResources UP-TO-DATE
+> Task :react-native-webview:assembleRelease UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseResources UP-TO-DATE
+> Task :react-native-svg:verifyReleaseResources UP-TO-DATE
+> Task :react-native-svg:assembleRelease UP-TO-DATE
+> Task :react-native-google-signin_google-signin:verifyReleaseResources UP-TO-DATE
+> Task :expo:mergeReleaseResources UP-TO-DATE
+> Task :react-native-google-signin_google-signin:assembleRelease UP-TO-DATE
+> Task :react-native-safe-area-context:verifyReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:assembleRelease UP-TO-DATE
+> Task :react-native-screens:configureCMakeRelWithDebInfo[x86_64]
+> Task :react-native-screens:buildCMakeRelWithDebInfo[x86_64]
+> Task :react-native-screens:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-screens:mergeReleaseNativeLibs UP-TO-DATE
+> Task :react-native-screens:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-screens:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-screens:generateReleaseResValues UP-TO-DATE
+> Task :react-native-screens:generateReleaseResources UP-TO-DATE
+> Task :react-native-screens:packageReleaseResources UP-TO-DATE
+> Task :react-native-screens:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-screens:generateReleaseRFile UP-TO-DATE
 > Task :react-native-screens:compileReleaseKotlin UP-TO-DATE
 > Task :react-native-screens:javaPreCompileRelease UP-TO-DATE
-> Task :react-native-screens:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-screens:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-screens:writeReleaseAarMetadata UP-TO-DATE
-> Task :react-native-screens:extractDeepLinksRelease UP-TO-DATE
-> Task :react-native-screens:processReleaseManifest UP-TO-DATE
-> Task :app:packageReleaseResources
-> Task :react-native-screens:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-screens:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-screens:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-screens:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-screens:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-screens:compileReleaseShaders NO-SOURCE
-> Task :react-native-screens:generateReleaseAssets UP-TO-DATE
-> Task :react-native-screens:mergeReleaseAssets UP-TO-DATE
-> Task :app:createReleaseCompatibleScreenManifests
-> Task :expo:mergeReleaseResources UP-TO-DATE
-> Task :app:extractDeepLinksRelease
-> Task :react-native-screens:processReleaseJavaRes UP-TO-DATE
-> Task :react-native-screens:stripReleaseDebugSymbols UP-TO-DATE
-> Task :react-native-screens:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-screens:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-screens:extractReleaseAnnotations UP-TO-DATE
-> Task :app:javaPreCompileRelease
-> Task :app:desugarReleaseFileDependencies
-> Task :react-native-screens:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-screens:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-screens:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-screens:mergeReleaseJavaResource UP-TO-DATE
-> Task :app:mergeReleaseStartupProfile
-> Task :react-native-screens:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-screens:bundleReleaseAar UP-TO-DATE
-> Task :react-native-worklets:buildCMakeRelWithDebInfo[x86_64][worklets]
-> Task :app:parseReleaseLocalResources
-> Task :react-native-worklets:externalNativeBuildRelease
-> Task :react-native-worklets:prefabReleasePackage UP-TO-DATE
 
-> Task :app:mergeExtDexRelease
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbd, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbo, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.zbb, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbv, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbv, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbi, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbi, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbp, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbs, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 10: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.zba, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbl, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbn, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbu, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbq, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 6: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbae, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbh, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbg, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbm, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbk, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 17: invokespecial Lcom/google/android/gms/auth/api/signin/internal/zbl;<init>(Lcom/google/android/gms/common/api/GoogleApiClient;)V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.internal.zbi, but was com.google.android.gms.auth.api.signin.internal.zbl.<init>(com.google.android.gms.common.api.GoogleApiClient).
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 20: invokespecial Lcom/google/android/gms/auth/api/signin/internal/zbl;<init>(Lcom/google/android/gms/common/api/GoogleApiClient;)V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.internal.zbk, but was com.google.android.gms.auth.api.signin.internal.zbl.<init>(com.google.android.gms.common.api.GoogleApiClient).
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbw, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbc, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbe, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbj, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbr, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbay, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 6: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbak, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbt, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.internal.zbu, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbb, but was java.lang.Object.<init>().
-WARNING: C:\Users\SAI DIHNESH\.gradle\caches\8.14.3\transforms\143006ae956ad02f6f52a9c8abdb94ff\transformed\play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 6: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbw, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
+> Task :expo-modules-core:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
 
-> Task :react-native-reanimated:configureCMakeRelWithDebInfo[arm64-v8a]
-> Task :expo-modules-core:compileReleaseKotlin
-> Task :react-native-screens:mapReleaseSourceSetPaths
-> Task :react-native-worklets:mergeReleaseJniLibFolders UP-TO-DATE
-> Task :react-native-screens:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseNativeLibs UP-TO-DATE
-> Task :react-native-worklets:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-worklets:generateReleaseBuildConfig UP-TO-DATE
-> Task :react-native-worklets:generateReleaseResValues UP-TO-DATE
-> Task :react-native-worklets:generateReleaseResources UP-TO-DATE
-> Task :react-native-worklets:packageReleaseResources UP-TO-DATE
-> Task :react-native-worklets:parseReleaseLocalResources UP-TO-DATE
-> Task :react-native-worklets:generateReleaseRFile UP-TO-DATE
-> Task :react-native-worklets:javaPreCompileRelease UP-TO-DATE
-> Task :expo-modules-core:compileReleaseKotlin UP-TO-DATE
-> Task :expo-modules-core:javaPreCompileRelease UP-TO-DATE
-> Task :expo-modules-core:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :expo-modules-core:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-reanimated:configureCMakeRelWithDebInfo[armeabi-v7a]
-> Task :react-native-screens:mergeReleaseResources UP-TO-DATE
 > Task :react-native-reanimated:configureCMakeRelWithDebInfo[x86]
-> Task :react-native-reanimated:configureCMakeRelWithDebInfo[x86_64]
-> Task :react-native-reanimated:generateJsonModelRelease
-> Task :react-native-reanimated:prefabReleaseConfigurePackage UP-TO-DATE
-> Task :react-native-reanimated:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :expo-modules-core:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseResources UP-TO-DATE
-> Task :expo-constants:compileReleaseKotlin UP-TO-DATE
-> Task :expo-constants:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :expo-constants:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :expo-modules-core:writeReleaseAarMetadata UP-TO-DATE
-> Task :expo-constants:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :expo-constants:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :expo-constants:processReleaseJavaRes UP-TO-DATE
-> Task :react-native-worklets:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-worklets:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :expo-modules-core:extractDeepLinksRelease UP-TO-DATE
-> Task :expo-constants:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-worklets:bundleLibRuntimeToDirRelease UP-TO-DATE
 > Task :expo-modules-core:processReleaseManifest UP-TO-DATE
-> Task :react-native-worklets:writeReleaseAarMetadata UP-TO-DATE
 > Task :expo-modules-core:compileReleaseLibraryResources UP-TO-DATE
 > Task :expo-modules-core:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-worklets:extractDeepLinksRelease UP-TO-DATE
-> Task :expo-modules-core:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-reanimated:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :react-native-reanimated:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :expo-modules-core:mergeReleaseShaders UP-TO-DATE
 > Task :expo-modules-core:compileReleaseShaders NO-SOURCE
 > Task :expo-modules-core:generateReleaseAssets UP-TO-DATE
 > Task :expo-modules-core:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-worklets:processReleaseManifest UP-TO-DATE
-> Task :react-native-worklets:compileReleaseLibraryResources UP-TO-DATE
-> Task :react-native-reanimated:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :react-native-worklets:prepareReleaseArtProfile UP-TO-DATE
-> Task :react-native-reanimated:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :react-native-worklets:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :expo-modules-core:processReleaseJavaRes UP-TO-DATE
-> Task :expo-constants:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseShaders UP-TO-DATE
-> Task :react-native-worklets:compileReleaseShaders NO-SOURCE
-> Task :react-native-worklets:generateReleaseAssets UP-TO-DATE
-> Task :expo-constants:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :expo-constants:mergeReleaseJavaResource UP-TO-DATE
-> Task :expo-constants:syncReleaseLibJars UP-TO-DATE
-> Task :expo-constants:bundleReleaseAar UP-TO-DATE
-> Task :expo-constants:assembleRelease UP-TO-DATE
+> Task :expo-modules-core:processReleaseJavaRes
 > Task :expo-modules-core:stripReleaseDebugSymbols UP-TO-DATE
 > Task :expo-modules-core:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
 > Task :expo-modules-core:extractDeepLinksForAarRelease UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseAssets UP-TO-DATE
-> Task :react-native-worklets:processReleaseJavaRes NO-SOURCE
-> Task :react-native-reanimated:extractReleaseAnnotations UP-TO-DATE
-> Task :expo-modules-core:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :expo-modules-core:extractReleaseAnnotations
 > Task :expo-modules-core:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :expo-modules-core:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-reanimated:syncReleaseLibJars UP-TO-DATE
+> Task :expo-modules-core:mergeReleaseConsumerProguardFiles
 > Task :expo-modules-core:prepareLintJarForPublish UP-TO-DATE
-> Task :expo-modules-core:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-worklets:stripReleaseDebugSymbols UP-TO-DATE
-> Task :expo-modules-core:syncReleaseLibJars UP-TO-DATE
-> Task :expo-modules-core:bundleReleaseAar UP-TO-DATE
-> Task :react-native-worklets:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-worklets:extractDeepLinksForAarRelease UP-TO-DATE
 > Task :expo-modules-core:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-worklets:extractReleaseAnnotations UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :react-native-gesture-handler:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-reanimated:verifyReleaseResources UP-TO-DATE
-> Task :react-native-screens:verifyReleaseResources UP-TO-DATE
-> Task :react-native-screens:assembleRelease UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :react-native-worklets:prepareLintJarForPublish UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseJavaResource UP-TO-DATE
-> Task :react-native-worklets:syncReleaseLibJars UP-TO-DATE
-> Task :react-native-worklets:bundleReleaseAar UP-TO-DATE
-> Task :react-native-worklets:mapReleaseSourceSetPaths UP-TO-DATE
-> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[arm64-v8a]
-> Task :expo:compileReleaseKotlin UP-TO-DATE
-> Task :expo:compileReleaseJavaWithJavac UP-TO-DATE
-> Task :expo:bundleLibRuntimeToDirRelease UP-TO-DATE
-> Task :expo:bundleLibCompileToJarRelease UP-TO-DATE
-> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[armeabi-v7a]
-> Task :expo:bundleLibRuntimeToJarRelease UP-TO-DATE
-> Task :expo:processReleaseJavaRes UP-TO-DATE
-> Task :expo:extractReleaseAnnotations UP-TO-DATE
-> Task :expo:mergeReleaseGeneratedProguardFiles UP-TO-DATE
-> Task :expo:mergeReleaseConsumerProguardFiles UP-TO-DATE
-> Task :expo:mergeReleaseJavaResource UP-TO-DATE
-> Task :expo:syncReleaseLibJars UP-TO-DATE
-> Task :expo:bundleReleaseAar UP-TO-DATE
-> Task :expo-modules-core:mergeReleaseResources UP-TO-DATE
 > Task :expo:verifyReleaseResources UP-TO-DATE
-> Task :expo:assembleRelease UP-TO-DATE
-> Task :react-native-worklets:mergeReleaseResources UP-TO-DATE
+> Task :expo-modules-core:mergeReleaseJavaResource
+> Task :expo-modules-core:mergeReleaseResources UP-TO-DATE
+> Task :expo-modules-core:bundleLibCompileToJarRelease
+> Task :expo-modules-core:bundleLibRuntimeToDirRelease
+> Task :react-native-screens:compileReleaseJavaWithJavac
+> Task :react-native-screens:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-screens:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-screens:processReleaseManifest UP-TO-DATE
+> Task :react-native-screens:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-screens:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-screens:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-screens:compileReleaseShaders NO-SOURCE
+> Task :react-native-screens:generateReleaseAssets UP-TO-DATE
+> Task :react-native-screens:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-screens:processReleaseJavaRes
+> Task :react-native-screens:stripReleaseDebugSymbols UP-TO-DATE
+> Task :react-native-screens:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-screens:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-screens:extractReleaseAnnotations
+> Task :react-native-screens:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-screens:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-screens:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-screens:mergeReleaseJavaResource
+> Task :react-native-screens:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-screens:bundleLibRuntimeToJarRelease
+> Task :react-native-screens:bundleLibCompileToJarRelease
+> Task :react-native-screens:bundleLibRuntimeToDirRelease
+> Task :expo-modules-core:bundleLibRuntimeToJarRelease
+> Task :react-native-screens:syncReleaseLibJars
+> Task :react-native-screens:bundleReleaseAar
+> Task :react-native-screens:mergeReleaseResources UP-TO-DATE
+> Task :react-native-screens:verifyReleaseResources UP-TO-DATE
+> Task :react-native-screens:assembleRelease
+> Task :expo-modules-core:syncReleaseLibJars
+> Task :expo-modules-core:bundleReleaseAar
 > Task :expo-modules-core:verifyReleaseResources UP-TO-DATE
-> Task :expo-modules-core:assembleRelease UP-TO-DATE
-> Task :react-native-worklets:verifyReleaseResources UP-TO-DATE
-> Task :react-native-worklets:assembleRelease UP-TO-DATE
-> Task :react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a][reanimated]
-> Task :react-native-reanimated:buildCMakeRelWithDebInfo[armeabi-v7a][reanimated]
-> Task :react-native-reanimated:buildCMakeRelWithDebInfo[x86][reanimated]
-> Task :react-native-reanimated:buildCMakeRelWithDebInfo[x86_64][reanimated]
-> Task :react-native-reanimated:externalNativeBuildRelease
-> Task :react-native-reanimated:prefabReleasePackage UP-TO-DATE
-> Task :react-native-reanimated:mergeReleaseNativeLibs UP-TO-DATE
-> Task :react-native-reanimated:copyReleaseJniLibsProjectOnly UP-TO-DATE
-> Task :react-native-reanimated:stripReleaseDebugSymbols UP-TO-DATE
-> Task :react-native-reanimated:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
-> Task :react-native-reanimated:bundleReleaseAar UP-TO-DATE
-> Task :react-native-reanimated:assembleRelease UP-TO-DATE
+> Task :expo-modules-core:assembleRelease
+> Task :react-native-reanimated:configureCMakeRelWithDebInfo[x86_64]
+
+> Task :expo-constants:compileReleaseKotlin
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo-constants/android/src/main/java/expo/modules/constants/ConstantsModule.kt:12:5 'fun Constants(legacyConstantsProvider: () -> Map<String, Any?>): Unit' is deprecated. Use `Constant` or `Property` instead.
+
+> Task :expo-constants:compileReleaseJavaWithJavac
+> Task :expo-constants:bundleLibCompileToJarRelease
+> Task :expo-constants:processReleaseJavaRes
+> Task :expo-constants:bundleLibRuntimeToJarRelease
+> Task :expo-constants:extractReleaseAnnotations
+> Task :expo-constants:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :expo-constants:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :expo-constants:mergeReleaseJavaResource
+> Task :expo-constants:bundleLibRuntimeToDirRelease
+> Task :expo-constants:syncReleaseLibJars
+> Task :expo-constants:bundleReleaseAar
+> Task :expo-constants:assembleRelease
+
+> Task :expo:compileReleaseKotlin
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ExpoModulesPackage.kt:34:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ExpoReactHostFactory.kt:8:8 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ExpoReactHostFactory.kt:80:22 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:24:8 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:58:33 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:105:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:105:38 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:113:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:114:21 'val reactInstanceManager: ReactInstanceManager' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:168:36 'constructor(activity: Activity, reactNativeHost: ReactNativeHost?, appKey: String?, launchOptions: Bundle?, fabricEnabled: Boolean): ReactDelegate' is deprecated. Deprecated since 0.81.0, use one of the other constructors instead.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:279:77 'val reactInstanceManager: ReactInstanceManager' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:282:22 'val reactInstanceManager: ReactInstanceManager' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:286:54 'val reactInstanceManager: ReactInstanceManager' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapper.kt:6:8 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapper.kt:15:9 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapper.kt:47:60 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapperBase.kt:7:8 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapperBase.kt:16:23 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapperBase.kt:89:16 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/ReactNativeHostWrapperBase.kt:101:38 'class ReactNativeHost : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/fetch/ExpoFetchModule.kt:30:39 'constructor(reactContext: ReactContext): ForwardingCookieHandler' is deprecated. Use the default constructor.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/fetch/NativeResponse.kt:42:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/expo/android/src/main/java/expo/modules/fetch/NativeResponse.kt:44:11 'fun deallocate(): Unit' is deprecated. Use sharedObjectDidRelease() instead.
+
+> Task :expo:compileReleaseJavaWithJavac
+> Task :expo:processReleaseJavaRes
+> Task :expo:bundleLibRuntimeToDirRelease
+> Task :expo:extractReleaseAnnotations
+> Task :expo:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :expo:mergeReleaseConsumerProguardFiles
+> Task :expo:mergeReleaseJavaResource
+> Task :expo:bundleLibRuntimeToJarRelease
+> Task :expo:syncReleaseLibJars
+> Task :expo:bundleReleaseAar
+> Task :expo:assembleRelease
+> Task :expo:bundleLibCompileToJarRelease
+> Task :react-native-reanimated:generateJsonModelRelease
+> Task :react-native-reanimated:prefabReleaseConfigurePackage UP-TO-DATE
+> Task :react-native-reanimated:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-reanimated:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-reanimated:mergeReleaseJavaResource UP-TO-DATE
+
+> Task :app:createBundleReleaseJsAndAssets
+env: load .env
+env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+
+> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[armeabi-v7a]
 > Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[x86]
+> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[x86_64]
+> Task :react-native-worklets:buildCMakeRelWithDebInfo[x86_64][worklets]
+> Task :react-native-worklets:externalNativeBuildRelease
+> Task :react-native-worklets:prefabReleasePackage
+> Task :react-native-worklets:mergeReleaseJniLibFolders
+> Task :react-native-worklets:generateReleaseBuildConfig
+> Task :react-native-worklets:generateReleaseResValues
+> Task :react-native-worklets:generateReleaseResources
+> Task :react-native-worklets:packageReleaseResources
+> Task :react-native-worklets:mergeReleaseNativeLibs
+> Task :react-native-gesture-handler:mapReleaseSourceSetPaths
+> Task :react-native-worklets:parseReleaseLocalResources
+> Task :react-native-worklets:javaPreCompileRelease
+> Task :react-native-worklets:writeReleaseAarMetadata
+> Task :react-native-worklets:extractDeepLinksRelease
+> Task :react-native-worklets:generateReleaseRFile
+> Task :react-native-worklets:compileReleaseLibraryResources
+> Task :react-native-worklets:copyReleaseJniLibsProjectOnly
+> Task :react-native-worklets:processReleaseManifest
+
+> Task :react-native-worklets:compileReleaseJavaWithJavac
+Note: C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-worklets\android\src\main\java\com\swmansion\worklets\WorkletsPackage.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :react-native-worklets:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-worklets:mergeReleaseShaders
+> Task :react-native-worklets:bundleLibRuntimeToJarRelease
+> Task :react-native-worklets:compileReleaseShaders NO-SOURCE
+> Task :react-native-worklets:bundleLibCompileToJarRelease
+> Task :react-native-worklets:generateReleaseAssets UP-TO-DATE
+> Task :react-native-worklets:mergeReleaseAssets
+> Task :react-native-worklets:processReleaseJavaRes NO-SOURCE
+> Task :react-native-worklets:bundleLibRuntimeToDirRelease
+> Task :react-native-worklets:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-worklets:extractReleaseAnnotations
+> Task :react-native-worklets:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-worklets:mergeReleaseConsumerProguardFiles
+> Task :react-native-worklets:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-worklets:mapReleaseSourceSetPaths
+> Task :react-native-worklets:mergeReleaseJavaResource
+> Task :react-native-worklets:stripReleaseDebugSymbols
+> Task :react-native-gesture-handler:mergeReleaseResources
+> Task :react-native-worklets:mergeReleaseResources
+> Task :react-native-worklets:syncReleaseLibJars
+> Task :react-native-worklets:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a][reanimated]
+
+> Task :app:createBundleReleaseJsAndAssets
+Starting Metro Bundler
+
+> Task :react-native-worklets:bundleReleaseAar
+> Task :react-native-gesture-handler:verifyReleaseResources
+
+> Task :app:createBundleReleaseJsAndAssets
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+
+> Task :react-native-worklets:verifyReleaseResources
+> Task :react-native-worklets:assembleRelease
+
+> Task :app:createBundleReleaseJsAndAssets
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[armeabi-v7a][reanimated]
+
+> Task :app:createBundleReleaseJsAndAssets
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  1.0% (1/1)
+Android node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/13)
+Android node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 5/13)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 7/29)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (13/37)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (14/40)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (14/51)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (19/67)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (27/87)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 38/116)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 39/194)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 52/214)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 67/250)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 79/266)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% ( 95/277)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (101/313)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (109/352)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (123/375)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (130/393)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (138/410)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (156/427)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (176/443)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 19.1% (189/455)
+Android node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 24.7% (237/477)
+Android node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 29.3% (264/488)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 33.5% (291/508)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 37.9% (325/561)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.3% (388/611)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 41.6% (423/661)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 43.5% (453/691)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (494/725)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (503/751)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (510/807)
+
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[x86][reanimated]
+
+> Task :app:createBundleReleaseJsAndAssets
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 511/2512)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 515/2547)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 517/2569)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 531/2597)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 578/2645)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 583/2667)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 631/2685)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 725/2716)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 777/2798)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% ( 976/2828)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (1271/2828)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (1569/2828)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (1884/2828)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.4% (2142/2828)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.4% (2287/2828)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74.9% (2448/2828)
+
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[x86_64][reanimated]
+
+> Task :app:createBundleReleaseJsAndAssets
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 80.5% (2581/2896)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 80.6% (2621/2935)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 80.6% (2643/2974)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 80.6% (2682/2993)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 83.0% (2737/3005)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.4% (2792/3022)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.7% (2874/3065)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.7% (2914/3128)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.7% (2963/3158)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.7% (2995/3197)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.2% (3049/3228)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.6% (3094/3250)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91.9% (3156/3292)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.6% (3219/3310)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.6% (3247/3395)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.6% (3291/3432)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.6% (3344/3474)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96.5% (3462/3537)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.0% (3504/3559)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.0% (3534/3605)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.0% (3578/3634)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (3645/3645)
+Android Bundled 504827ms node_modules\expo-router\entry.js (3645 modules)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (3645/3645)
+Writing bundle output to: android\app\build\generated\assets\createBundleReleaseJsAndAssets\index.android.bundle
+Writing sourcemap output to: android\app\build\intermediates\sourcemaps\react\release\index.android.bundle.packager.map
+Copying 65 asset files
+Done writing bundle output
+Done writing sourcemap output
+
+> Task :react-native-reanimated:externalNativeBuildRelease
+> Task :react-native-reanimated:prefabReleasePackage
+> Task :react-native-reanimated:mergeReleaseNativeLibs
+
+> Task :react-native-reanimated:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :react-native-reanimated:bundleLibRuntimeToJarRelease
+> Task :react-native-reanimated:bundleLibCompileToJarRelease
+> Task :react-native-reanimated:bundleLibRuntimeToDirRelease
+> Task :react-native-reanimated:extractReleaseAnnotations
+> Task :react-native-reanimated:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-reanimated:mergeReleaseConsumerProguardFiles
+> Task :react-native-reanimated:copyReleaseJniLibsProjectOnly
+> Task :react-native-reanimated:syncReleaseLibJars
+> Task :react-native-reanimated:stripReleaseDebugSymbols
+> Task :react-native-reanimated:mapReleaseSourceSetPaths
+> Task :react-native-reanimated:copyReleaseJniLibsProjectAndLocalJars
 > Task :react-native-gesture-handler:buildCMakeRelWithDebInfo[arm64-v8a]
 > Task :app:configureCMakeRelWithDebInfo[arm64-v8a]
 > Task :react-native-gesture-handler:buildCMakeRelWithDebInfo[armeabi-v7a]
-> Task :app:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-reanimated:mergeReleaseResources
+> Task :react-native-reanimated:bundleReleaseAar
 > Task :react-native-gesture-handler:buildCMakeRelWithDebInfo[x86]
-> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[x86_64]
+> Task :app:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-reanimated:verifyReleaseResources
+> Task :react-native-reanimated:assembleRelease
 > Task :react-native-gesture-handler:buildCMakeRelWithDebInfo[x86_64]
 > Task :react-native-gesture-handler:mergeReleaseNativeLibs
 > Task :react-native-gesture-handler:copyReleaseJniLibsProjectOnly
-> Task :react-native-gesture-handler:mergeReleaseResources UP-TO-DATE
-> Task :react-native-gesture-handler:verifyReleaseResources UP-TO-DATE
-
 > Task :react-native-gesture-handler:stripReleaseDebugSymbols
-C:/Andriod/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-strip.exe: error: No such file or directory
-
-
-> Task :react-native-gesture-handler:stripReleaseDebugSymbols FAILED
+> Task :react-native-gesture-handler:copyReleaseJniLibsProjectAndLocalJars
 > Task :react-native-gesture-handler:compileReleaseKotlin
 w: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerRootView.kt:41:43 The corresponding parameter in the supertype 'ReactViewGroup' is named 'ev'. This may cause problems when calling this function with named arguments.
-e: Daemon compilation failed: null
-java.lang.Exception
-	at org.jetbrains.kotlin.daemon.common.CompileService$CallResult$Error.get(CompileService.kt:69)
-	at org.jetbrains.kotlin.daemon.common.CompileService$CallResult$Error.get(CompileService.kt:65)
-	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.compileWithDaemon(GradleKotlinCompilerWork.kt:240)
-	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.compileWithDaemonOrFallbackImpl(GradleKotlinCompilerWork.kt:159)
-	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:111)
-	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
-	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
-	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
-	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
-	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
-	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
-	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
-	at org.gradle.internal.Factories$1.create(Factories.java:31)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-Caused by: java.lang.AssertionError: java.lang.Exception: Could not close incremental caches in C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups: lookups.tab
-	at org.jetbrains.kotlin.com.google.common.io.Closer.close(Closer.java:218)
-	at org.jetbrains.kotlin.incremental.IncrementalCachesManager.close(IncrementalCachesManager.kt:55)
-	at kotlin.io.CloseableKt.closeFinally(Closeable.kt:46)
-	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:302)
-	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:137)
-	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:678)
-	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
-	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1805)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
-	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
-	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:360)
-	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:200)
-	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:197)
-	at java.base/java.security.AccessController.doPrivileged(AccessController.java:712)
-	at java.rmi/sun.rmi.transport.Transport.serviceCall(Transport.java:196)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:587)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:828)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(TCPTransport.java:705)
-	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:704)
-	... 3 more
-Caused by: java.lang.Exception: Could not close incremental caches in C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups: lookups.tab
-	at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.forEachMapSafe(BasicMapsOwner.kt:95)
-	at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.close(BasicMapsOwner.kt:53)
-	at org.jetbrains.kotlin.incremental.LookupStorage.close(LookupStorage.kt:155)
-	at org.jetbrains.kotlin.com.google.common.io.Closer.close(Closer.java:205)
-	... 24 more
-	Suppressed: java.lang.IllegalStateException: Storage for [C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups\lookups.tab] is already registered
-		at org.jetbrains.kotlin.com.intellij.util.io.FilePageCache.registerPagedFileStorage(FilePageCache.java:410)
-		at org.jetbrains.kotlin.com.intellij.util.io.PagedFileStorage.<init>(PagedFileStorage.java:72)
-		at org.jetbrains.kotlin.com.intellij.util.io.ResizeableMappedFile.<init>(ResizeableMappedFile.java:55)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentBTreeEnumerator.<init>(PersistentBTreeEnumerator.java:128)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentEnumerator.createDefaultEnumerator(PersistentEnumerator.java:52)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:165)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:140)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.buildImplementation(PersistentMapBuilder.java:88)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.build(PersistentMapBuilder.java:71)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:45)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:71)
-		at org.jetbrains.kotlin.incremental.storage.LazyStorage.createMap(LazyStorage.kt:62)
-		at org.jetbrains.kotlin.incremental.storage.LazyStorage.getStorageOrCreateNew(LazyStorage.kt:59)
-		at org.jetbrains.kotlin.incremental.storage.LazyStorage.set(LazyStorage.kt:80)
-		at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.applyChanges(InMemoryStorage.kt:108)
-		at org.jetbrains.kotlin.incremental.storage.AppendableInMemoryStorage.applyChanges(InMemoryStorage.kt:179)
-		at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.close(InMemoryStorage.kt:136)
-		at org.jetbrains.kotlin.incremental.storage.AppendableSetBasicMap.close(BasicMap.kt:157)
-		at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-		at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-		at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.forEachMapSafe(BasicMapsOwner.kt:87)
-		... 27 more
-		Suppressed: java.lang.Exception: Storage[C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups\lookups.tab] registration stack trace
-			at org.jetbrains.kotlin.com.intellij.util.io.FilePageCache.registerPagedFileStorage(FilePageCache.java:437)
-			at org.jetbrains.kotlin.com.intellij.util.io.PagedFileStorage.<init>(PagedFileStorage.java:72)
-			at org.jetbrains.kotlin.com.intellij.util.io.ResizeableMappedFile.<init>(ResizeableMappedFile.java:55)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentBTreeEnumerator.<init>(PersistentBTreeEnumerator.java:128)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentEnumerator.createDefaultEnumerator(PersistentEnumerator.java:52)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:165)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:140)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.buildImplementation(PersistentMapBuilder.java:88)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.build(PersistentMapBuilder.java:71)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:45)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:71)
-			at org.jetbrains.kotlin.incremental.storage.LazyStorage.createMap(LazyStorage.kt:62)
-			at org.jetbrains.kotlin.incremental.storage.LazyStorage.getStorageOrCreateNew(LazyStorage.kt:59)
-			at org.jetbrains.kotlin.incremental.storage.LazyStorage.set(LazyStorage.kt:80)
-			at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.applyChanges(InMemoryStorage.kt:108)
-			at org.jetbrains.kotlin.incremental.storage.AppendableInMemoryStorage.applyChanges(InMemoryStorage.kt:179)
-			at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.close(InMemoryStorage.kt:136)
-			at org.jetbrains.kotlin.incremental.storage.AppendableSetBasicMap.close(BasicMap.kt:157)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.forEachMapSafe(BasicMapsOwner.kt:87)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.close(BasicMapsOwner.kt:53)
-			at org.jetbrains.kotlin.incremental.LookupStorage.close(LookupStorage.kt:155)
-			at org.jetbrains.kotlin.com.google.common.io.Closer.close(Closer.java:205)
-			at org.jetbrains.kotlin.incremental.IncrementalCachesManager.close(IncrementalCachesManager.kt:55)
-			at kotlin.io.CloseableKt.closeFinally(Closeable.kt:49)
-			... 22 more
 
-Failed to compile with Kotlin daemon: java.lang.Exception
-	at org.jetbrains.kotlin.daemon.common.CompileService$CallResult$Error.get(CompileService.kt:69)
-	at org.jetbrains.kotlin.daemon.common.CompileService$CallResult$Error.get(CompileService.kt:65)
-	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.compileWithDaemon(GradleKotlinCompilerWork.kt:240)
-	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.compileWithDaemonOrFallbackImpl(GradleKotlinCompilerWork.kt:159)
-	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:111)
-	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
-	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
-	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
-	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
-	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
-	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
-	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
-	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
-	at org.gradle.internal.Factories$1.create(Factories.java:31)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
-	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
-	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-Caused by: java.lang.AssertionError: java.lang.Exception: Could not close incremental caches in C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups: lookups.tab
-	at org.jetbrains.kotlin.com.google.common.io.Closer.close(Closer.java:218)
-	at org.jetbrains.kotlin.incremental.IncrementalCachesManager.close(IncrementalCachesManager.kt:55)
-	at kotlin.io.CloseableKt.closeFinally(Closeable.kt:46)
-	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:302)
-	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:137)
-	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:678)
-	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
-	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1805)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
-	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
-	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:360)
-	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:200)
-	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:197)
-	at java.base/java.security.AccessController.doPrivileged(AccessController.java:712)
-	at java.rmi/sun.rmi.transport.Transport.serviceCall(Transport.java:196)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:587)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:828)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(TCPTransport.java:705)
-	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
-	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:704)
-	... 3 more
-Caused by: java.lang.Exception: Could not close incremental caches in C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups: lookups.tab
-	at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.forEachMapSafe(BasicMapsOwner.kt:95)
-	at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.close(BasicMapsOwner.kt:53)
-	at org.jetbrains.kotlin.incremental.LookupStorage.close(LookupStorage.kt:155)
-	at org.jetbrains.kotlin.com.google.common.io.Closer.close(Closer.java:205)
-	... 24 more
-	Suppressed: java.lang.IllegalStateException: Storage for [C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups\lookups.tab] is already registered
-		at org.jetbrains.kotlin.com.intellij.util.io.FilePageCache.registerPagedFileStorage(FilePageCache.java:410)
-		at org.jetbrains.kotlin.com.intellij.util.io.PagedFileStorage.<init>(PagedFileStorage.java:72)
-		at org.jetbrains.kotlin.com.intellij.util.io.ResizeableMappedFile.<init>(ResizeableMappedFile.java:55)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentBTreeEnumerator.<init>(PersistentBTreeEnumerator.java:128)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentEnumerator.createDefaultEnumerator(PersistentEnumerator.java:52)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:165)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:140)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.buildImplementation(PersistentMapBuilder.java:88)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.build(PersistentMapBuilder.java:71)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:45)
-		at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:71)
-		at org.jetbrains.kotlin.incremental.storage.LazyStorage.createMap(LazyStorage.kt:62)
-		at org.jetbrains.kotlin.incremental.storage.LazyStorage.getStorageOrCreateNew(LazyStorage.kt:59)
-		at org.jetbrains.kotlin.incremental.storage.LazyStorage.set(LazyStorage.kt:80)
-		at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.applyChanges(InMemoryStorage.kt:108)
-		at org.jetbrains.kotlin.incremental.storage.AppendableInMemoryStorage.applyChanges(InMemoryStorage.kt:179)
-		at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.close(InMemoryStorage.kt:136)
-		at org.jetbrains.kotlin.incremental.storage.AppendableSetBasicMap.close(BasicMap.kt:157)
-		at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-		at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-		at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.forEachMapSafe(BasicMapsOwner.kt:87)
-		... 27 more
-		Suppressed: java.lang.Exception: Storage[C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\kotlin\compileReleaseKotlin\cacheable\caches-jvm\lookups\lookups.tab] registration stack trace
-			at org.jetbrains.kotlin.com.intellij.util.io.FilePageCache.registerPagedFileStorage(FilePageCache.java:437)
-			at org.jetbrains.kotlin.com.intellij.util.io.PagedFileStorage.<init>(PagedFileStorage.java:72)
-			at org.jetbrains.kotlin.com.intellij.util.io.ResizeableMappedFile.<init>(ResizeableMappedFile.java:55)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentBTreeEnumerator.<init>(PersistentBTreeEnumerator.java:128)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentEnumerator.createDefaultEnumerator(PersistentEnumerator.java:52)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:165)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapImpl.<init>(PersistentMapImpl.java:140)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.buildImplementation(PersistentMapBuilder.java:88)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentMapBuilder.build(PersistentMapBuilder.java:71)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:45)
-			at org.jetbrains.kotlin.com.intellij.util.io.PersistentHashMap.<init>(PersistentHashMap.java:71)
-			at org.jetbrains.kotlin.incremental.storage.LazyStorage.createMap(LazyStorage.kt:62)
-			at org.jetbrains.kotlin.incremental.storage.LazyStorage.getStorageOrCreateNew(LazyStorage.kt:59)
-			at org.jetbrains.kotlin.incremental.storage.LazyStorage.set(LazyStorage.kt:80)
-			at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.applyChanges(InMemoryStorage.kt:108)
-			at org.jetbrains.kotlin.incremental.storage.AppendableInMemoryStorage.applyChanges(InMemoryStorage.kt:179)
-			at org.jetbrains.kotlin.incremental.storage.InMemoryStorage.close(InMemoryStorage.kt:136)
-			at org.jetbrains.kotlin.incremental.storage.AppendableSetBasicMap.close(BasicMap.kt:157)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner$close$1.invoke(BasicMapsOwner.kt:53)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.forEachMapSafe(BasicMapsOwner.kt:87)
-			at org.jetbrains.kotlin.incremental.storage.BasicMapsOwner.close(BasicMapsOwner.kt:53)
-			at org.jetbrains.kotlin.incremental.LookupStorage.close(LookupStorage.kt:155)
-			at org.jetbrains.kotlin.com.google.common.io.Closer.close(Closer.java:205)
-			at org.jetbrains.kotlin.incremental.IncrementalCachesManager.close(IncrementalCachesManager.kt:55)
-			at kotlin.io.CloseableKt.closeFinally(Closeable.kt:49)
-			... 22 more
-Using fallback strategy: Compile without Kotlin daemon
-Try ./gradlew --stop if this issue persists
-If it does not look related to your configuration, please file an issue with logs to https://kotl.in/issue
-exception: c:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\src\main\java\com\swmansion\gesturehandler\react\RNGestureHandlerRootView.kt:41:43: warning: the corresponding parameter in the supertype 'ReactViewGroup' is named 'ev'. This may cause problems when calling this function with named arguments.
-exception:   override fun dispatchGenericMotionEvent(event: MotionEvent) =
-exception:                                           ^^^^^
-w: Detected multiple Kotlin daemon sessions at 
-
-[Incubating] Problems report is available at: file:///C:/Users/SAI%20DIHNESH/Desktop/Reddy/api/partner%20app/a1care-partner/android/build/reports/problems/problems-report.html
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':react-native-gesture-handler:stripReleaseDebugSymbols'.
-> A failure occurred while executing com.android.build.gradle.internal.tasks.StripDebugSymbolsDelegate
-   > There was a failure while executing work items
-      > A failure occurred while executing com.android.build.gradle.internal.tasks.StripDebugSymbolsRunnable
-         > C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\intermediates\merged_native_libs\release\mergeReleaseNativeLibs\out\lib\x86_64\libgesturehandler.so -> C:\Users\SAI DIHNESH\Desktop\Reddy\api\partner app\a1care-partner\node_modules\react-native-gesture-handler\android\build\intermediates\stripped_native_libs\release\stripReleaseDebugSymbols\out\lib\x86_64\libgesturehandler.so
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
-
-You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
-
-For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-
-BUILD FAILED in 7m 7s
-642 actionable tasks: 62 executed, 580 up-to-date
+> Task :react-native-gesture-handler:compileReleaseJavaWithJavac
+> Task :react-native-gesture-handler:processReleaseJavaRes
+> Task :react-native-gesture-handler:bundleLibCompileToJarRelease
+> Task :react-native-gesture-handler:extractReleaseAnnotations
+> Task :react-native-gesture-handler:bundleLibRuntimeToJarRelease
+> Task :react-native-gesture-handler:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseJavaResource
+> Task :react-native-gesture-handler:syncReleaseLibJars
+> Task :react-native-gesture-handler:bundleReleaseAar
+> Task :react-native-gesture-handler:assembleRelease
+> Task :react-native-gesture-handler:bundleLibRuntimeToDirRelease
+> Task :app:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :app:buildCMakeRelWithDebInfo[armeabi-v7a]
+Terminate batch job (Y/N)? 

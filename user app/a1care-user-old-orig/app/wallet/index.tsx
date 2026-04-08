@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { walletService } from '@/services/wallet.service';
 import { paymentService } from '@/services/payment.service';
@@ -39,6 +40,13 @@ export default function WalletScreen() {
         queryKey: ['wallet'],
         queryFn: walletService.getWallet,
     });
+
+    // Ensure admin-side topups show up as soon as the screen is opened
+    useFocusEffect(
+        React.useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
 
     const addMoneyMutation = useMutation({
         mutationFn: async (amount: number) => {

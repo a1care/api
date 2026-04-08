@@ -8,6 +8,7 @@ interface PartnerUser {
     name: string;
     email?: string;
     mobileNumber: string;
+    roleId?: string;
     role: PartnerRole;
     profileImage?: string;
     isVerified?: boolean;

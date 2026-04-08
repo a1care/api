@@ -11,8 +11,9 @@ export const partnerBookingService = {
         return api.patch(path, { status: finalStatus });
     },
 
-    acceptServiceRequest: async (id: string) => {
-        return api.post(`/service/booking/accept/${id}`);
+    acceptServiceRequest: async (id: string, roleId?: string) => {
+        const body = roleId ? { roleId } : {};
+        return api.post(`/service/booking/accept/${id}`, body);
     },
 
     rejectServiceRequest: async (id: string) => {

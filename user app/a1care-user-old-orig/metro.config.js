@@ -7,6 +7,6 @@ config.resolver.sourceExts.push("mjs");
 config.resolver.sourceExts.push("cjs");
 
 // Force use of CJS for packages that have issues with ESM resolution on Windows
-config.resolver.resolverMainFields = ["main", "module", "browser", "react-native"];
+config.resolver.resolverMainFields = ["react-native", "browser", "main"];
 
 module.exports = config;

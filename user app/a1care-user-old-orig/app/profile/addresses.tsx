@@ -295,7 +295,7 @@ export default function AddressesScreen() {
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false}>
-                            <Text style={styles.inputLabel}>Address Label</Text>
+                            <Text style={styles.inputLabel}>Address Label <Text style={styles.required}>*</Text></Text>
                             <View style={styles.labelChips}>
                                 {['Home', 'Work', 'Other'].map((l) => {
                                     const config = getAddressIcon(l);
@@ -342,7 +342,7 @@ export default function AddressesScreen() {
                                 })}
                             </View>
 
-                            <Text style={styles.inputLabel}>House No / Street / Area</Text>
+                            <Text style={styles.inputLabel}>House No / Street / Area <Text style={styles.required}>*</Text></Text>
                             <TextInput
                                 style={styles.input}
                                 value={street}
@@ -353,7 +353,7 @@ export default function AddressesScreen() {
 
                             <View style={styles.inputRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>City</Text>
+                                    <Text style={styles.inputLabel}>City <Text style={styles.required}>*</Text></Text>
                                     <TextInput
                                         style={styles.input}
                                         value={city}
@@ -363,7 +363,7 @@ export default function AddressesScreen() {
                                     />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>State</Text>
+                                    <Text style={styles.inputLabel}>State <Text style={styles.required}>*</Text></Text>
                                     <TextInput
                                         style={styles.input}
                                         value={state}
@@ -376,7 +376,7 @@ export default function AddressesScreen() {
 
                             <View style={styles.inputRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>Pincode</Text>
+                                    <Text style={styles.inputLabel}>Pincode <Text style={styles.required}>*</Text></Text>
                                     <TextInput
                                         style={styles.input}
                                         value={pincode}
@@ -616,6 +616,7 @@ const styles = StyleSheet.create({
     },
     modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
     inputLabel: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8, marginTop: 16 },
+    required: { color: '#E11D48', fontWeight: '900' },
     input: {
         backgroundColor: '#F8FAFC',
         borderWidth: 1,

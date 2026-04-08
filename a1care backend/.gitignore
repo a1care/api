@@ -130,3 +130,25 @@ dist
 .yarn/install-state.gz
 .pnp.*
 firebaseServiceAccount.json
+data/firebase-service-account.json
+
+# Generated TypeScript outputs committed beside source files
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+!eslint.config.js
+!jest.config.js
+!metro.config.js
+!babel.config.js
+!webpack.config.js
+!vite.config.js
+!tailwind.config.js
+!postcss.config.js
+!prettier.config.js
+!commitlint.config.js
+!src/utils/alotsSms.ts
+
+# Local scripts and diagnostics
+*.cjs
+test-mongo.js

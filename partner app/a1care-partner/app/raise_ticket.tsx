@@ -60,7 +60,7 @@ export default function RaiseTicketScreen() {
                     <Text style={styles.cardTitle}>Raise a New Ticket</Text>
                     <View style={styles.form}>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Subject</Text>
+                            <Text style={styles.label}>Subject <Text style={styles.asterisk}>*</Text></Text>
                             <TextInput
                                 style={styles.input}
                                 value={form.subject}
@@ -70,7 +70,7 @@ export default function RaiseTicketScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Description</Text>
+                            <Text style={styles.label}>Description <Text style={styles.asterisk}>*</Text></Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={form.description}
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     form: { gap: 16 },
     inputGroup: { gap: 8 },
     label: { fontSize: 14, fontWeight: "700", color: "#475569", marginLeft: 4 },
+    asterisk: { color: "#EF4444" },
     input: { height: 56, backgroundColor: "#F8FAFC", borderRadius: 16, paddingHorizontal: 18, fontSize: 15, color: "#1E293B", borderWidth: 1, borderColor: "#E2E8F0" },
     textArea: { height: 120, textAlignVertical: "top", paddingTop: 16 },
     priorityRow: { flexDirection: "row", gap: 10 },

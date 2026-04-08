@@ -252,16 +252,17 @@ export default function ProfileEditScreen() {
                     <View style={styles.inputGroup}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Text style={styles.label}>Professional Bio (About)</Text>
-                            <Text style={{ fontSize: 11, color: (formData.about?.length || 0) > 230 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{formData.about?.length || 0}/255</Text>
+                            <Text style={{ fontSize: 11, color: (formData.about?.length || 0) > 140 ? '#E74C3C' : '#94A3B8', fontWeight: '600' }}>{formData.about?.length || 0}/150</Text>
                         </View>
                         <TextInput
                             style={[styles.input, styles.textArea]}
                             value={formData.about}
                             onChangeText={(text) => {
-                                if (text.length <= 255) setFormData({ ...formData, about: text });
+                                const clean = text.replace(/[^a-zA-Z0-9 .,-]/g, "");
+                                if (clean.length <= 150) setFormData({ ...formData, about: clean });
                             }}
                             placeholder="Tell patients about your expertise..."
-                            maxLength={255}
+                            maxLength={150}
                             multiline
                         />
                     </View>
@@ -301,9 +302,12 @@ export default function ProfileEditScreen() {
                         <TextInput 
                             style={styles.input} 
                             value={formData.workingHours} 
-                            onChangeText={(text) => setFormData({ ...formData, workingHours: text.replace(/\D/g, "") })} 
-                            placeholder="e.g. 0918" 
-                            keyboardType="number-pad"
+                            onChangeText={(text) => {
+                                const clean = text.replace(/[^0-9: \-]/g, "").slice(0, 17);
+                                setFormData({ ...formData, workingHours: clean });
+                            }} 
+                            placeholder="e.g. 09:00 - 18:00" 
+                            keyboardType="default"
                         />
                     </View>
 
@@ -345,6 +349,22 @@ export default function ProfileEditScreen() {
                                 placeholderTextColor="#94A3B8"
                             />
                             <ScrollView style={{ maxHeight: 400 }} keyboardShouldPersistTaps="handled">
+                                {specSearch.trim().length > 0 && !filteredSpecs.some(s => s.toLowerCase() === specSearch.toLowerCase()) && (
+                                    <TouchableOpacity 
+                                        style={styles.customAddBtn}
+                                        onPress={() => {
+                                            const newSpec = specSearch.trim();
+                                            if (!formData.specialization.includes(newSpec)) {
+                                                toggleSpecialization(newSpec);
+                                            }
+                                            setSpecSearch("");
+                                        }}
+                                    >
+                                        <Ionicons name="add-circle-outline" size={20} color="#2D935C" />
+                                        <Text style={styles.customAddText}>Add "{specSearch.trim()}" as custom specialization</Text>
+                                    </TouchableOpacity>
+                                )}
+                                
                                 {filteredSpecs.map(s => {
                                     const selected = formData.specialization.includes(s);
                                     return (
@@ -362,6 +382,13 @@ export default function ProfileEditScreen() {
                                         </TouchableOpacity>
                                     );
                                 })}
+                                
+                                {filteredSpecs.length === 0 && !specSearch.trim() && (
+                                    <View style={{ padding: 40, alignItems: 'center' }}>
+                                        <Ionicons name="search-outline" size={48} color="#CBD5E1" />
+                                        <Text style={{ marginTop: 12, color: '#94A3B8', fontWeight: '600' }}>Search to add specialization</Text>
+                                    </View>
+                                )}
                             </ScrollView>
                         </View>
                     </View>
@@ -410,5 +437,7 @@ const styles = StyleSheet.create({
     genderTextActive: { color: "#FFF" },
     saveBtn: { backgroundColor: "#2D935C", borderRadius: 20, height: 62, justifyContent: "center", alignItems: "center", marginTop: 10, shadowColor: "#2D935C", shadowOpacity: 0.25, shadowRadius: 15, elevation: 8 },
     saveBtnDisabled: { opacity: 0.6 },
-    saveBtnText: { color: "#FFF", fontSize: 18, fontWeight: "800" }
+    saveBtnText: { color: "#FFF", fontSize: 18, fontWeight: "800" },
+    customAddBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', padding: 16, borderRadius: 12, marginHorizontal: 4, marginBottom: 12, borderWidth: 1, borderColor: '#2D935C', borderStyle: 'dashed', gap: 10 },
+    customAddText: { color: '#2D935C', fontSize: 14, fontWeight: '700' }
 });

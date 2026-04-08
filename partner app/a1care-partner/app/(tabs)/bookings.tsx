@@ -3,13 +3,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
 import { partnerBookingService } from '../../lib/bookings';
 import { MessageCircle, MapPin, Navigation, Calendar, Clock, CreditCard } from 'lucide-react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuthStore } from "../../stores/auth";
 
 const { width } = Dimensions.get("window");
 
@@ -32,6 +33,8 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https:/
 export default function BookingsScreen() {
     const queryClient = useQueryClient();
     const router = useRouter();
+    const { user } = useAuthStore();
+    const { status } = useLocalSearchParams<{ status?: string }>();
     const [activeTab, setActiveTab] = useState("Pending");
     const primaryColor = "#2D935C";
 
@@ -40,11 +43,14 @@ export default function BookingsScreen() {
     const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
+        if (status && TABS.includes(status)) {
+            setActiveTab(status);
+        }
         socketRef.current = io(API_URL);
         return () => {
             socketRef.current?.disconnect();
         };
-    }, []);
+    }, [status]);
 
     const { data: bookings = [], isLoading, refetch, isRefetching } = useQuery({
         queryKey: ["bookings", activeTab],
@@ -69,12 +75,18 @@ export default function BookingsScreen() {
     });
 
     const acceptServiceMutation = useMutation({
-        mutationFn: (id: string) => partnerBookingService.acceptServiceRequest(id),
+        mutationFn: async (id: string) => {
+            console.log('[Partner] Accepting service', id);
+            const res = await partnerBookingService.acceptServiceRequest(id, user?.roleId);
+            console.log('[Partner] Accept success', JSON.stringify(res.data || res, null, 2));
+            return res;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["bookings"] });
             Alert.alert("Job Claimed!", "Check 'Confirmed' tab to start the journey.");
         },
         onError: (err: any) => {
+            console.log('[Partner] Accept failed', err?.response?.data || err.message);
             Alert.alert("Busy!", err?.response?.data?.message || "Someone else just claimed this job.");
         }
     });
@@ -221,7 +233,7 @@ export default function BookingsScreen() {
                             </View>
 
                             <View style={styles.actions}>
-                                {b.status === "Broadcasted" && (
+                                {b.status?.toLowerCase?.() === "broadcasted" && (
                                     <TouchableOpacity
                                         style={[styles.mainBtn, { backgroundColor: '#8B5CF6' }]}
                                         onPress={() => acceptServiceMutation.mutate(b._id)}

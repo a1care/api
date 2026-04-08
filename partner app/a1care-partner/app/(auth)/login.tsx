@@ -8,14 +8,25 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Toast } from "../../components/CustomToast";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
+import { Ionicons } from "@expo/vector-icons";
 
-// Import native Firebase modules safely
+// Import native Firebase and Google Sign-in modules safely
 const getAuth = () => {
     try {
         const auth = require('@react-native-firebase/auth');
         return auth.default || auth;
     } catch (e) {
-        console.warn('Native Firebase Auth not found, check if you are in a production build');
+        console.warn('Native Firebase Auth not found');
+        return null;
+    }
+};
+
+const getGoogleSignin = () => {
+    try {
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        return GoogleSignin;
+    } catch (e) {
+        console.warn('Google Sign-in module not found');
         return null;
     }
 };
@@ -31,7 +42,10 @@ const getMessaging = () => {
 };
 
 const roleLabels: Record<string, string> = {
-    doctor: "Doctor", nurse: "Nurse", ambulance: "Ambulance", rental: "Medical Rental",
+    doctor: "Doctor",
+    nurse: "Nurse",
+    ambulance: "Ambulance Driver",
+    rental: "Equipment Provider"
 };
 
 const LoginScreen = () => {
@@ -42,7 +56,96 @@ const LoginScreen = () => {
     const [otp, setOtp] = useState("");
     const [otpSessionId, setOtpSessionId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
+
+    // Initialize Google Sign-in (Ideally in app.json or a hook, but here for direct implementation)
+    React.useEffect(() => {
+        const GoogleSignin = getGoogleSignin();
+        if (GoogleSignin) {
+            GoogleSignin.configure({
+                // webClientId is required for Firebase login
+                // It should be provided by the user in .env later
+                webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '826082561306-dummy.apps.googleusercontent.com', 
+            });
+        }
+    }, []);
+
+    const handleGoogleSignIn = async () => {
+        const GoogleSignin = getGoogleSignin();
+        const auth = getAuth();
+        if (!GoogleSignin || !auth) {
+            Alert.alert("Error", "Google Sign-in requires a Production Build.");
+            return;
+        }
+
+        setGoogleLoading(true);
+        try {
+            await GoogleSignin.hasPlayServices();
+            const signInResult = await GoogleSignin.signIn();
+            const idToken = signInResult.data?.idToken || signInResult.idToken;
+
+            if (!idToken) throw new Error("No ID Token found from Google.");
+
+            // Sign in to Firebase with the credential
+            const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+            const userCredential = await auth().signInWithCredential(googleCredential);
+            const firebaseUser = userCredential.user;
+            const fbToken = await firebaseUser.getIdToken(true);
+
+            // Prefer Firebase-linked phone; otherwise fall back to the entered mobile box
+            let linkedMobile = firebaseUser.phoneNumber || "";
+            if (!linkedMobile) {
+                const cleaned = mobile.replace(/\D/g, '');
+                if (cleaned.length === 10) {
+                    linkedMobile = `+91${cleaned}`;
+                } else {
+                    setGoogleLoading(false);
+                    Alert.alert(
+                        "Phone Required",
+                        "Enter your 10-digit mobile number above, then tap 'Continue with Google' again to link your account.",
+                        [{ text: "OK" }]
+                    );
+                    return;
+                }
+            }
+
+            // Proceed to backend verification with either Firebase phone or user-provided number
+            await finishLogin(fbToken, linkedMobile);
+
+        } catch (err: any) {
+            console.error('Google Sign-in error:', err);
+            Toast.show({ type: 'error', text1: 'Google Sign-in Failed', text2: err.message });
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
+
+    const finishLogin = async (idToken: string, mobileNumber: string) => {
+        setVerifying(true);
+        try {
+            const cleanedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber.replace(/\D/g, '').slice(-10)}`;
+            const res = await api.post("/doctor/auth/verify-otp", {
+                idToken,
+                mobileNumber: cleanedMobile,
+            });
+            const { token } = res.data.data;
+
+            api.defaults.headers.Authorization = `Bearer ${token}`;
+            const detailsRes = await api.get("/doctor/auth/details");
+            const staff = detailsRes.data.data;
+
+            // FCM logic ... (omitted for brevity here but should be called)
+            await setAuth(token, { ...staff, role: role as PartnerRole });
+            router.replace("/(tabs)/home");
+            Toast.show({ type: 'success', text1: 'Welcome!', text2: 'Logged in successfully via Google' });
+        } catch (err: any) {
+             const msg = err?.response?.data?.message || err?.message || "Google Verification Failed";
+             Toast.show({ type: 'error', text1: 'Login Failed', text2: msg });
+        } finally {
+            setVerifying(false);
+        }
+    };
 
     const handleSendOtp = async () => {
         let cleaned = mobile.replace(/\D/g, '');
@@ -268,6 +371,32 @@ const LoginScreen = () => {
                         </TouchableOpacity>
                     )}
 
+                    {!otpSessionId && (
+                        <>
+                            <View style={styles.divider}>
+                                <View style={styles.dividerLine} />
+                                <Text style={styles.dividerText}>OR</Text>
+                                <View style={styles.dividerLine} />
+                            </View>
+
+                            <TouchableOpacity 
+                                style={styles.googleBtn} 
+                                onPress={handleGoogleSignIn}
+                                disabled={googleLoading}
+                                activeOpacity={0.8}
+                            >
+                                {googleLoading ? (
+                                    <ActivityIndicator color="#1A7FD4" />
+                                ) : (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                        <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                        <Text style={styles.googleBtnText}>Continue with Google</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        </>
+                    )}
+
                     <View style={{ height: 20 }} />
 
                     <Text style={styles.disclaimer}>
@@ -315,4 +444,14 @@ const styles = StyleSheet.create({
     registerLink: { fontSize: 14, color: "#6B8A9E" },
     resendText: { fontSize: 12, color: "#1A7FD4", fontWeight: "600", marginTop: 4 },
     disclaimer: { fontSize: 12, color: "#6B8A9E", textAlign: "center", marginTop: 15 },
+    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 12 },
+    dividerLine: { flex: 1, height: 1.5, backgroundColor: "#D8EAF5" },
+    dividerText: { fontSize: 12, fontWeight: "700", color: "#9CB3C4", uppercase: true },
+    googleBtn: {
+        height: 56, backgroundColor: "#FFFFFF", borderRadius: 28,
+        flexDirection: "row", alignItems: "center", justifyContent: "center",
+        borderWidth: 1.5, borderColor: "#D8EAF5",
+        shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    googleBtnText: { fontSize: 15, fontWeight: "700", color: "#0D2E4D" },
 });

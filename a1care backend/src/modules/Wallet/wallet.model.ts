@@ -9,6 +9,7 @@ export interface Transaction {
 
 export interface WalletDocument extends Document {
     userId: mongoose.Types.ObjectId;
+    onModel: "Patient" | "Staff";
     balance: number;
     transactions: Transaction[];
 }
@@ -17,9 +18,15 @@ const WalletSchema = new Schema<WalletDocument>(
     {
         userId: {
             type: Schema.Types.ObjectId,
-            ref: "Patient",
+            refPath: "onModel",
             required: true,
             unique: true,
+        },
+        onModel: {
+            type: String,
+            required: true,
+            enum: ["Patient", "Staff"],
+            default: "Patient"
         },
         balance: {
             type: Number,

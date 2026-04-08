@@ -92,6 +92,7 @@ export default function NotificationsScreen() {
         },
         onMutate: () => {
             setLocalList(prev => prev.map(n => ({ ...n, isRead: true })));
+            qc.setQueryData(['notifications'], (prev: any) => prev ? { ...prev, unreadCount: 0, notifications: (prev.notifications || []).map((n: any) => ({ ...n, isRead: true })) } : prev);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['notifications'] });
@@ -106,6 +107,12 @@ export default function NotificationsScreen() {
         },
         onMutate: (id: string) => {
             setLocalList(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+            qc.setQueryData(['notifications'], (prev: any) => {
+                if (!prev) return prev;
+                const updated = (prev.notifications || []).map((n: any) => n._id === id ? { ...n, isRead: true } : n);
+                const unreadCount = updated.filter((n: any) => !n.isRead).length;
+                return { ...prev, notifications: updated, unreadCount };
+            });
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['notifications'] });

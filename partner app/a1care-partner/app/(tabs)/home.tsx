@@ -45,11 +45,13 @@ export default function HomeScreen() {
         }
     }, [user]);
 
+    const [period, setPeriod] = useState<"thisMonth" | "lastMonth">("thisMonth");
+
     const { data: bookings = [], isLoading: loadingStats, refetch: refetchStats, isRefetching } = useQuery({
-        queryKey: ["homeStats"],
+        queryKey: ["homeStats", period],
         queryFn: async () => {
             const res = await api.get("/appointment/provider/feed", {
-                params: { status: "Pending" }
+                params: { status: "Pending", period }
             });
             return res.data.data || [];
         }
@@ -218,7 +220,14 @@ export default function HomeScreen() {
                 {/* Dashboard Stats */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Dashboard</Text>
-                    <TouchableOpacity><Text style={styles.viewAllText}>This Month</Text></TouchableOpacity>
+                    <View style={styles.periodSwitcher}>
+                        <TouchableOpacity onPress={() => setPeriod("thisMonth")} style={[styles.periodBtn, period === "thisMonth" && styles.periodBtnActive]}>
+                            <Text style={[styles.periodText, period === "thisMonth" && styles.periodTextActive]}>This Month</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setPeriod("lastMonth")} style={[styles.periodBtn, period === "lastMonth" && styles.periodBtnActive]}>
+                            <Text style={[styles.periodText, period === "lastMonth" && styles.periodTextActive]}>Last Month</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.statsGrid}>
@@ -418,6 +427,27 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: "#2D935C",
         fontWeight: "700",
+    },
+    periodSwitcher: {
+        flexDirection: 'row',
+        backgroundColor: '#E2E8F0',
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    periodBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    periodBtnActive: {
+        backgroundColor: '#2D935C',
+    },
+    periodText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#334155',
+    },
+    periodTextActive: {
+        color: '#FFF',
     },
     statsGrid: {
         flexDirection: 'row',

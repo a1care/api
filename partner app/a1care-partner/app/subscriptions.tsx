@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, BackHandler } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal } from "react-native";
 import { WebView } from "react-native-webview";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,31 +54,20 @@ export default function SubscriptionsScreen() {
         enabled: activeTab === "History"
     });
 
+    // Payment gateway disabled: subscriptions will be activated manually by admin.
     const buySubscription = useMutation({
         mutationFn: async (planId: string) => {
-            const res = await api.post("/subscription/subscribe", { planId });
+            const res = await api.post("/subscription/subscribe", { planId, paymentBy: "ADMIN_MANUAL" });
             return res.data.data;
         },
-        onSuccess: async (data: any) => {
-            if (data.requiresPayment) {
-                try {
-                    // Initiate Payment
-                    const initRes = await api.post("/payments/initiate", { orderId: data.order._id });
-                    const { accessKey, env } = initRes.data.data;
-                    const baseUrl = env === "test" ? "https://testpay.easebuzz.in" : "https://pay.easebuzz.in";
-                    setPaymentUrl(`${baseUrl}/pay/${accessKey}`);
-                } catch (err: any) {
-                    Alert.alert("Payment Error", "Failed to initiate payment. Please try again.");
-                }
-            } else {
-                Alert.alert("Success", "Subscription activated successfully!");
-                queryClient.invalidateQueries({ queryKey: ["myActiveSubscription"] });
-                queryClient.invalidateQueries({ queryKey: ["subscriptionHistory"] });
-                router.replace("/(tabs)/profile");
-            }
+        onSuccess: async () => {
+            Alert.alert("Request Sent", "Admin will activate your subscription after manual wallet top-up.");
+            queryClient.invalidateQueries({ queryKey: ["myActiveSubscription"] });
+            queryClient.invalidateQueries({ queryKey: ["subscriptionHistory"] });
+            router.replace("/(tabs)/profile");
         },
         onError: (error: any) => {
-            Alert.alert("Error", error.response?.data?.message || "Failed to initiate subscription");
+            Alert.alert("Error", error.response?.data?.message || "Failed to request subscription");
         }
     });
 
@@ -86,19 +75,7 @@ export default function SubscriptionsScreen() {
         router.push("/(tabs)/home");
     };
 
-    useEffect(() => {
-        const backAction = () => {
-            handleBack();
-            return true;
-        };
-
-        const backHandler = BackHandler.addEventListener(
-            "hardwareBackPress",
-            backAction
-        );
-
-        return () => backHandler.remove();
-    }, []);
+    // Default back behavior (OS handles stack); no manual override.
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

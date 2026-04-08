@@ -27,3 +27,13 @@ dist-ssr
 
 # TypeScript
 *.tsbuildinfo
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+src/**/*.d.ts.map
+vite.config.js*
+vite.config.d.ts*
+
+# Build artifacts & logs
+build_admin*.log
+dist.zip

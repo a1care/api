@@ -9,7 +9,6 @@ import {
     useFonts,
 } from '@expo-google-fonts/inter';
 import { StatusBar } from 'expo-status-bar';
-// Firebase specific imports - handled safely for Expo Go
 import { authService } from '@/services/auth.service';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
@@ -18,8 +17,10 @@ import { useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Alert } from 'react-native'; 
+import { Alert, PermissionsAndroid, Platform } from 'react-native'; 
 import Toast from 'react-native-toast-message';
+import messaging from '@react-native-firebase/messaging';
+import api from '@/services/api';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -41,6 +42,89 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         initialize();
         fetchConfig();
     }, []);
+
+    const requestUserPermission = async () => {
+        try {
+            if (Platform.OS === 'android' && Platform.Version >= 33) {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+            }
+
+            const authStatus = await messaging().requestPermission();
+            const enabled =
+                authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+                authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+            if (enabled) {
+                const fcmToken = await messaging().getToken();
+                if (fcmToken) {
+                    await api.put('/notifications/fcm-token/patient', { fcmToken });
+                    console.log('[FCM] Token registered:', fcmToken);
+                }
+            }
+        } catch (e) {
+            console.log("[FCM] Registry Error:", e);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            requestUserPermission();
+
+            const unsubscribe = messaging().onMessage(async remoteMessage => {
+                console.log('[FCM] Foreground message received:', remoteMessage);
+                Alert.alert(
+                    remoteMessage.notification?.title || "A1Care",
+                    remoteMessage.notification?.body || "You have a new notification",
+                    [
+                        {
+                            text: "View",
+                            onPress: () => {
+                                if (remoteMessage.data?.screen) {
+                                    router.push(remoteMessage.data.screen as any);
+                                }
+                            }
+                        },
+                        { text: "Dismiss", style: "cancel" }
+                    ]
+                );
+            });
+
+            messaging().onNotificationOpenedApp(remoteMessage => {
+                console.log('[FCM] Notification opened app:', remoteMessage.notification);
+                if (remoteMessage.data?.screen) {
+                    router.push(remoteMessage.data.screen as any);
+                }
+            });
+
+            messaging()
+                .getInitialNotification()
+                .then(remoteMessage => {
+                    if (remoteMessage) {
+                        console.log('[FCM] App opened from quit state:', remoteMessage.notification);
+                        if (remoteMessage.data?.screen) {
+                            setTimeout(() => {
+                                router.push(remoteMessage.data?.screen as any);
+                            }, 500);
+                        }
+                    }
+                });
+
+            return unsubscribe;
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        return messaging().onTokenRefresh(fcmToken => {
+            if (fcmToken) {
+                api.put('/notifications/fcm-token/patient', { fcmToken });
+                console.log('[FCM] Token refreshed:', fcmToken);
+            }
+        });
+    }, [isAuthenticated]);
 
     useEffect(() => {
         console.log('[AuthGuard] State Changed:', { isAuthenticated, isLoading, segments, maintenance: config?.maintenanceMode });

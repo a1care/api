@@ -16,3 +16,25 @@ Thumbs.db
 *.bat
 *android.json
 *log.txt
+.gradle/
+.gradle-local/
+.idea/
+.vscode/
+*.apk
+dist.zip
+*.zip
+repos.json
+remote_info.txt
+payload.json
+screen_debug.png
+bin/
+*.bin
+
+# Generated TypeScript declaration/map artifacts
+*.d.ts
+*.d.ts.map
+*.js.map
+
+# Sensitive local service credentials
+*firebase-service-account.json
+google-services.json

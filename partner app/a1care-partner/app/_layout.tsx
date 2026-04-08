@@ -51,7 +51,10 @@ function AuthGuard() {
             if (enabled) {
                 const fcmToken = await messaging().getToken();
                 if (fcmToken) {
-                    await api.put('/doctor/auth/fcm-token', { fcmToken });
+                    console.log('[Partner] Registering FCM token', fcmToken);
+                    // Register on both legacy and new endpoints to be safe
+                    try { await api.put('/doctor/auth/fcm-token', { fcmToken }); } catch (e) { console.log('FCM /doctor/auth/fcm-token failed', e?.response?.data || e.message); }
+                    try { await api.put('/notifications/fcm-token/partner', { fcmToken }); } catch (e) { console.log('FCM /notifications/fcm-token/partner failed', e?.response?.data || e.message); }
                 }
             }
         } catch (e) {
@@ -112,7 +115,9 @@ function AuthGuard() {
         if (!token) return;
         return messaging().onTokenRefresh(fcmToken => {
             if (fcmToken) {
-                api.put('/doctor/auth/fcm-token', { fcmToken });
+                console.log('[Partner] Refresh FCM token', fcmToken);
+                api.put('/doctor/auth/fcm-token', { fcmToken }).catch(() => {});
+                api.put('/notifications/fcm-token/partner', { fcmToken }).catch(() => {});
             }
         });
     }, [token]);

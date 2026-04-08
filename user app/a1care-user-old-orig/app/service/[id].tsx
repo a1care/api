@@ -259,8 +259,11 @@ export default function ServiceDetailScreen() {
                     setStep(activeSteps[idx - 1]);
                     return true;
                 }
+                // At first step: go back one screen, but keep control (don't exit app)
+                router.back();
+                return true;
             }
-            return false; // Let system handle (exits screen)
+            return true; // consume to avoid jumping home
         };
 
         const subscription = require('react-native').BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -655,7 +658,7 @@ export default function ServiceDetailScreen() {
                                             {editingAddressId ? '📝 Edit Address' : '🏠 Add New Address'}
                                         </Text>
 
-                                        <Text style={styles.fieldLabel}>Address Label</Text>
+                                        <Text style={styles.fieldLabel}>Address Label *</Text>
                                         <View style={styles.labelChips}>
                                             {['HOME', 'WORK', 'OTHERS'].map((lab) => (
                                                 <TouchableOpacity

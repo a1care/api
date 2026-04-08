@@ -20,7 +20,7 @@ export default function ProfileScreen() {
         }
     });
 
-    const { data: bookings = [] } = useQuery({
+    const { data: bookings = [], refetch: refetchBookings } = useQuery({
         queryKey: ["profileBookings"],
         queryFn: async () => {
             const res = await api.get("/appointment/provider/appointments");
@@ -39,9 +39,23 @@ export default function ProfileScreen() {
 
     const pendingCount = bookings.filter((b: any) => b.status === "Pending").length;
     const confirmedCount = bookings.filter((b: any) => b.status === "Confirmed" || b.status === "Active").length;
+    const upcomingCount = bookings.filter((b: any) => ["Pending", "Confirmed", "Active"].includes(b.status)).length;
 
     const daysLeft = mySub ? Math.ceil((new Date(mySub.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
+    const displayData = staffData || user || {};
+    const detailsList = [
+        { label: "Name", value: displayData.name },
+        { label: "Mobile", value: displayData.mobileNumber },
+        { label: "Email", value: displayData.email },
+        { label: "Role", value: displayData.roleId ? (displayData.role?.name || "Partner") : (displayData.role || "Partner") },
+        { label: "Specialization", value: Array.isArray(displayData.specialization) ? displayData.specialization.join(", ") : displayData.specialization },
+        { label: "Experience (yrs)", value: displayData.experience ?? (displayData.startExperience ? Math.max(0, new Date().getFullYear() - new Date(displayData.startExperience).getFullYear()) : undefined) },
+        { label: "Service Radius (km)", value: displayData.serviceRadius },
+        { label: "Home Consultation Fee", value: displayData.homeConsultationFee ? `₹${displayData.homeConsultationFee}` : undefined },
+        { label: "Online Consultation Fee", value: displayData.onlineConsultationFee ? `₹${displayData.onlineConsultationFee}` : undefined },
+        { label: "Working Hours", value: displayData.workingHours },
+    ].filter(item => item.value !== undefined && item.value !== null && String(item.value).trim() !== "");
 
     const handleLogout = () => {
         Alert.alert("Logout", "Are you sure you want to log out?", [
@@ -131,13 +145,13 @@ export default function ProfileScreen() {
                 {/* Quick Access - Matched Mockup */}
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
                 <View style={styles.quickActionsGrid}>
-                    <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/bookings")}>
+                    <TouchableOpacity style={styles.actionCard} onPress={() => router.push({ pathname: "/(tabs)/bookings", params: { status: "Pending" } })}>
                         <View style={styles.actionIconBg}>
                             <Ionicons name="calendar-outline" size={30} color="#15803D" />
                         </View>
                         <Text style={styles.actionLabel}>Upcoming</Text>
                         <View style={styles.actionBadge}>
-                            <Text style={styles.actionBadgeText}>{confirmedCount}</Text>
+                            <Text style={styles.actionBadgeText}>{upcomingCount}</Text>
                         </View>
                     </TouchableOpacity>
 
@@ -184,6 +198,17 @@ export default function ProfileScreen() {
                             <Text style={styles.emptyDocsText}>No documents found.</Text>
                         </View>
                     )}
+                </View>
+
+                {/* Registration Details */}
+                <Text style={styles.sectionTitle}>Profile Details</Text>
+                <View style={styles.detailsGrid}>
+                    {detailsList.map((item, idx) => (
+                        <View key={idx} style={styles.detailCard}>
+                            <Text style={styles.detailLabel}>{item.label}</Text>
+                            <Text style={styles.detailValue}>{String(item.value)}</Text>
+                        </View>
+                    ))}
                 </View>
 
                 {/* Main Menu - Updated with Subscription Management */}
@@ -467,6 +492,34 @@ const styles = StyleSheet.create({
     emptyDocsText: {
         color: '#94A3B8',
         fontSize: 13,
+    },
+    detailsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 28,
+    },
+    detailCard: {
+        width: "47%",
+        backgroundColor: "#FFF",
+        borderRadius: 18,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        elevation: 1,
+    },
+    detailLabel: {
+        fontSize: 12,
+        color: "#94A3B8",
+        fontWeight: "700",
+        marginBottom: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5
+    },
+    detailValue: {
+        fontSize: 14,
+        fontWeight: "800",
+        color: "#1E293B",
     },
     menuContainer: {
         backgroundColor: '#FFF',

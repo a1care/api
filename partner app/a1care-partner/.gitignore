@@ -46,3 +46,24 @@ yarn-error.*
 .env
 .env.staging
 .env.production
+.gradle/
+.gradle-local/
+*.apk
+build_log*.txt
+clean_log.txt
+screen*.png
+bin/
+*.bin
+
+# TypeScript/Generated
+**/*.js.map
+**/*.d.ts
+**/*.d.ts.map
+# Ignore compiled .js from .tsx (excluding root configs)
+app/**/*.js
+components/**/*.js
+lib/**/*.js
+stores/**/*.js
+utils/**/*.js
+App.js
+index.js

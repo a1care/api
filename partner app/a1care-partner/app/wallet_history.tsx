@@ -55,20 +55,16 @@ export default function WalletScreen() {
         }
     });
 
+    // Payment gateway disabled: admins will top-up wallets manually.
     const topUpMutation = useMutation({
-        mutationFn: async (topUpAmount: number) => {
-            // This would normally initiate a payment gateway
-            // For now, we'll simulate a request to the admin for manual top-up or use the /wallet/initiate if patient-role matches
-            return await api.post('/wallet/add', { amount: topUpAmount, description: "Partner Wallet Top-up" });
-        },
+        mutationFn: async (_topUpAmount: number) => Promise.resolve(),
         onSuccess: () => {
-            Alert.alert("Success", "Credit added to your operational wallet.");
+            Alert.alert("Top-up Disabled", "Please contact admin to add wallet balance while the gateway is offline.");
             setShowTopUp(false);
             setAmount("");
-            queryClient.invalidateQueries({ queryKey: ['staff_earnings'] });
         },
-        onError: (err: any) => {
-            Alert.alert("Top-up Failed", "Check your internet or payment settings.");
+        onError: () => {
+            Alert.alert("Top-up Disabled", "Please contact admin to add wallet balance while the gateway is offline.");
         }
     });
 
@@ -86,12 +82,7 @@ export default function WalletScreen() {
     };
 
     const handleTopUp = () => {
-        const amt = parseFloat(amount);
-        if (isNaN(amt) || amt < 100) {
-            Alert.alert("Invalid Amount", "Minimum top-up is ₹100");
-            return;
-        }
-        topUpMutation.mutate(amt);
+        Alert.alert("Top-up Disabled", "Please contact admin to add wallet balance while the gateway is offline.");
     };
 
     return (

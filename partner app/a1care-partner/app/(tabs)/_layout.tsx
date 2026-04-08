@@ -1,8 +1,57 @@
-import { Tabs } from "expo-router";
-import { View, Text, StyleSheet } from "react-native";
+import { Tabs, useFocusEffect } from "expo-router";
+import { View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../../stores/auth";
+import { api } from "../../lib/api";
+import { useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function TabsLayout() {
+    const { user, isLoading, setUser } = useAuthStore() as any;
+    const hasRefetched = useRef(false);
+
+    // Unread notifications for badge
+    const { data: notifData } = useQuery({
+        queryKey: ["partner_notifications_unread"],
+        queryFn: async () => {
+            const res = await api.get("/notifications?unread=true&limit=1");
+            return res.data?.data?.unreadCount || 0;
+        },
+        enabled: !!user?._id,
+        refetchInterval: 30000,
+    });
+    const unreadCount = notifData || 0;
+
+    // When coming to tabs, refresh auth details once so newly verified providers get unlocked immediately
+    useFocusEffect(
+        useCallback(() => {
+            const refresh = async () => {
+                if (!user?._id || hasRefetched.current) return;
+                try {
+                    const res = await api.get("/doctor/auth/details");
+                    if (res?.data?.data) {
+                        await setUser(res.data.data);
+                    }
+                    hasRefetched.current = true;
+                } catch (err) {
+                    console.log("Auth refresh failed (non-blocking):", err?.message || err);
+                }
+            };
+            refresh();
+        }, [user?._id, setUser])
+    );
+
+    // Lock tabs only when we definitely know the user is unapproved.
+    // While loading (or when flags are absent), keep tabs usable.
+    const isExplicitlyUnapproved = user?.isVerified === false || user?.isRegistered === false;
+    const tabsLocked = isLoading ? false : isExplicitlyUnapproved;
+
+    const DisabledButton = (props: any) => (
+        <View style={{ flex: 1, opacity: tabsLocked ? 0.45 : 1 }} pointerEvents={tabsLocked ? "none" : "auto"}>
+            {props.children}
+        </View>
+    );
+
     return (
         <Tabs
             screenOptions={{
@@ -10,8 +59,11 @@ export default function TabsLayout() {
                 tabBarStyle: styles.tabBar,
                 tabBarShowLabel: true,
                 tabBarLabelStyle: styles.label,
+                tabBarIconStyle: styles.icon,
+                tabBarItemStyle: styles.item,
                 tabBarActiveTintColor: "#2D935C",
                 tabBarInactiveTintColor: "#94A3B8",
+                tabBarButton: tabsLocked ? DisabledButton : undefined,
             }}
         >
             <Tabs.Screen
@@ -46,7 +98,12 @@ export default function TabsLayout() {
                 options={{
                     title: "Menu",
                     tabBarIcon: ({ focused, color }) => (
-                        <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />
+                        <View>
+                            <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />
+                            {unreadCount > 0 && (
+                                <View style={styles.badgeDot} />
+                            )}
+                        </View>
                     ),
                 }}
             />
@@ -60,13 +117,31 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         borderTopWidth: 1,
         borderTopColor: '#F1F5F9',
-        paddingBottom: 12,
-        paddingTop: 8,
+        paddingBottom: 10,
+        paddingTop: 6,
     },
     label: {
         fontSize: 11,
         fontWeight: "700",
-        marginTop: 2
+        marginTop: 2,
+        marginBottom: 0,
+    },
+    icon: {
+        marginTop: 2,
+        marginBottom: -2,
+    },
+    item: {
+        paddingVertical: 6,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    badgeDot: {
+        position: "absolute",
+        top: -2,
+        right: -4,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: "#EF4444",
     },
 });
-

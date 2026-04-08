@@ -29,6 +29,7 @@ export interface DoctorDocument extends Document {
     upiId?: string;
   };
   fcmToken?: string;
+  email?: string;
 }
 
 const DoctorSchema = new Schema<DoctorDocument>(
@@ -137,6 +138,11 @@ const DoctorSchema = new Schema<DoctorDocument>(
     fcmToken: {
       type: String,
       default: null
+    },
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true
     }
   },
 

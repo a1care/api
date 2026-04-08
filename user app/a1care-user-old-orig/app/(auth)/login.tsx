@@ -11,15 +11,100 @@ import {
     ScrollView,
     StyleSheet,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
+import { authService } from '@/services/auth.service';
+import { useAuthStore } from '@/stores/auth.store';
+import { Ionicons } from '@expo/vector-icons';
+
+// Import native Firebase and Google modules safely
+const getAuth = () => {
+    try {
+        const auth = require('@react-native-firebase/auth');
+        return auth.default || auth;
+    } catch (e) {
+        console.warn('Native Firebase Auth not found');
+        return null;
+    }
+};
+
+const getGoogleSignin = () => {
+    try {
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        return GoogleSignin;
+    } catch (e) {
+        console.warn('Google Sign-in module not found');
+        return null;
+    }
+};
 
 export default function LoginScreen() {
     const router = useRouter();
+    const { setToken, setUser } = useAuthStore();
     const [mobile, setMobile] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
+
+    // Initialize Google Sign-in
+    React.useEffect(() => {
+        const GoogleSignin = getGoogleSignin();
+        if (GoogleSignin) {
+            GoogleSignin.configure({
+                webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '826082561306-dummy.apps.googleusercontent.com',
+            });
+        }
+    }, []);
+
+    const handleGoogleSignIn = async () => {
+        const GoogleSignin = getGoogleSignin();
+        const auth = getAuth();
+        if (!GoogleSignin || !auth) {
+            Alert.alert("Notice", "Google Login requires a Production Build.");
+            return;
+        }
+
+        setGoogleLoading(true);
+        try {
+            await GoogleSignin.hasPlayServices();
+            const { data } = await GoogleSignin.signIn();
+            const idToken = data?.idToken || (data as any).idToken;
+
+            if (!idToken) throw new Error("Google ID Token missing");
+
+            const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+            const userCredential = await auth().signInWithCredential(googleCredential);
+            const fbToken = await userCredential.user.getIdToken(true);
+
+            // Prefer phone from Firebase, otherwise use typed mobile
+            const phone = userCredential.user.phoneNumber || (mobile ? `+91${mobile}` : null);
+            if (!phone) {
+                setGoogleLoading(false);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Mobile required',
+                    text2: 'Please enter your mobile number above, then tap Google again.',
+                    position: 'top'
+                });
+                return;
+            }
+
+            // Call backend
+            const res = await authService.verifyOtp(phone, "GOOGLE", fbToken);
+            setToken(res.data.token);
+            const profile = await authService.getProfile();
+            setUser(profile);
+
+            router.replace(profile.isRegistered ? '/(tabs)' : '/(auth)/profile-setup');
+
+        } catch (err: any) {
+            console.error('[Google Login] Error:', err);
+            Toast.show({ type: 'error', text1: 'Login Failed', text2: err.message });
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
 
     const handleSendOtp = async () => {
         const cleaned = mobile.replace(/\D/g, '');
@@ -108,6 +193,28 @@ export default function LoginScreen() {
                         </LinearGradient>
                     </TouchableOpacity>
 
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>OR</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+
+                    <TouchableOpacity 
+                        style={styles.googleBtn} 
+                        onPress={handleGoogleSignIn}
+                        disabled={googleLoading}
+                        activeOpacity={0.8}
+                    >
+                        {googleLoading ? (
+                            <ActivityIndicator color="#1A7FD4" />
+                        ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                <Text style={styles.googleBtnText}>Continue with Google</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
                     <Text style={styles.disclaimer}>
                         By continuing, you agree to our <Text onPress={() => router.push('/terms')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Terms</Text> and <Text onPress={() => router.push('/privacy')} style={{ color: "#1A7FD4", fontWeight: "700" }}>Privacy Policy</Text>
                     </Text>
@@ -150,7 +257,17 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     ctaText: { fontSize: 17, fontWeight: "800", color: "#fff" },
-    disclaimer: { fontSize: 12, color: "#6B8A9E", textAlign: "center", marginTop: 10 },
+    disclaimer: { fontSize: 12, color: "#6B8A9E", textAlign: "center", marginTop: 15 },
+    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 18, gap: 12 },
+    dividerLine: { flex: 1, height: 1.5, backgroundColor: "#D8EAF5" },
+    dividerText: { fontSize: 12, fontWeight: "700", color: "#9CB3C4" },
+    googleBtn: {
+        height: 56, backgroundColor: "#FFFFFF", borderRadius: 28,
+        flexDirection: "row", alignItems: "center", justifyContent: "center",
+        borderWidth: 1.5, borderColor: "#D8EAF5",
+        shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    googleBtnText: { fontSize: 15, fontWeight: "700", color: "#0D2E4D" },
     badges: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 30 },
     badge: {
         backgroundColor: 'rgba(26, 127, 212, 0.1)',

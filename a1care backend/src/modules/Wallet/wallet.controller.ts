@@ -4,6 +4,7 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import WalletModel from "./wallet.model.js";
 import { getSystemSettings } from "../Admin/admin.controller.js";
 import { Patient } from "../Authentication/patient.model.js";
+import DoctorModel from "../Doctors/doctor.model.js";
 import { generateEasebuzzHash, verifyEasebuzzResponse } from "./easebuzz.utils.js";
 import { enqueueEmail } from "../../queues/communicationQueue.js";
 import { v4 as uuidv4 } from "uuid";
@@ -12,7 +13,7 @@ const txNotExists = (description: string) => ({
     $not: { $elemMatch: { description } }
 });
 
-export const creditWalletAtomic = async (userId: string, amount: number, description: string) => {
+export const creditWalletAtomic = async (userId: string, amount: number, description: string, onModel: "Patient" | "Staff" = "Patient") => {
     const tx = {
         amount,
         type: "Credit" as const,
@@ -22,8 +23,8 @@ export const creditWalletAtomic = async (userId: string, amount: number, descrip
 
     // Ensure wallet exists (avoids duplicate-key risk with upserts + idempotency filters).
     await WalletModel.updateOne(
-        { userId },
-        { $setOnInsert: { userId, balance: 0, transactions: [] } },
+        { userId, onModel },
+        { $setOnInsert: { userId, onModel, balance: 0, transactions: [] } },
         { upsert: true }
     );
 
@@ -148,30 +149,49 @@ export const handlePaymentResponse = asyncHandler(async (req, res) => {
 });
 
 export const addMoney = asyncHandler(async (req, res) => {
-    // If admin is adding money to a specific patient, they provide patientId in body
+    // If admin is adding money to a specific user, they provide userId/patientId and userType in body
     const targetUserId = req.body.userId || req.body.patientId || req.user?.id;
-    const { amount, description } = req.body;
+    const { amount, description, userType } = req.body; 
 
     if (!targetUserId) throw new ApiError(400, "Target User ID is required");
     if (!amount || amount <= 0) throw new ApiError(400, "Invalid amount");
 
+    // Determine onModel: default to Patient if not specified, 
+    // or if we can detect it's a staff member.
+    let onModel: "Patient" | "Staff" = "Patient";
+    if (userType === "Staff" || userType === "Partner" || userType === "Doctor") {
+        onModel = "Staff";
+    }
+
     // Use a unique default description if none provided to avoid idempotency blocks on second manual add
     const finalDescription = description || `Manual Adjustment (${new Date().toLocaleString()})`;
 
-    const { wallet, applied } = await creditWalletAtomic(targetUserId as string, amount, finalDescription);
+    const { wallet, applied } = await creditWalletAtomic(targetUserId as string, amount, finalDescription, onModel);
 
     if (!applied) {
         throw new ApiError(400, "This adjustment has already been applied (Duplicate Description)");
     }
 
-    // ── New: Send Confirmation Email ───────────────────────────────────────
-    const patient = await Patient.findById(targetUserId);
-    if (patient?.email) {
+    // ── Send Confirmation Email ───────────────────────────────────────
+    let userEmail: string | undefined;
+    let userName: string | undefined;
+
+    if (onModel === "Patient") {
+        const patient = await Patient.findById(targetUserId);
+        userEmail = patient?.email;
+        userName = patient?.name;
+    } else {
+        const staff = await DoctorModel.findById(targetUserId);
+        userEmail = staff?.email;
+        userName = staff?.name;
+    }
+
+    if (userEmail) {
         await enqueueEmail({
             kind: "wallet_topup",
             data: {
-                email: patient.email,
-                fullName: patient.name || "User",
+                email: userEmail,
+                fullName: userName || "User",
                 amount: amount.toString(),
                 txnid: "ADJ-" + Date.now().toString().slice(-6),
             },

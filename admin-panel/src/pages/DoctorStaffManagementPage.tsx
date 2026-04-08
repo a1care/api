@@ -22,7 +22,10 @@ import {
     Loader2,
     UserPlus,
     Eye,
-    XCircle
+    XCircle,
+    CreditCard as WalletIcon,
+    ArrowUpCircle,
+    ArrowDownCircle
 } from "lucide-react";
 
 function InfoCard({ icon, label, value, color }: { icon: any, label: string, value: string, color?: string }) {
@@ -137,14 +140,20 @@ export function DoctorStaffManagementPage() {
 
                     <div className="relative flex justify-between items-start">
                         <div className="flex gap-6 items-center">
-                            <div className="w-20 h-20 rounded-[24px] bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-blue-200">
+                            <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-blue-200">
                                 {(doctor.name || 'U').charAt(0)}
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tight">{doctor.name || "Provider"}</h2>
                                 <div className="flex gap-3 mt-2 items-center">
-                                    <span className="badge warning px-3 py-1 text-[10px] font-black uppercase tracking-widest border border-amber-100">
-                                        Pending Verification
+                                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${
+                                        doctor.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                        doctor.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                                        'bg-rose-50 text-rose-600 border-rose-100'
+                                    }`}>
+                                        {doctor.status === 'Active' ? 'Verified Member' : 
+                                         doctor.status === 'Pending' ? 'Pending Verification' : 
+                                         'Inactive / Restricted'}
                                     </span>
                                     <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
                                     <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Partner ID: {doctor._id.slice(-6).toUpperCase()}</p>
@@ -165,7 +174,11 @@ export function DoctorStaffManagementPage() {
                         <InfoCard icon={<Users size={16} />} label="GENDER PROFILE" value={doctor.gender || "Not Specified"} />
                         <InfoCard icon={<Clock size={16} />} label="PROFESSIONAL TENURE" value={doctor.startExperience ? `${new Date().getFullYear() - new Date(doctor.startExperience).getFullYear()} Years Experience` : "Experience Not Set"} />
                         <InfoCard icon={<Phone size={16} />} label="CONTACT CHANNEL" value={doctor.mobileNumber || "N/A"} />
-                        <InfoCard icon={<ShieldCheck size={16} />} label="CONSULTATION VALUE" value={`₹${doctor.consultationFee}`} color="#10b981" />
+                        <InfoCard icon={<ShieldCheck size={16} />} label="CONSULTATION VALUE" value={`₹${doctor.consultationFee || 0}`} color="#10b981" />
+                    </div>
+
+                    <div className="mb-10">
+                        <DoctorWalletSection doctor={doctor} />
                     </div>
 
                     <div className="flex items-center gap-3 mb-4 px-1">
@@ -203,22 +216,36 @@ export function DoctorStaffManagementPage() {
                 </div>
 
                 <div className="p-8 border-t bg-[var(--bg-main)]-30 flex gap-4">
-                    <button
-                        onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Active' })}
-                        disabled={updateStatusMutation.isPending}
-                        className="button primary h-14 flex-1 shadow-2xl shadow-blue-200 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl"
-                    >
-                        {updateStatusMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                        <span>Approve Provider</span>
-                    </button>
-                    <button
-                        onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Inactive' })}
-                        disabled={updateStatusMutation.isPending}
-                        className="button secondary h-14 flex-1 border-none bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-100 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
-                    >
-                        <XCircle size={18} />
-                        <span>Reject</span>
-                    </button>
+                    {doctor.status !== 'Active' ? (
+                        <button
+                            onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Active' })}
+                            disabled={updateStatusMutation.isPending}
+                            className="button primary h-14 flex-1 shadow-2xl shadow-blue-200 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl"
+                        >
+                            {updateStatusMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                            <span>Approve Provider</span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Inactive' })}
+                            disabled={updateStatusMutation.isPending}
+                            className="button secondary h-14 flex-1 border-none bg-rose-50 text-rose-600 hover:bg-rose-100 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
+                        >
+                            <XCircle size={18} />
+                            <span>Restrict Access</span>
+                        </button>
+                    )}
+                    
+                    {doctor.status === 'Pending' && (
+                        <button
+                            onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Inactive' })}
+                            disabled={updateStatusMutation.isPending}
+                            className="button secondary h-14 flex-1 border-none bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-100 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
+                        >
+                            <XCircle size={18} />
+                            <span>Reject</span>
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -408,6 +435,127 @@ function TextLabel({ label, value }: { label: string, value: string }) {
             <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-0.5">{label}</p>
             <p className="text-sm font-bold text-[var(--text-main)]">{value}</p>
         </div>
+    );
+}
+
+function DoctorWalletSection({ doctor }: { doctor: Doctor }) {
+    const queryClient = useQueryClient();
+    const [amount, setAmount] = useState("");
+    const [description, setDescription] = useState("");
+    const [isAdjusting, setIsAdjusting] = useState(false);
+
+    const { data: wallet, isLoading } = useQuery({
+        queryKey: ["user_wallet", doctor._id],
+        queryFn: async () => {
+            try {
+                const res = await api.get(`/admin/users/doctor/${doctor._id}/wallet-balance`);
+                return res.data.data;
+            } catch (err: any) {
+                // If wallet doesn't exist yet, create one with zero balance so UI always has data
+                if (err?.response?.status === 404) {
+                    await api.post(`/admin/users/doctor/${doctor._id}/wallet-adjust`, {
+                        amount: 0,
+                        description: "Auto-create wallet",
+                        type: "Credit"
+                    });
+                    const res = await api.get(`/admin/users/doctor/${doctor._id}/wallet-balance`);
+                    return res.data.data;
+                }
+                throw err;
+            }
+        }
+    });
+
+    const adjustMutation = useMutation({
+        mutationFn: async (type: 'Credit' | 'Debit') => {
+            const res = await api.post(`/admin/users/doctor/${doctor._id}/wallet-adjust`, {
+                amount: parseFloat(amount),
+                description,
+                type
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["user_wallet", doctor._id] });
+            toast.success("Wallet balanced updated.");
+            setAmount("");
+            setDescription("");
+            setIsAdjusting(false);
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || "Adjustment failed.");
+        }
+    });
+
+    return (
+        <section className="space-y-6">
+            <div className="flex items-center gap-3 mb-4 px-1">
+                <div className="h-px flex-1 bg-[var(--bg-main)]"></div>
+                <h3 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] flex items-center gap-2">
+                    <WalletIcon size={14} className="text-emerald-500" /> Financial Protocol
+                </h3>
+                <div className="h-px flex-1 bg-[var(--bg-main)]"></div>
+            </div>
+
+            <div className="bg-slate-950 p-8 rounded-[40px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <WalletIcon size={100} className="text-emerald-500" />
+                </div>
+                <div className="relative z-10">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Current Balance</p>
+                    <h4 className="text-5xl font-black text-white leading-none">
+                        {isLoading ? "---" : `₹${wallet?.balance || 0}`}
+                    </h4>
+                </div>
+                
+                {!isAdjusting ? (
+                    <button 
+                        onClick={() => setIsAdjusting(true)} 
+                        className="h-14 px-10 rounded-2xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-emerald-700"
+                    >
+                        Execute Delta Adjust
+                    </button>
+                ) : (
+                    <div className="w-full md:w-[340px] space-y-3 p-5 bg-white/5 rounded-3xl border border-white/10 animate-in zoom-in-95 backdrop-blur-xl">
+                        <input 
+                            type="number" 
+                            placeholder="Amount in ₹" 
+                            value={amount} 
+                            onChange={e => setAmount(e.target.value)} 
+                            className="w-full bg-white border-none h-12 px-5 rounded-2xl text-slate-950 font-black placeholder:text-slate-400 outline-none" 
+                        />
+                        <input 
+                            placeholder="Reason (e.g., Promotion)" 
+                            value={description} 
+                            onChange={e => setDescription(e.target.value)} 
+                            className="w-full bg-white border-none h-12 px-5 rounded-2xl text-slate-950 font-bold placeholder:text-slate-400 outline-none" 
+                        />
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => adjustMutation.mutate('Credit')} 
+                                className="flex-1 h-11 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase flex items-center justify-center gap-2" 
+                                disabled={adjustMutation.isPending}
+                            >
+                                <ArrowUpCircle size={14} /> Credit
+                            </button>
+                            <button 
+                                onClick={() => adjustMutation.mutate('Debit')} 
+                                className="flex-1 h-11 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase flex items-center justify-center gap-2" 
+                                disabled={adjustMutation.isPending}
+                            >
+                                <ArrowDownCircle size={14} /> Debit
+                            </button>
+                            <button 
+                                onClick={() => setIsAdjusting(false)} 
+                                className="w-11 h-11 rounded-xl bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
     );
 }
 

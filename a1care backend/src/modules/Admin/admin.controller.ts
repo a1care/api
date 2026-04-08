@@ -1534,26 +1534,26 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
 
   if (!amount || isNaN(amount)) throw new ApiError(400, "Invalid amount");
 
-  const user = category === 'patient' 
+  const onModel: "Patient" | "Staff" = category === 'patient' ? "Patient" : "Staff";
+  const user = onModel === 'Patient' 
     ? await Patient.findById(userId) 
     : await Doctor.findById(userId);
 
   if (!user) throw new ApiError(404, "User not found");
 
-  const wallet = await WalletModel.findOneAndUpdate(
-    { userId: user._id },
-    { $setOnInsert: { userId: user._id, balance: 0, transactions: [] } },
-    { upsert: true, new: true }
-  );
+  let wallet = await WalletModel.findOne({ userId: user._id, onModel });
+  if (!wallet) {
+    wallet = await WalletModel.create({ userId: user._id, onModel, balance: 0, transactions: [] });
+  }
 
   if (type === 'Credit') {
     wallet.balance += Number(amount);
   } else {
+    if (wallet.balance < Number(amount)) {
+        throw new ApiError(400, "Insufficient wallet balance");
+    }
     wallet.balance -= Number(amount);
   }
-
-  // Ensure balance doesn't go negative if Debit
-  if (wallet.balance < 0) wallet.balance = 0;
 
   wallet.transactions.push({
     amount: Number(amount),

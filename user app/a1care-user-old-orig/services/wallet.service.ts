@@ -22,6 +22,8 @@ export const walletService = {
         const res = await api.get<ApiResponse<Wallet>>(
             Endpoints.WALLET
         );
+        // Debug log to quickly spot stale balances while testing
+        console.log('[Wallet] Fetched wallet', JSON.stringify(res.data?.data));
         return res.data.data;
     },
 
