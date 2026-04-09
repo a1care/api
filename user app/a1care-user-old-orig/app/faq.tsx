@@ -1,14 +1,28 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useConfigStore } from '@/stores/config.store';
 
 export default function FAQScreen() {
     const router = useRouter();
     const { config } = useConfigStore();
+    const [expanded, setExpanded] = useState<number | null>(null);
+
+    // Hardware back button should go to Profile Menu
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                router.push('/(tabs)/profile');
+                return true;
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [])
+    );
+
     const defaultFaqs = [
         { q: "How do I book a service?", a: "You can book a service by browsing through the categories on the Home screen and selecting the service or doctor of your choice." },
         { q: "What are your payment methods?", a: "We accept payments via A1Care Wallet, UPI, Credit/Debit cards, and NetBanking." },
@@ -19,7 +33,7 @@ export default function FAQScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#1E293B" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Frequently Asked Qs</Text>

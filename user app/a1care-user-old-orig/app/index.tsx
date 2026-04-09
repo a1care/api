@@ -162,7 +162,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
     contentOverlay: {
         position: 'absolute',
-        bottom: 120,
+        bottom: 165,
         left: 20,
         right: 20,
         backgroundColor: 'rgba(0,0,0,0.4)',

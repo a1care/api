@@ -12,10 +12,11 @@ import {
     RefreshControl,
     Linking,
     ToastAndroid,
+    BackHandler,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { medicalService, MedicalRecord } from '@/services/medical.service';
@@ -33,6 +34,18 @@ export default function HealthVaultScreen() {
     const qc = useQueryClient();
     const [isUploading, setIsUploading] = useState(false);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    // Hardware back button should go to Profile Menu
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                router.push('/(tabs)/profile');
+                return true;
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [])
+    );
 
     const getFileUrl = (url: string) => {
         if (!url) return '';
@@ -174,7 +187,7 @@ export default function HealthVaultScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#1E293B" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Health Vault</Text>

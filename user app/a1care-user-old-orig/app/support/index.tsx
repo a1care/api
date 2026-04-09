@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -7,10 +7,11 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
+    BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ticketsService } from '@/services/tickets.service';
 import { useConfigStore } from '@/stores/config.store';
 import { Linking } from 'react-native';
@@ -26,6 +27,20 @@ const FAQS = [
 
 export default function SupportDashboardScreen() {
     const router = useRouter();
+    const qc = useQueryClient();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Hardware back button should go to Profile Menu
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                router.push('/(tabs)/profile');
+                return true;
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [])
+    );
 
     const { config } = useConfigStore();
     const supportPhone = config?.contact?.supportPhone || '1800-123-4567';
@@ -59,7 +74,7 @@ export default function SupportDashboardScreen() {
         <SafeAreaView style={styles.root} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backBtn}>
                     <Text style={styles.backText}>←</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Help & Support</Text>

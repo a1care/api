@@ -25,6 +25,7 @@ import {
 } from 'lucide-react-native';
 import { Colors, Shadows } from '@/constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNotificationStore } from '@/stores/notification.store';
 
 // ── Icon/Color Mapping ───────────────────────────────────────────────────
 const TYPE_META: Record<string, { icon: any; color: string; bgColor: string }> = {
@@ -63,6 +64,7 @@ const DUMMY_FALLBACK: any[] = [];
 
 export default function NotificationsScreen() {
     const qc = useQueryClient();
+    const { setUnreadCount } = useNotificationStore();
     const [localList, setLocalList] = useState<any[]>([]);
 
     const { data, isLoading, isRefetching, refetch } = useQuery({
@@ -74,8 +76,10 @@ export default function NotificationsScreen() {
     useEffect(() => {
         if (data?.notifications) {
             setLocalList(data.notifications.length > 0 ? data.notifications : DUMMY_FALLBACK);
+            setUnreadCount(data.unreadCount ?? 0);
         } else if (!isLoading) {
             setLocalList(DUMMY_FALLBACK);
+            setUnreadCount(0);
         }
     }, [data, isLoading]);
 
@@ -92,6 +96,7 @@ export default function NotificationsScreen() {
         },
         onMutate: () => {
             setLocalList(prev => prev.map(n => ({ ...n, isRead: true })));
+            setUnreadCount(0);
             qc.setQueryData(['notifications'], (prev: any) => prev ? { ...prev, unreadCount: 0, notifications: (prev.notifications || []).map((n: any) => ({ ...n, isRead: true })) } : prev);
         },
         onSuccess: () => {
@@ -110,8 +115,9 @@ export default function NotificationsScreen() {
             qc.setQueryData(['notifications'], (prev: any) => {
                 if (!prev) return prev;
                 const updated = (prev.notifications || []).map((n: any) => n._id === id ? { ...n, isRead: true } : n);
-                const unreadCount = updated.filter((n: any) => !n.isRead).length;
-                return { ...prev, notifications: updated, unreadCount };
+                const newUnreadCount = updated.filter((n: any) => !n.isRead).length;
+                setUnreadCount(newUnreadCount);
+                return { ...prev, notifications: updated, unreadCount: newUnreadCount };
             });
         },
         onSuccess: () => {

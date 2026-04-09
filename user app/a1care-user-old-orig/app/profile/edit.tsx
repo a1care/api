@@ -10,10 +10,11 @@ import {
     Image,
     Platform,
     ToastAndroid,
+    BackHandler,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +37,18 @@ export default function ProfileEditScreen() {
     const [gender, setGender] = useState('');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+    // Hardware back button should go to Profile Menu
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                router.push('/(tabs)/profile');
+                return true;
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [])
+    );
+
     useEffect(() => {
         if (profile) {
             setName(profile.name || '');
@@ -55,7 +68,7 @@ export default function ProfileEditScreen() {
                 text1: 'Success',
                 text2: 'Profile updated successfully',
                 position: 'top',
-                onHide: () => router.back()
+                onHide: () => router.push('/(tabs)/profile')
             });
         },
         onError: (error: any) => {
@@ -140,7 +153,7 @@ export default function ProfileEditScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Edit Profile</Text>

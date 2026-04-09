@@ -10,11 +10,11 @@ import {
     Alert,
     Modal,
     TextInput,
+    BackHandler,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { walletService } from '@/services/wallet.service';
 import { paymentService } from '@/services/payment.service';
@@ -45,6 +45,13 @@ export default function WalletScreen() {
     useFocusEffect(
         React.useCallback(() => {
             refetch();
+            
+            const onBackPress = () => {
+                router.push('/(tabs)/profile');
+                return true;
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
         }, [refetch])
     );
 
@@ -92,7 +99,7 @@ export default function WalletScreen() {
         <SafeAreaView style={styles.root} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { paddingTop: Math.max(insets.top, 14) }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backBtn}>
                     <Text style={styles.backText}>←</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Wallet</Text>

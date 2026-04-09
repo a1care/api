@@ -12,9 +12,12 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
+    Linking,
+    ToastAndroid,
+    BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,6 +29,18 @@ export default function AddressesScreen() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [refreshing, setRefreshing] = useState(false);
+
+    // Hardware back button should go to Profile Menu
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                router.push('/(tabs)/profile');
+                return true;
+            };
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [])
+    );
 
     // Address Form Mode
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -179,7 +194,7 @@ export default function AddressesScreen() {
             />
 
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={styles.headerTitles}>

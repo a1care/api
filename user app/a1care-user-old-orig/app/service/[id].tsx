@@ -91,7 +91,7 @@ export default function ServiceDetailScreen() {
     const [scheduledDate, setScheduledDate] = useState('');
     const [scheduledTime, setScheduledTime] = useState('');
     const [notes, setNotes] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'WALLET' | 'ONLINE'>('COD');
+    const [paymentMethod, setPaymentMethod] = useState<'COD'>('COD');
     const [submittingOnline, setSubmittingOnline] = useState(false);
     const [isAsap, setIsAsap] = useState(true);
     const [submitted, setSubmitted] = useState(false);

@@ -46,6 +46,7 @@ import { doctorsService } from '@/services/doctors.service';
 import api from '@/services/api';
 import { notificationsService } from '@/services/notifications.service';
 import { useAuthStore } from '@/stores/auth.store';
+import { useNotificationStore } from '@/stores/notification.store';
 import { Colors, Shadows } from '@/constants/colors';
 import { Endpoints } from '@/constants/api';
 import { FontSize } from '@/constants/spacing';
@@ -233,6 +234,7 @@ export default function HomeScreen() {
     const [selectedKB, setSelectedKB] = useState<any>(null);
     const [isKBModalOpen, setIsKBModalOpen] = useState(false);
     const { config, fetchConfig } = useConfigStore();
+    const { unreadCount: globalUnreadCount } = useNotificationStore();
     const [locCity, setLocCity] = useState('Detecting...');
     const [locArea, setLocArea] = useState('');
     const [locLoading, setLocLoading] = useState(false);
@@ -500,7 +502,7 @@ export default function HomeScreen() {
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.iconCircle} onPress={() => router.push('/(tabs)/notifications')}>
                             <Bell size={20} color={Colors.textPrimary} />
-                            {unreadCount > 0 && <View style={styles.notifDot} />}
+                            {globalUnreadCount > 0 && <View style={styles.notifDot} />}
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
                             <View style={styles.avatarCircle}>
