@@ -32,16 +32,25 @@ const DEV_BYPASS_OTP = "123456";
 
 export const getPatientDetailsById = asyncHandler(async (req, res) => {
   const patientId = req.user?.id
+  console.log(`[ProfileFetch] Starting for ID: ${patientId}`);
 
   if (mongoose.connection.readyState !== 1) {
+    console.error("[ProfileFetch] DB not ready");
     throw new ApiError(503, "Database unavailable");
   }
 
-  const userDetails = await Patient.findById(patientId).populate('primaryAddressId')
+  try {
+    const userDetails = await Patient.findById(patientId);
+    console.log(`[ProfileFetch] User found: ${!!userDetails}`);
 
-  if (userDetails) return res.status(200).json(new ApiResponse(200, "data fetched", userDetails))
-  else {
-    throw new ApiError(404, "No user found")
+    if (userDetails) {
+      return res.status(200).json(new ApiResponse(200, "data fetched", userDetails));
+    } else {
+      throw new ApiError(404, "No user found");
+    }
+  } catch (err: any) {
+    console.error("[ProfileFetch] Error:", err.message);
+    throw err;
   }
 })
 
@@ -79,33 +88,12 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
 
-  // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
+  // ─── DEV BYPASS CHECK REMOVED FOR REALTIME OTP ──────────────────────────
+  /*
   if (String(otp) === DEV_BYPASS_OTP) {
-    console.log(`[OTP] ⚡ DEV BYPASS activated for: ${cleanMobile}`);
-    let patient = await Patient.findOne({
-      mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
-    });
-    if (!patient) {
-      patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
-      await patient.save();
-    }
-
-    const token = jwt.sign(
-      {
-        mobileNumber: patient.mobileNumber,
-        userId: patient._id,
-        role: "Patient",
-        appType: "user",
-        userType: "patient"
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "7d" }
-    );
-
-    return res.status(200).json(
-      new ApiResponse(200, "Bypass successful", buildPatientAuthResponse(patient, token))
-    );
+    ... bypass logic ...
   }
+  */
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Check Redis for manual OTP if provided
