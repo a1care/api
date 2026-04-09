@@ -84,6 +84,7 @@ export default function DoctorBookingScreen() {
             return;
         }
 
+        /* 
         if (paymentMethod === 'WALLET' && (wallet?.balance ?? 0) < (doctor?.consultationFee ?? 0)) {
             Alert.alert('Insufficient Balance', 'Your wallet balance is lower than the consultation fee. Please top up or use COD.');
             return;
@@ -91,41 +92,15 @@ export default function DoctorBookingScreen() {
 
         if (paymentMethod === 'ONLINE') {
             try {
-                console.log(`[DoctorBooking] Starting online payment for: ${id} | Fee: ${doctor?.consultationFee}`);
-                // 1. Create Booking first (status Pending)
-                const booking = await bookingsService.bookDoctor(id!, {
-                    date: selectedDate,
-                    startingTime: selectedSlot.startingTime,
-                    endingTime: selectedSlot.endingTime,
-                    paymentMode: 'ONLINE'
-                });
-                console.log(`[DoctorBooking] Booking created: ${booking._id}. Now creating payment order...`);
-
-                // 2. Create Payment Order for this Booking
-                const order = await paymentService.createOrder({
-                    amount: doctor?.consultationFee ?? 0,
-                    type: "BOOKING",
-                    referenceId: booking._id
-                });
-                console.log(`[DoctorBooking] Order created: ${order._id}. Now initiating gateway...`);
-
-                // 3. Initiate Payment
-                const params = await paymentService.initiatePayment(order._id);
-                console.log(`[DoctorBooking] Gateway initiation success. Redirecting to Easebuzz...`);
-
-                // 4. Navigate to Easebuzz Checkout
-                router.push({
-                    pathname: "/checkout/easebuzz" as any,
-                    params: { ...params }
-                });
+                // ... online payment integration commented out
             } catch (err: any) {
-                console.error("Booking Payment Error:", err);
-                Alert.alert("Error", err?.response?.data?.message || "Could not start online payment. Please use COD.");
+                // ...
             }
         } else {
-            // WALLET or COD flow
+        */
+            // Default to COD flow
             bookMutation.mutate(selectedSlot);
-        }
+        // }
     };
 
     if (doctorError) return <ErrorState message="Could not find doctor context" onRetry={refetchDoctor} />;
@@ -227,7 +202,7 @@ export default function DoctorBookingScreen() {
                 <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Payment Method</Text>
                 <View style={styles.paymentMethods}>
                     <TouchableOpacity
-                        style={[styles.payCard, paymentMethod === 'COD' ? styles.payCardActive : {}]}
+                        style={[styles.payCard, styles.payCardActive]}
                         onPress={() => setPaymentMethod('COD')}
                     >
                         <Text style={styles.payIcon}>💵</Text>
@@ -235,36 +210,8 @@ export default function DoctorBookingScreen() {
                             <Text style={styles.payLabel}>Cash on Delivery</Text>
                             <Text style={styles.paySub}>Pay at clinic/home</Text>
                         </View>
-                        <View style={[styles.radio, paymentMethod === 'COD' ? styles.radioActive : {}]}>
-                            {paymentMethod === 'COD' && <View style={styles.radioInner} />}
-                        </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.payCard, paymentMethod === 'WALLET' ? styles.payCardActive : {}]}
-                        onPress={() => setPaymentMethod('WALLET')}
-                    >
-                        <Text style={styles.payIcon}>👛</Text>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.payLabel}>A1 Wallet</Text>
-                            <Text style={styles.paySub}>Balance: {formatCurrency(wallet?.balance ?? 0)}</Text>
-                        </View>
-                        <View style={[styles.radio, paymentMethod === 'WALLET' ? styles.radioActive : {}]}>
-                            {paymentMethod === 'WALLET' && <View style={styles.radioInner} />}
-                        </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.payCard, paymentMethod === 'ONLINE' ? styles.payCardActive : {}]}
-                        onPress={() => setPaymentMethod('ONLINE')}
-                    >
-                        <Text style={styles.payIcon}>💳</Text>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.payLabel}>Online Payment</Text>
-                            <Text style={styles.paySub}>Cards, UPI, Netbanking</Text>
-                        </View>
-                        <View style={[styles.radio, paymentMethod === 'ONLINE' ? styles.radioActive : {}]}>
-                            {paymentMethod === 'ONLINE' && <View style={styles.radioInner} />}
+                        <View style={[styles.radio, styles.radioActive]}>
+                            <View style={styles.radioInner} />
                         </View>
                     </TouchableOpacity>
                 </View>

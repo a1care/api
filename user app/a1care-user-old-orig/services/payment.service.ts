@@ -17,18 +17,21 @@ export interface Order {
 
 export const paymentService = {
     createOrder: async (params: CreateOrderParams) => {
-        const res = await api.post("/payments/orders/create", params);
-        return res.data.data;
+        // const res = await api.post("/payments/orders/create", params);
+        // return res.data.data;
+        throw new Error("Online payments are disabled. Please use COD.");
     },
 
     initiatePayment: async (orderId: string) => {
-        const res = await api.post("/payments/initiate", { orderId });
-        return res.data.data;
+        // const res = await api.post("/payments/initiate", { orderId });
+        // return res.data.data;
+        throw new Error("Online payments are disabled. Please use COD.");
     },
 
     verifyPayment: async (orderId: string) => {
-        const res = await api.post("/payments/verify", { orderId });
-        return res.data.data;
+        // const res = await api.post("/payments/verify", { orderId });
+        // return res.data.data;
+        throw new Error("Online payments are disabled. Please use COD.");
     },
 
     getOrder: async (orderId: string): Promise<Order> => {

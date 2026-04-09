@@ -1,6 +1,6 @@
 import React from 'react'; 
 import { Stack } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryProvider } from '@/providers/QueryProvider';
 import {
     Inter_400Regular,
     Inter_500Medium,
@@ -22,14 +22,6 @@ import Toast from 'react-native-toast-message';
 import messaging from '@react-native-firebase/messaging';
 import api from '@/services/api';
 
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 1000 * 60 * 2, // 2 minutes
-            retry: 1,
-        },
-    },
-});
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
     const { isAuthenticated, isLoading, user, initialize } = useAuthStore();
@@ -195,8 +187,8 @@ export default function RootLayout() {
 
     console.log('[RootLayout] Fonts Loaded, Rendering Providers');
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <QueryClientProvider client={queryClient}>
+        <>
+            <GestureHandlerRootView style={{ flex: 1 }}>
                 <AuthGuard>
                     <Stack screenOptions={{ headerShown: false }}>
                         <Stack.Screen name="(auth)" />
@@ -217,8 +209,8 @@ export default function RootLayout() {
                         <Stack.Screen name="maintenance" />
                     </Stack>
                 </AuthGuard>
-            </QueryClientProvider>
+            </GestureHandlerRootView>
             <Toast />
-        </GestureHandlerRootView>
+        </>
     );
 }

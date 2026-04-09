@@ -1,9 +1,10 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import React, { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '@/constants/colors';
-import { notificationsService } from '@/services/notifications.service';
+import { useNotificationStore } from '@/stores/notification.store';
+import { QueryProvider } from '@/providers/QueryProvider';
 
 interface TabIconProps {
     focused: boolean;
@@ -37,15 +38,15 @@ function TabIcon({ focused, icon, label, isCenter }: TabIconProps) {
     );
 }
 
-export default function TabsLayout() {
-    // Fetch unread count for badge
-    const { data } = useQuery({
-        queryKey: ['notifications'],
-        queryFn: () => notificationsService.getAll(1),
-        refetchInterval: 30000, // Refresh every 30s to keep badge updated
-    });
 
-    const unreadCount = data?.unreadCount ?? 0;
+export default function TabsLayout() {
+    const { unreadCount, fetchUnreadCount } = useNotificationStore();
+
+    useEffect(() => {
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <Tabs

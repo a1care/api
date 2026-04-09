@@ -45,8 +45,7 @@ export default function HospitalBookingScreen() {
     const [selectedSymptom, setSelectedSymptom] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'WALLET' | 'OFFLINE' | 'ONLINE'>('OFFLINE');
-    const [submittingOnline, setSubmittingOnline] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<'OFFLINE'>('OFFLINE');
     const [step, setStep] = useState<'details' | 'payment'>('details');
     const [submitted, setSubmitted] = useState(false);
 
@@ -126,36 +125,13 @@ export default function HospitalBookingScreen() {
             }
             setStep('payment');
         } else {
+            /* 
             if (paymentMethod === 'ONLINE') {
-                try {
-                    setSubmittingOnline(true);
-                    // 1. Create Booking (Pending)
-                    const booking = await bookMutation.mutateAsync();
-
-                    // 2. Create Order
-                    const order = await paymentService.createOrder({
-                        amount: service?.price || 0,
-                        type: "BOOKING",
-                        referenceId: booking._id
-                    });
-
-                    // 3. Initiate
-                    const params = await paymentService.initiatePayment(order._id);
-
-                    // 4. Navigate to Checkout
-                    router.push({
-                        pathname: "/checkout/easebuzz" as any,
-                        params: { ...params }
-                    });
-                } catch (err: any) {
-                    console.error("Hospital Payment Error:", err);
-                    Alert.alert("Order Error", err?.response?.data?.message || "Could not start online payment. Please use COD.");
-                } finally {
-                    setSubmittingOnline(false);
-                }
+                // ... online payment integration commented out
             } else {
+            */
                 bookMutation.mutate();
-            }
+            // }
         }
     };
 
@@ -327,65 +303,23 @@ export default function HospitalBookingScreen() {
                     </>
                 ) : (
                     <View style={{ gap: 20 }}>
-                        <Text style={styles.sectionTitle}>Select Payment Method</Text>
-
                         <TouchableOpacity
-                            style={[styles.payCard, paymentMethod === 'WALLET' && styles.activePayCard]}
-                            onPress={() => setPaymentMethod('WALLET')}
-                        >
-                            <View style={[styles.payIcon, paymentMethod === 'WALLET' && { backgroundColor: Colors.primary }]}>
-                                <Ionicons
-                                    name="wallet-outline"
-                                    size={24}
-                                    color={paymentMethod === 'WALLET' ? '#fff' : Colors.primary}
-                                />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.payTitle}>A1 Wallet</Text>
-                                <Text style={styles.paySub}>Pay instantly from your balance</Text>
-                            </View>
-                            <View style={[styles.radio, paymentMethod === 'WALLET' && styles.radioActive]}>
-                                {paymentMethod === 'WALLET' && <View style={styles.radioInner} />}
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.payCard, paymentMethod === 'OFFLINE' && styles.activePayCard]}
+                            style={[styles.payCard, styles.activePayCard]}
                             onPress={() => setPaymentMethod('OFFLINE')}
                         >
-                            <View style={[styles.payIcon, paymentMethod === 'OFFLINE' && { backgroundColor: Colors.primary }]}>
+                            <View style={[styles.payIcon, { backgroundColor: Colors.primary }]}>
                                 <Ionicons
                                     name="cash-outline"
                                     size={24}
-                                    color={paymentMethod === 'OFFLINE' ? '#fff' : Colors.primary}
+                                    color="#fff"
                                 />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.payTitle}>Pay at Hospital</Text>
                                 <Text style={styles.paySub}>Pay directly at the OP desk</Text>
                             </View>
-                            <View style={[styles.radio, paymentMethod === 'OFFLINE' && styles.radioActive]}>
-                                {paymentMethod === 'OFFLINE' && <View style={styles.radioInner} />}
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.payCard, paymentMethod === 'ONLINE' && styles.activePayCard]}
-                            onPress={() => setPaymentMethod('ONLINE')}
-                        >
-                            <View style={[styles.payIcon, paymentMethod === 'ONLINE' && { backgroundColor: Colors.primary }]}>
-                                <Ionicons
-                                    name="card-outline"
-                                    size={24}
-                                    color={paymentMethod === 'ONLINE' ? '#fff' : Colors.primary}
-                                />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.payTitle}>Online Payment</Text>
-                                <Text style={styles.paySub}>Pay via Cards, UPI or Netbanking</Text>
-                            </View>
-                            <View style={[styles.radio, paymentMethod === 'ONLINE' && styles.radioActive]}>
-                                {paymentMethod === 'ONLINE' && <View style={styles.radioInner} />}
+                            <View style={[styles.radio, styles.radioActive]}>
+                                <View style={styles.radioInner} />
                             </View>
                         </TouchableOpacity>
 
