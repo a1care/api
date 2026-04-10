@@ -34,34 +34,126 @@ export const sentOtpForPatient = asyncHandler(async (req , res)=>{
 })
 
 // verify otp 
-export const verifyOtpForPatient = asyncHandler(async (req , res)=>{
-    const {mobileNumber , otp} = req.body
+export const verifyOtpForPatient = asyncHandler(async (req, res) => {
+  const { idToken, mobileNumber, otp } = req.body
 
-    if(!mobileNumber || !otp){
-        throw new ApiError(401 ,  "Validation failed!")
+  const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
+
+  // ─── DEV BYPASS CHECK REMOVED FOR REALTIME OTP ──────────────────────────
+  /*
+  if (String(otp) === DEV_BYPASS_OTP) {
+    ... bypass logic ...
+  }
+  */
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // Check Redis for manual OTP if provided
+  if (otp && cleanMobile) {
+    const storedOtp = await RedisClient.get(`otp:patient:${cleanMobile}`);
+    if (storedOtp && String(storedOtp) === String(otp)) {
+      console.log(`[OTP] ✅ Patient verified via Redis for: ${cleanMobile}`);
+      
+      // Cleanup OTP
+      await RedisClient.del(`otp:patient:${cleanMobile}`);
+
+      let patient = await Patient.findOne({
+        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+      });
+      if (!patient) {
+        patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
+        await patient.save();
+      }
+
+      const token = jwt.sign(
+        {
+          mobileNumber: patient.mobileNumber,
+          userId: patient._id,
+          role: "Patient",
+          appType: "user",
+          userType: "patient"
+        },
+        process.env.JWT_SECRET as string,
+        { expiresIn: "7d" }
+      );
+
+      return res.status(200).json(
+        new ApiResponse(200, "Verification successful", buildPatientAuthResponse(patient, token))
+      );
+    } else if (storedOtp) {
+       throw new ApiError(400, "Invalid OTP provided.");
+    }
+    // If otp was provided but no storedOtp found, it's either expired or never sent.
+    throw new ApiError(400, "OTP expired or invalid. Please request a new one.");
+  }
+
+  if (!idToken) {
+    throw new ApiError(400, "Firebase ID token is required!")
+  }
+
+  try {
+    // 1. Verify the secure Firebase Token
+    const admin = (await import('../../configs/fcmConfig.js')) as any;
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    // 2. Extract verified data
+    const firebasePhone = decodedToken.phone_number;
+    const firebaseEmail = decodedToken.email;
+    
+    // Search for patient by email first to find existing phone number
+    let patient = null;
+    if (firebaseEmail) {
+        patient = await Patient.findOne({ email: firebaseEmail });
     }
 
-   const redisOtp = await RedisClient.get(`otp:${mobileNumber}`)
-   console.log("this is redis otp" , redisOtp)
+    const finalPhone = firebasePhone || mobileNumber || (patient ? patient.mobileNumber : null);
 
-    if(Number(otp) === 123123){
-        let isExists = await Patient.findOne({mobileNumber})
-        console.log( 'before happening this one..' , isExists)
-        if(!isExists){
-            const newPatient = new Patient({
-                    mobileNumber
-            })
-
-            await newPatient.save() 
-            isExists = newPatient
-        }
-        const token = jwt.sign({mobileNumber , userId:isExists._id}, process.env.JWT_SECRET as string )
-        console.log("token is generated..." , token)
-        
-        return res.status(201).json(new ApiResponse(201 , "verification successfull" , {token}))
-    }else{
-        throw new ApiError(404 , "Invalid OTP!")
+    if (!finalPhone) {
+      throw new ApiError(400, "Mobile number is required for new accounts. Please enter your mobile number and tap Google Sign-in again.");
     }
+
+    // 3. Find or create the user in your database
+    if (!patient) {
+        patient = await Patient.findOne({ mobileNumber: finalPhone.replace(/^\+91/, "").replace(/\D/g, "") });
+    }
+    
+    if (!patient) {
+        patient = await Patient.findOne({ mobileNumber: finalPhone });
+    }
+
+    if (!patient) {
+      const newPatient = new Patient({ 
+        mobileNumber: finalPhone,
+        email: firebaseEmail // Auto-set email from Google if new account
+      });
+      await newPatient.save();
+      patient = newPatient;
+    } else if (firebaseEmail && !patient.email) {
+      // Link email if it's currently missing
+      patient.email = firebaseEmail;
+      await patient.save();
+    }
+
+    // 4. Generate your own custom JWT Token
+    const token = jwt.sign(
+      {
+        mobileNumber: patient.mobileNumber,
+        userId: patient._id,
+        role: "Patient",
+        appType: "user",
+        userType: "patient"
+      },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" }
+    )
+
+    return res.status(200).json(
+      new ApiResponse(200, "Firebase Verification successful", buildPatientAuthResponse(patient, token))
+    )
+
+  } catch (error: any) {
+    console.error("Firebase Token Error:", error);
+    throw new ApiError(401, error.message || "Invalid or expired Firebase Token!")
+  }
 })
 
 export const updateProfile = asyncHandler(async (req, res) => {
