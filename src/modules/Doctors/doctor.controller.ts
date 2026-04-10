@@ -174,6 +174,8 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     } else if (storedOtp) {
        throw new ApiError(400, "Invalid OTP provided.");
     }
+
+    throw new ApiError(400, "OTP expired or invalid. Please request a new one.");
   }
 
   if (!idToken) {

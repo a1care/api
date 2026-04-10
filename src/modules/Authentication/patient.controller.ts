@@ -131,8 +131,8 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
     } else if (storedOtp) {
        throw new ApiError(400, "Invalid OTP provided.");
     }
-    // If otp was provided but no storedOtp found, it's either expired or never sent.
-    if (!idToken) throw new ApiError(400, "OTP expired or invalid. Please request a new one.");
+
+    throw new ApiError(400, "OTP expired or invalid. Please request a new one.");
   }
 
   if (!idToken) {
