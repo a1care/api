@@ -178,7 +178,11 @@ const DoctorSchema = new Schema<DoctorDocument>(
 DoctorSchema.index({ mobileNumber: 1, roleId: 1 }, { unique: true });
 DoctorSchema.index({ location: "2dsphere" });
 
-export default mongoose.model<DoctorDocument>(
-  "staff",
-  DoctorSchema
-);
+const Doctor = mongoose.model<DoctorDocument>("staff", DoctorSchema);
+
+// Self-healing: Drop the legacy single-unique index if it exists to allow multi-role support
+Doctor.collection.dropIndex("mobileNumber_1").catch(() => {
+  // Ignore error if index doesn't exist
+});
+
+export default Doctor;

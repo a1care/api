@@ -117,20 +117,38 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     if (storedOtp && String(storedOtp) === String(otp)) {
       console.log(`[OTP] ✅ Verified via Redis for: ${cleanMobile}`);
 
-      if (!resolvedRoleId) throw new ApiError(400, "Role context is required for login.");
+      if (!resolvedRoleId) throw new ApiError(400, "Role context is required.");
       
       // Cleanup OTP
       await RedisClient.del(`otp:staff:${cleanMobile}`);
 
+      // 1. Strictly find by Phone + Role to keep profiles separate
       let staff = await doctorModel.findOne({
         mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] },
         roleId: resolvedRoleId
       });
+
+      // 2. If no record for THIS role exists, create a brand new one (Fresh Registration)
       if (!staff) {
-        staff = await doctorModel.create({ 
-          mobileNumber: `+91${cleanMobile}`,
-          roleId: resolvedRoleId
-        });
+        try {
+          staff = await doctorModel.create({ 
+            mobileNumber: `+91${cleanMobile}`,
+            roleId: resolvedRoleId,
+            isRegistered: false // This triggers the fresh registration flow in the app
+          });
+        } catch (error: any) {
+          // If the DB still has the old unique index, we need to handle it
+          if (error.code === 11000) {
+             // Fallback: If we can't create a new one due to old DB rules, 
+             // we'll have to use the existing one but this shouldn't happen after the index fix.
+             console.log("[DB FIX] Duplicate key on mobileNumber. Attempting to find existing...");
+             staff = await doctorModel.findOne({
+                mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+             });
+          } else {
+             throw error;
+          }
+        }
       }
 
       const token = jwt.sign(
@@ -140,80 +158,15 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       );
 
       return res.status(200).json(
-        new ApiResponse(200, "Verification successful", { token })
+        new ApiResponse(200, "Login successful", { token, user: staff })
       );
     } else if (storedOtp) {
        throw new ApiError(400, "Invalid OTP provided.");
     }
   }
 
-  if (!idToken) {
-    throw new ApiError(400, "Firebase ID token is required!");
-  }
-
-  try {
-    // 1. Verify the secure Firebase Token
-    const admin = (await import('../../configs/fcmConfig.js')) as any;
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    
-    // 2. Extract verified data
-    const firebasePhone = decodedToken.phone_number;
-    const firebaseEmail = decodedToken.email;
-
-    // Search for staff by email first to find existing phone number
-    let staff = null;
-    if (firebaseEmail) {
-        staff = await doctorModel.findOne({ email: firebaseEmail });
-    }
-
-    const finalPhone = firebasePhone || mobileNumber || (staff ? staff.mobileNumber : null);
-
-    if (!finalPhone) {
-        throw new ApiError(400, "Mobile number is required for new accounts. Please enter your mobile number and tap Google Sign-in again.");
-    }
-
-    // 3. Find or create the staff in the database
-    if (!staff && resolvedRoleId) {
-        staff = await doctorModel.findOne({ 
-          mobileNumber: finalPhone.replace(/^\+91/, "").replace(/\D/g, ""),
-          roleId: resolvedRoleId
-        });
-    }
-    
-    if (!staff && resolvedRoleId) {
-        staff = await doctorModel.findOne({ 
-          mobileNumber: finalPhone,
-          roleId: resolvedRoleId
-        });
-    }
-
-    if (!staff) {
-      if (!resolvedRoleId) throw new ApiError(400, "Role context is required for registration.");
-      staff = await doctorModel.create({ 
-        mobileNumber: finalPhone,
-        email: firebaseEmail,
-        roleId: resolvedRoleId
-      });
-    } else if (firebaseEmail && !staff.email) {
-        staff.email = firebaseEmail;
-        await staff.save();
-    }
-
-    // 4. Generate the JWT Token for the rest of the app
-    const token = jwt.sign(
-      { staffId: staff._id },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    return res.status(200).json(
-      new ApiResponse(200, "Firebase Verification successful", { token })
-    );
-
-  } catch (error: any) {
-    console.error("Firebase Token Error:", error);
-    throw new ApiError(401, error.message || "Invalid or expired Firebase Token!");
-  }
+  // If we reach here, no OTP was provided or matched
+  throw new ApiError(400, "Valid OTP is required for login.");
 });
 
 
