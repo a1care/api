@@ -698,6 +698,57 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, `${category} list fetched`, staff));
 });
 
+export const createUserByCategory = asyncHandler(async (req, res) => {
+  const { category } = req.params;
+  const { name, mobileNumber, email } = req.body;
+
+  if (!category || !name || !mobileNumber) {
+    throw new ApiError(400, "Category, name and mobile number are required");
+  }
+
+  if (!isDbOnline()) {
+    throw new ApiError(503, "Database unavailable");
+  }
+
+  if (category === 'patient') {
+    const existing = await Patient.findOne({ mobileNumber });
+    if (existing) throw new ApiError(409, "Patient with this mobile number already exists");
+
+    const patient = await Patient.create({ name, mobileNumber, email, isRegistered: true });
+    return res.status(201).json(new ApiResponse(201, "Patient created successfully", patient));
+  }
+
+  // Handle Staff/Service Providers
+  const role = await RoleModel.findOne({
+    $or: [
+      { code: category.toUpperCase() },
+      { name: new RegExp(`^${category}$`, 'i') }
+    ]
+  });
+
+  if (!role) {
+    throw new ApiError(404, `Role category '${category}' not found in system configuration`);
+  }
+
+  const existing = await Doctor.findOne({ mobileNumber, roleId: role._id });
+  if (existing) {
+    throw new ApiError(409, `A provider with this number is already registered under the ${category} role`);
+  }
+
+  const staff = await Doctor.create({
+    name,
+    mobileNumber,
+    email,
+    roleId: role._id,
+    status: "Pending",
+    isRegistered: false,
+    startExperience: new Date(),
+    specialization: []
+  });
+
+  return res.status(201).json(new ApiResponse(201, `${category} created successfully`, staff));
+});
+
 export const listPatients = asyncHandler(async (_req, res) => {
   if (!isDbOnline()) {
     throw new ApiError(503, "Database unavailable");
@@ -710,7 +761,11 @@ export const listDoctors = asyncHandler(async (_req, res) => {
   if (!isDbOnline()) {
     throw new ApiError(503, "Database unavailable");
   }
-  const doctors = await Doctor.find().sort({ createdAt: -1 });
+
+  const role = await RoleModel.findOne({ code: 'DOCTOR' });
+  const filter = role ? { roleId: role._id } : {};
+
+  const doctors = await Doctor.find(filter).sort({ createdAt: -1 });
   return res.status(200).json(new ApiResponse(200, "Doctors fetched", doctors));
 });
 
@@ -939,11 +994,24 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
     .populate("patientId", "name mobileNumber")
     .sort({ createdAt: -1 });
 
-  const formatted = bookings.map(b => ({
-    ...b.toObject(),
-    totalAmount: b.totalAmount || 0,
-    paymentStatus: b.paymentStatus || "PENDING"
-  }));
+  console.log(`[DEBUG] Fetched ${bookings.length} doctor bookings. First patientId:`, bookings[0]?.patientId);
+
+  const formatted = bookings.map(b => {
+    const obj = b.toObject() as any;
+    return {
+      ...obj,
+      doctorId: obj.doctorId || { name: "Awaiting Doctor", specialization: [] },
+      patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
+        name: obj.patientId.name || "",
+        mobile: obj.patientId.mobileNumber || "No Profile"
+      } : { 
+        name: "Missing Profile", 
+        mobile: obj.patientId ? obj.patientId.toString() : "N/A" 
+      },
+      totalAmount: obj.totalAmount || 0,
+      paymentStatus: obj.paymentStatus || "PENDING"
+    };
+  });
 
   res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", formatted));
 });
@@ -993,7 +1061,13 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     return {
       ...obj,
       serviceId: obj.childServiceId || { name: "Unknown Service" },
-      patientId: obj.userId ? { name: obj.userId.name || "Guest User", mobile: obj.userId.mobileNumber || "N/A" } : { name: "Guest User", mobile: "N/A" },
+      patientId: (obj.userId && typeof obj.userId === 'object' && obj.userId._id) ? { 
+        name: obj.userId.name || "", 
+        mobile: obj.userId.mobileNumber || "No Profile" 
+      } : { 
+        name: "Missing Profile", 
+        mobile: obj.userId ? obj.userId.toString() : "N/A" 
+      },
       totalAmount: obj.price || 0,
       paymentStatus: obj.status === "COMPLETED" ? "COMPLETED" : "PENDING"
     };
@@ -1155,7 +1229,7 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
   const formatted = list.map((b: any) => ({
     ...b,
     serviceId: b.childServiceId || { name: "Unknown Service" },
-    patientId: b.userId ? { name: b.userId.name || "Guest", mobile: b.userId.mobileNumber || "N/A" } : { name: "Guest", mobile: "N/A" },
+    patientId: b.userId ? { name: b.userId.name || "Anonymous Member", mobile: b.userId.mobileNumber || "N/A" } : { name: "Anonymous Member", mobile: "N/A" },
     totalAmount: b.price || 0,
     urgency: b.urgency || "NORMAL",
   }));
@@ -1164,8 +1238,25 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
 });
 
 export const getHospitalBookings = asyncHandler(async (req, res) => {
-  const bookings = await HospitalBooking.find().populate("patientId", "name mobileNumber").sort({ acceptedAt: -1 });
-  res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", bookings));
+  const bookings = await HospitalBooking.find()
+    .populate("patientId", "name mobileNumber")
+    .sort({ acceptedAt: -1 });
+
+  const formatted = bookings.map(b => {
+    const obj = b.toObject() as any;
+    return {
+      ...obj,
+      patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
+        name: obj.patientId.name || "",
+        mobile: obj.patientId.mobileNumber || "No Profile"
+      } : { 
+        name: "Missing Profile", 
+        mobile: obj.patientId ? obj.patientId.toString() : "N/A" 
+      }
+    };
+  });
+
+  res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", formatted));
 });
 
 // ─── System Config Endpoints ────────────────────────────────────────────────

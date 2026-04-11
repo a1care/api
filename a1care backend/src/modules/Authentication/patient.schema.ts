@@ -1,18 +1,17 @@
 import * as z from 'zod'
 
 export const patientValidation = z.object({
-    mobileNumber: z.number().optional(),
+    mobileNumber: z.preprocess((val) => (typeof val === 'string' ? parseInt(val, 10) : val), z.number()).optional(),
     name: z.string().optional(),
-    email: z.email().optional(),
-    // profileImage:z.string() ,
+    email: z.string().email().optional().or(z.literal('')),
     location: z.object({
-        latitude: z.number(),
-        longitude: z.number()
+        latitude: z.preprocess((val) => (typeof val === 'string' ? parseFloat(val) : val), z.number()),
+        longitude: z.preprocess((val) => (typeof val === 'string' ? parseFloat(val) : val), z.number())
     }).optional(),
     gender: z.enum(["Male", "Female", "Other"]).optional(),
     dateOfBirth: z.coerce.date().optional(),
     fcmToken: z.string().optional(),
-    isRegistered: z.boolean().default(false)
+    isRegistered: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(false)
 })
 
 export type patientType = z.infer<typeof patientValidation>

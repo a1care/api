@@ -217,9 +217,15 @@ export function AppLayout() {
 
           {servicesOpen && (
             <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
-              <NavLink to="/service-management" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Catalog</NavLink>
-              <NavLink to="/service-categories" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Categories</NavLink>
-              <NavLink to="/service-subcategories" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Sub-Services</NavLink>
+              {[
+                { to: "/service-management", label: "Catalog" },
+                { to: "/service-categories", label: "Categories" },
+                { to: "/service-subcategories", label: "Sub-Services" }
+              ].map(link => (
+                <NavLink key={link.to} to={link.to} className={({ isActive }) => `block py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
+                  {link.label}
+                </NavLink>
+              ))}
               <NavLink to="/health-packages" className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
                 <Package size={13} /> Health Packages
               </NavLink>

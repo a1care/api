@@ -113,8 +113,8 @@ export const updateProfile = asyncHandler(async (req, res) => {
     );
   }
 
-  // 2. Get patient id from auth middleware
-  const patientId = req.user?.id
+  const patientId = req.user?.id;
+  console.log("[UpdateProfile] Patient ID:", patientId, "Parsed Data:", parsed.data);
 
   // 3. Update profile
   const updatedPatient = await Patient.findByIdAndUpdate(
@@ -126,6 +126,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
         profileImage: req.fileUrl,
         gender: parsed.data.gender,
         dateOfBirth: parsed.data.dateOfBirth,
+        location: parsed.data.location,
         fcmToken: parsed.data.fcmToken || null,
         isRegistered: true
       }

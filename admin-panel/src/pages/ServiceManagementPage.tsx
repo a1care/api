@@ -44,9 +44,33 @@ interface ChildService {
     completed: number;
 }
 
+import { useLocation, useNavigate } from "react-router-dom";
+
 export function ServiceManagementPage() {
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState<"categories" | "sub-services" | "child-services">("categories");
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Map URL path to tab state
+    const getActiveTab = () => {
+        const path = location.pathname;
+        if (path.includes("sub-services")) return "sub-services";
+        if (path.includes("child-services")) return "child-services";
+        return "categories";
+    };
+
+    const activeTab = getActiveTab();
+    
+    // Internal tab navigation
+    const setActiveTab = (tab: string) => {
+        const routes = {
+            "categories": "/service-categories",
+            "sub-services": "/service-subcategories",
+            "child-services": "/service-child-services"
+        };
+        navigate(routes[tab as keyof typeof routes] || "/service-management");
+    };
+
     const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
     const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
 

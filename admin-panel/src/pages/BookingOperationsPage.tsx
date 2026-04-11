@@ -391,7 +391,7 @@ export function BookingOperationsPage() {
                                 <th className="py-5 px-6 whitespace-nowrap min-w-[200px]">
                                     {activeTab === "doctors" ? "Doctor" : activeTab === "services" ? "Service" : "Hospital Task"}
                                 </th>
-                                <th className="py-5 px-6 whitespace-nowrap">Customer</th>
+                                <th className="py-5 px-6 whitespace-nowrap">Patient Name</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Date & Time</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Status</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Amount</th>
@@ -421,7 +421,7 @@ export function BookingOperationsPage() {
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="text-sm font-semibold text-[var(--text-main)]">
-                                                    {booking.patientId?.name || "Guest User"}
+                                                    {booking.patientId?.name || booking.patientId?.mobile || "Anonymous Member"}
                                                 </div>
                                                 <div className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5">
                                                     {booking.patientId?.mobile || "N/A"}
@@ -556,7 +556,7 @@ export function BookingOperationsPage() {
                                         <User size={12} className="text-blue-500" /> Patient Profile
                                     </h4>
                                     <div className="space-y-1">
-                                        <p className="text-[var(--text-main)] font-bold text-lg leading-tight">{selectedBooking.patientId?.name || "Guest User"}</p>
+                                        <p className="text-[var(--text-main)] font-bold text-lg leading-tight">{selectedBooking.patientId?.name || selectedBooking.patientId?.mobile || "Guest User"}</p>
                                         <p className="text-[var(--text-muted)] font-mono text-xs">{selectedBooking.patientId?.mobile || "No mobile available"}</p>
                                     </div>
                                 </div>

@@ -12,6 +12,7 @@ import {
   listPatients,
   listDoctors,
   listUsersByCategory,
+  createUserByCategory,
   getUserCategoryStats,
   loginAdmin,
   logoutAdmin,
@@ -82,6 +83,7 @@ adminRoutes.get("/patients", protectAdmin, requireAdminRole(["admin", "super_adm
 adminRoutes.get("/doctors", protectAdmin, requireAdminRole(["admin", "super_admin"]), listDoctors);
 adminRoutes.get("/user-stats/:category", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserCategoryStats);
 adminRoutes.get("/user-list/:category", protectAdmin, requireAdminRole(["admin", "super_admin"]), listUsersByCategory);
+adminRoutes.post("/users/:category/create", protectAdmin, requireAdminRole(["admin", "super_admin"]), createUserByCategory);
 adminRoutes.get("/users/:category/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserDetails);
 adminRoutes.put("/users/:category/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateUserStatus);
 adminRoutes.get("/users/:category/:userId/wallet-balance", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserWalletBalance);
