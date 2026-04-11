@@ -9,7 +9,7 @@ export const formatZodError = (error: ZodError): string => {
   if (issues && issues.length > 0) {
     const firstIssue = issues[0];
     if (firstIssue) {
-      return firstIssue.message;
+      return `Invalid input on ${firstIssue.path.join(".")}: ${firstIssue.message}`;
     }
   }
   return "Validation failed";
