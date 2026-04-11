@@ -117,7 +117,6 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     if (storedOtp && String(storedOtp) === String(otp)) {
       console.log(`[OTP] ✅ Verified via Redis for: ${cleanMobile}`);
 
-      if (!resolvedRoleId) throw new ApiError(400, "Role context is required.");
 
       // Cleanup OTP
       await RedisClient.del(`otp:staff:${cleanMobile}`);
