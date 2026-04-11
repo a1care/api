@@ -91,7 +91,7 @@ export default function ServiceDetailScreen() {
     const [scheduledDate, setScheduledDate] = useState('');
     const [scheduledTime, setScheduledTime] = useState('');
     const [notes, setNotes] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'COD'>('COD');
+    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE' | 'WALLET'>('COD');
     const [submittingOnline, setSubmittingOnline] = useState(false);
     const [isAsap, setIsAsap] = useState(true);
     const [submitted, setSubmitted] = useState(false);
@@ -908,8 +908,10 @@ export default function ServiceDetailScreen() {
 
                         {/* Wallet Option */}
                         <TouchableOpacity
-                            style={[styles.payMethodCard, paymentMethod === 'WALLET' ? styles.payMethodActive : {}]}
-                            onPress={() => setPaymentMethod('WALLET')}
+                            style={[styles.payMethodCard, styles.payMethodDisabled]}
+                            disabled
+                            activeOpacity={1}
+                            accessibilityState={{ disabled: true }}
                         >
                             <View style={[styles.radioOuter, paymentMethod === 'WALLET' ? styles.radioActive : {}]}>
                                 {paymentMethod === 'WALLET' && <View style={styles.radioInner} />}
@@ -917,6 +919,7 @@ export default function ServiceDetailScreen() {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.payMethodTitle}>A1 Wallet</Text>
                                 <Text style={styles.payMethodSub}>Balance: {formatCurrency(wallet?.balance ?? 0)}</Text>
+                                <Text style={styles.paymentUnavailableLabel}>Not available for this booking</Text>
                             </View>
                             <Text style={{ fontSize: 26 }}>👛</Text>
                         </TouchableOpacity>
@@ -938,8 +941,10 @@ export default function ServiceDetailScreen() {
 
                         {/* Online Option */}
                         <TouchableOpacity
-                            style={[styles.payMethodCard, paymentMethod === 'ONLINE' ? styles.payMethodActive : {}]}
-                            onPress={() => setPaymentMethod('ONLINE')}
+                            style={[styles.payMethodCard, styles.payMethodDisabled]}
+                            disabled
+                            activeOpacity={1}
+                            accessibilityState={{ disabled: true }}
                         >
                             <View style={[styles.radioOuter, paymentMethod === 'ONLINE' ? styles.radioActive : {}]}>
                                 {paymentMethod === 'ONLINE' && <View style={styles.radioInner} />}
@@ -947,44 +952,22 @@ export default function ServiceDetailScreen() {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.payMethodTitle}>Online Payment</Text>
                                 <Text style={styles.payMethodSub}>Easy payment via UPI, Card or Netbanking</Text>
+                                <Text style={styles.paymentUnavailableLabel}>Not available for this booking</Text>
                             </View>
                             <Text style={{ fontSize: 26 }}>💳</Text>
                         </TouchableOpacity>
 
-                        {paymentMethod === 'COD' ? (
-                            <View style={styles.codInfoBox}>
-                                <Text style={styles.codInfoTitle}>How COD works</Text>
-                                {[
-                                    '1. Book your service (no payment now)',
-                                    '2. A professional is assigned and comes to you',
-                                    '3. Service is completed',
-                                    '4. Pay cash to the provider',
-                                ].map((line) => (
-                                    <Text key={line} style={styles.codInfoLine}>{line}</Text>
-                                ))}
-                            </View>
-                        ) : (
-                            <View style={[styles.codInfoBox, { borderColor: Colors.primary, backgroundColor: Colors.primaryLight + '10' }]}>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                    <Text style={[styles.codInfoTitle, { color: Colors.primary, marginBottom: 0 }]}>Wallet Payment</Text>
-                                    {(wallet?.balance ?? 0) < (priceParam ? parseFloat(priceParam) : 0) && (
-                                        <TouchableOpacity
-                                            onPress={() => router.push('/wallet')}
-                                            style={styles.topUpBadge}
-                                        >
-                                            <Text style={styles.topUpBadgeText}>+ Top up</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                {(wallet?.balance ?? 0) < (priceParam ? parseFloat(priceParam) : 0) ? (
-                                    <Text style={[styles.codInfoLine, { color: Colors.emergency, fontWeight: '600' }]}>
-                                        ⚠️ Low Balance: You need {formatCurrency((priceParam ? parseFloat(priceParam) : 0) - (wallet?.balance ?? 0))} more in your wallet to book this service.
-                                    </Text>
-                                ) : (
-                                    <Text style={styles.codInfoLine}>The amount will be instantly deducted from your A1 Wallet balance upon booking confirmation.</Text>
-                                )}
-                            </View>
-                        )}
+                        <View style={styles.codInfoBox}>
+                            <Text style={styles.codInfoTitle}>How COD works</Text>
+                            {[
+                                '1. Book your service (no payment now)',
+                                '2. A professional is assigned and comes to you',
+                                '3. Service is completed',
+                                '4. Pay cash to the provider',
+                            ].map((line) => (
+                                <Text key={line} style={styles.codInfoLine}>{line}</Text>
+                            ))}
+                        </View>
                     </View>
                 )}
 
@@ -1460,6 +1443,7 @@ const styles = StyleSheet.create({
     payMethodDisabled: { opacity: 0.6 },
     payMethodTitle: { fontSize: FontSize.base, fontWeight: '700', color: Colors.textPrimary, marginBottom: 3 },
     payMethodSub: { fontSize: FontSize.xs, color: Colors.textSecondary },
+    paymentUnavailableLabel: { fontSize: 10, fontWeight: '700', color: Colors.emergency, marginTop: 4 },
     comingSoonBadge: {
         backgroundColor: '#D1D5DB',
         borderRadius: 20,

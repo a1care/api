@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.jpeg",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "userInterfaceStyle": "light",
     "scheme": "a1care-partner",
     "splash": {
@@ -36,7 +36,9 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -59,7 +61,7 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 34,
             "minSdkVersion": 24,
-            "kotlinVersion": "1.9.24",
+            "kotlinVersion": "2.1.20",
             "packagingOptions": {
               "pickFirst": [
                 "lib/x86/libc++_shared.so",
@@ -74,6 +76,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c7c7db5d-f052-4ada-90d8-b58b870b7ba2"
+      }
+    },
+    "owner": "vamsireddy1133"
   }
 }

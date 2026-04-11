@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/EmptyState';
 import { formatDateTime } from '@/utils/formatters';
 import { MapPin, MessageSquare, XCircle } from 'lucide-react-native';
+import type { Address, ServiceRequest } from '@/types';
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_STEPS: Array<{ status: string; label: string; icon: string; desc: string }> = [
@@ -30,6 +31,33 @@ const STATUS_STEPS: Array<{ status: string; label: string; icon: string; desc: s
 ];
 
 const STATUS_ORDER = STATUS_STEPS.map((s) => s.status);
+
+function formatAddress(address?: Address | string | null) {
+    if (!address) return '';
+    if (typeof address === 'string') return address;
+
+    return [
+        address.moreInfo,
+        address.street,
+        address.city,
+        address.state,
+        address.pincode,
+    ].filter(Boolean).join(', ');
+}
+
+function getBookingAddress(booking: ServiceRequest) {
+    const data = booking as ServiceRequest & {
+        addressId?: Address | string;
+        location?: { address?: string };
+    };
+
+    return (
+        formatAddress(data.addressId) ||
+        data.location?.address ||
+        data.address ||
+        'Not specified'
+    );
+}
 
 // ─── Status progression banner ────────────────────────────────────────────────
 const STATUS_BG: Record<string, string> = {
@@ -165,7 +193,7 @@ export default function BookingDetailScreen() {
                                 { label: 'Booking ID', value: `#${booking._id.slice(-10).toUpperCase()}` },
                                 { label: 'Status', value: <StatusBadge status={booking.status} size="md" /> },
                                 { label: 'Booked On', value: formatDateTime(booking.createdAt) },
-                                { label: 'Address', value: booking.address ?? 'Not specified' },
+                                { label: 'Address', value: getBookingAddress(booking) },
                                 { label: 'Schedule', value: (booking as any).scheduledTime ?? 'ASAP' },
                                 { label: 'Payment', value: paymentLabel },
                             ];

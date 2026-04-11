@@ -63,6 +63,7 @@ const ServiceRequestSchema = new Schema(
     },
     addressId: {
       type: Schema.Types.ObjectId,
+      ref: "patient_addresses",
     },
 
     assignedProviderId: {

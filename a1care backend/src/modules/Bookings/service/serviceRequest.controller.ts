@@ -85,7 +85,8 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const serviceRequest = await serviceRequestModel
         .findById(newServiceRequest._id)
         .populate("childServiceId")
-        .populate("healthPackageId");
+        .populate("healthPackageId")
+        .populate("addressId");
     const serviceName = (serviceRequest?.childServiceId as any)?.name ?? (serviceRequest?.healthPackageId as any)?.name ?? "a service";
 
     // ── Notify Provider(s) ──────────────────────────────────────────────────
@@ -171,7 +172,8 @@ export const getServiceRequestByUser = asyncHandler(async (req, res) => {
     const serviceRequests = await serviceRequestModel
         .find({ userId })
         .populate("userId")
-        .populate("childServiceId");
+        .populate("childServiceId")
+        .populate("addressId");
     return res.status(200).json(new ApiResponse(200, "Got service", serviceRequests));
 });
 
@@ -180,14 +182,18 @@ export const getPendingRequest = asyncHandler(async (req, res) => {
     const onGoingServices = await serviceRequestModel.find({
         userId: new mongoose.Types.ObjectId(userId!),
         status: { $in: ["PENDING", "BROADCASTED", "ACCEPTED", "IN_PROGRESS"] },
-    }).populate("childServiceId");
+    }).populate("childServiceId").populate("addressId");
     return res.status(200).json(new ApiResponse(200, "Ongoing fetched!", onGoingServices));
 });
 
 export const getSerivceRequestById = asyncHandler(async (req, res) => {
     const { requestId } = req.params;
     if (!requestId) throw new ApiError(401, "Please Provide request Id");
-    const requestDetails = await serviceRequestModel.findOne({ _id: new mongoose.Types.ObjectId(requestId) });
+    const requestDetails = await serviceRequestModel
+        .findOne({ _id: new mongoose.Types.ObjectId(requestId) })
+        .populate("childServiceId")
+        .populate("healthPackageId")
+        .populate("addressId");
     if (!requestDetails) throw new ApiError(404, "Service request not found");
     return res.status(200).json(new ApiResponse(200, "Request Found", requestDetails));
 });
@@ -204,12 +210,14 @@ export const getServiceRequestForProvider = asyncHandler(async (req, res) => {
         requests = await serviceRequestModel
             .find({ childServiceId: { $in: childService.map((item) => [item._id]) }, status })
             .populate("childServiceId")
-            .populate("userId");
+            .populate("userId")
+            .populate("addressId");
     } else {
         requests = await serviceRequestModel
             .find({ childServiceId: { $in: childService.map((item) => [item._id]) }, status: "PENDING" })
             .populate("childServiceId")
-            .populate("userId");
+            .populate("userId")
+            .populate("addressId");
     }
     return res.status(200).json(new ApiResponse(200, "Fetched requests", requests));
 });
@@ -261,7 +269,8 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     const booking = await serviceRequestModel
         .findByIdAndUpdate(id, updateData, { new: true })
         .populate("childServiceId")
-        .populate("userId");
+        .populate("userId")
+        .populate("addressId");
 
     if (!booking) throw new ApiError(404, "Service request not found");
 

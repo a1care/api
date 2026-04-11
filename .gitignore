@@ -38,3 +38,5 @@ bin/
 # Sensitive local service credentials
 *firebase-service-account.json
 google-services.json
+!user app/a1care-user-old-orig/google-services.json
+!partner app/a1care-partner/google-services.json
