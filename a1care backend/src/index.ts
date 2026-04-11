@@ -1,5 +1,6 @@
 import dotenv from 'dotenv'
 import app from './app.js'
+import { RoleModel } from "./modules/roles/role.model.js";
 import { connectDb } from "./configs/db.js";
 import { initFCM } from "./configs/fcmConfig.js";
 import http from 'http';
@@ -44,6 +45,24 @@ io.on('connection', (socket) => {
 const startServer = async () => {
     try {
         await connectDb();
+        
+        // --- DATABASE BOOTSTRAP: Ensure all roles exist ---
+        const rolesToSeed = [
+            { name: "Doctor", code: "DOCTOR", requiresLicense: true, capabilities: ["HOME_VISIT", "VIRTUAL"] },
+            { name: "Nurse", code: "NURSE", requiresLicense: true, capabilities: ["HOME_VISIT"] },
+            { name: "Ambulance Driver", code: "AMBULANCE", requiresLicense: true, capabilities: ["HOME_VISIT"] },
+            { name: "Medical Rental", code: "RENTAL", requiresLicense: false, capabilities: ["HOME_VISIT"] },
+        ];
+
+        for (const r of rolesToSeed) {
+            const match = await RoleModel.findOne({ $or: [{ code: r.code }, { name: r.name }] });
+            if (!match) {
+                console.log(`[SEED] Creating missing role: ${r.name}`);
+                await RoleModel.create(r);
+            }
+        }
+        console.log("[SEED] Roles check completed.");
+
         await initFCM();
         
         // Background Jobs

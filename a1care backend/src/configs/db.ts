@@ -7,10 +7,7 @@ export async function connectDb() {
     const uri = process.env.MONGO_URI;
     if (!uri) {
         console.error("CRITICAL ERROR: MONGO_URI not found in .env");
-        if (process.env.NODE_ENV === "production") {
-            process.exit(1);
-        }
-        return;
+        process.exit(1);
     }
 
     try {
@@ -21,12 +18,6 @@ export async function connectDb() {
         console.log("✅ MongoDB connected successfully");
     } catch (err: any) {
         console.error("❌ MongoDB connection failed:", err.message);
-
-        if (process.env.NODE_ENV === "production") {
-            console.error("CRITICAL: Database connection required in production. Exiting...");
-            process.exit(1);
-        }
-
-        console.warn("⚠️ Continuing in DEVELOPMENT mode with limited functionality.");
+        throw err; // Stop the server initialization
     }
 }

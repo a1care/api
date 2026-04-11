@@ -98,6 +98,8 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
+  
+  console.log(`[AUTH SPY] Attempting login. Phone: ${cleanMobile}, Role: ${role}, RoleId: ${roleId}`);
   // if (String(otp) === DEV_BYPASS_OTP) {
   //   console.log(`[DEV BYPASS] ✅ Partner bypass activated for: ${cleanMobile}`);
   //   ... (rest of bypass logic commented out)
