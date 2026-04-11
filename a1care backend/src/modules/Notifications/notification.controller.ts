@@ -20,6 +20,7 @@ export const updatePatientFcmToken = asyncHandler(async (req, res) => {
     const { fcmToken } = req.body;
     if (!fcmToken) throw new ApiError(400, "fcmToken is required");
 
+    console.log(`[FCM-Patient] FULL TOKEN for ID ${patientId}: ${fcmToken}`);
     await Patient.findByIdAndUpdate(patientId, { fcmToken });
     return res.json(new ApiResponse(200, "FCM token updated", null));
 });
@@ -35,6 +36,7 @@ export const updatePartnerFcmToken = asyncHandler(async (req, res) => {
     const { fcmToken } = req.body;
     if (!fcmToken) throw new ApiError(400, "fcmToken is required");
 
+    console.log(`[FCM-Partner] FULL TOKEN for ID ${doctorId}: ${fcmToken}`);
     await DoctorModel.findByIdAndUpdate(doctorId, { fcmToken });
     return res.json(new ApiResponse(200, "FCM token updated", null));
 });
@@ -108,6 +110,16 @@ export const markAllNotificationsRead = asyncHandler(async (req, res) => {
         { isRead: true }
     );
     return res.json(new ApiResponse(200, "All notifications marked as read", null));
+});
+
+/**
+ * DELETE /api/notifications/clear-all
+ * Deletes all notifications for the user.
+ */
+export const clearAllNotifications = asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    await NotificationModel.deleteMany({ recipientId: new mongoose.Types.ObjectId(userId!) });
+    return res.json(new ApiResponse(200, "All notifications cleared", null));
 });
 
 // ─── Admin: Notification Management ──────────────────────────────────────────

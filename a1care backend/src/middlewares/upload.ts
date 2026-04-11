@@ -33,7 +33,7 @@ export function createS3Upload(options: UploadOptions) {
     },
     storage: multerS3({
       s3,
-      bucket: process.env.S3_BUCKET_NAME as string,
+      bucket: process.env.S3_BUCKET_NAME || "a1-care",
       contentType: multerS3.AUTO_CONTENT_TYPE,
       key(req, file, cb) {
         const uniqueName =

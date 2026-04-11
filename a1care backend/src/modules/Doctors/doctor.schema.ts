@@ -2,6 +2,7 @@ import * as z from 'zod'
 
 const doctorValidation = z.object({
     name: z.string().min(2, "Name must be at least 2 characters").max(50, "Name too long").regex(/^[a-zA-Z\s]+$/, "Name can only contain letters and spaces"),
+    email: z.string().email("Invalid email address").optional(),
     gender: z.enum(["Male", "Female", "Other"]),
     startExperience: z.coerce.date().refine((date) => !isNaN(date.getTime()), { message: "Invalid date object" }).optional(),
     experience: z.union([z.number(), z.string()]).optional(),

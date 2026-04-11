@@ -102,6 +102,19 @@ export const sendWelcomeEmail = async (data: { email: string; fullName: string }
     return sendEmail({ to: data.email, subject: "Welcome to A1Care 24/7 - Quality Care at Home", html: baseTemplate("Welcome", body) });
 };
 
+export const sendPartnerWelcomeEmail = async (data: { email: string; fullName: string }) => {
+    const body = `
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Welcome to the A1Care Partner Network!</h2>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">We're thrilled to have you join us as a healthcare partner. A1Care 24/7 is on a mission to bring high-quality healthcare directly to patients' homes, and your expertise is key to making that happen.</p>
+        <p style="margin-bottom:20px;">Your profile is currently under review. Once verified, you'll be able to receive and manage service requests, track your earnings, and grow your practice with us.</p>
+        <p style="margin-bottom:30px;">Download the A1Care Partner app to stay updated on your status and start receiving bookings once you're active.</p>
+        <a href="#" style="display:inline-block;background-color:${EMAIL_PRIMARY_COLOR};color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Go to Partner App</a>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
+    `;
+    return sendEmail({ to: data.email, subject: "Welcome to A1Care Partner - Let's Grow Together", html: baseTemplate("Welcome Partner", body) });
+};
+
 export const sendJobAcknowledgmentEmail = async (data: { email: string; fullName: string; jobTitle: string }) => {
     const body = `
         <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Application Received</h2>

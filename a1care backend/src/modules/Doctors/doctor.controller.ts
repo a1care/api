@@ -12,6 +12,8 @@ import { hmacHash } from "../../utils/Hmac.js";
 import sendMessage from "../../configs/twilioConfig.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import mongoose from "mongoose";
+import { RoleModel } from "../roles/role.model.js";
+import { sendPartnerWelcomeEmail } from "../../utils/email.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
 // const DEV_BYPASS_OTP = "123456";
@@ -92,7 +94,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 //verify otp for staff 
 export const verifyOtp = asyncHandler(async (req, res) => {
   console.log("[Partner Verify] Request Body:", req.body);
-  const { idToken, mobileNumber, otp } = req.body;
+  const { idToken, mobileNumber, otp, roleId, role } = req.body;
 
   // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
@@ -102,20 +104,33 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   // }
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // Resolve RoleId if not provided
+  let resolvedRoleId = roleId;
+  if (!resolvedRoleId && role) {
+    const foundRole = await RoleModel.findOne({ code: role.toUpperCase() }) || await RoleModel.findOne({ name: new RegExp(role, 'i') });
+    if (foundRole) resolvedRoleId = foundRole._id;
+  }
+
   // Check Redis for manual OTP if provided
   if (otp && cleanMobile) {
     const storedOtp = await RedisClient.get(`otp:staff:${cleanMobile}`);
     if (storedOtp && String(storedOtp) === String(otp)) {
       console.log(`[OTP] ✅ Verified via Redis for: ${cleanMobile}`);
+
+      if (!resolvedRoleId) throw new ApiError(400, "Role context is required for login.");
       
       // Cleanup OTP
       await RedisClient.del(`otp:staff:${cleanMobile}`);
 
       let staff = await doctorModel.findOne({
-        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] },
+        roleId: resolvedRoleId
       });
       if (!staff) {
-        staff = await doctorModel.create({ mobileNumber: `+91${cleanMobile}` });
+        staff = await doctorModel.create({ 
+          mobileNumber: `+91${cleanMobile}`,
+          roleId: resolvedRoleId
+        });
       }
 
       const token = jwt.sign(
@@ -158,18 +173,26 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     }
 
     // 3. Find or create the staff in the database
-    if (!staff) {
-        staff = await doctorModel.findOne({ mobileNumber: finalPhone.replace(/^\+91/, "").replace(/\D/g, "") });
+    if (!staff && resolvedRoleId) {
+        staff = await doctorModel.findOne({ 
+          mobileNumber: finalPhone.replace(/^\+91/, "").replace(/\D/g, ""),
+          roleId: resolvedRoleId
+        });
     }
     
-    if (!staff) {
-        staff = await doctorModel.findOne({ mobileNumber: finalPhone });
+    if (!staff && resolvedRoleId) {
+        staff = await doctorModel.findOne({ 
+          mobileNumber: finalPhone,
+          roleId: resolvedRoleId
+        });
     }
 
     if (!staff) {
+      if (!resolvedRoleId) throw new ApiError(400, "Role context is required for registration.");
       staff = await doctorModel.create({ 
         mobileNumber: finalPhone,
-        email: firebaseEmail 
+        email: firebaseEmail,
+        roleId: resolvedRoleId
       });
     } else if (firebaseEmail && !staff.email) {
         staff.email = firebaseEmail;
@@ -242,9 +265,10 @@ export const registerStaff = asyncHandler(async (req, res) => {
   // Build update object only with provided fields
   const updateData: any = {};
   const fields = [
-    'name', 'gender', 'startExperience', 'specialization', 'about',
+    'name', 'email', 'gender', 'startExperience', 'specialization', 'about',
     'workingHours', 'serviceRadius', 'roleId', 'consultationFee', 'homeConsultationFee',
-    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage'
+    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage',
+    'city', 'address', 'location'
   ];
 
   fields.forEach(field => {
@@ -289,6 +313,14 @@ export const registerStaff = asyncHandler(async (req, res) => {
   } else if (!findStaff.isRegistered && req.body.name) {
     // If name is being set for the first time, maybe consider it partially registered
     updateData.isRegistered = true;
+  }
+
+  // 📧 Send Welcome Email if registration is becoming true
+  if (!findStaff.isRegistered && updateData.isRegistered && (updateData.email || findStaff.email)) {
+    sendPartnerWelcomeEmail({
+      email: updateData.email || findStaff.email,
+      fullName: updateData.name || findStaff.name || "Partner"
+    }).catch(err => console.error("Welcome email failed:", err));
   }
 
   const updatedStaff = await doctorModel.findByIdAndUpdate(

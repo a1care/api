@@ -30,6 +30,12 @@ export interface DoctorDocument extends Document {
   };
   fcmToken?: string;
   email?: string;
+  address?: string;
+  city?: string;
+  location?: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
 }
 
 const DoctorSchema = new Schema<DoctorDocument>(
@@ -121,7 +127,6 @@ const DoctorSchema = new Schema<DoctorDocument>(
     mobileNumber: {
       type: String,
       required: true,
-      unique: true
     },
 
     isRegistered: {
@@ -143,6 +148,25 @@ const DoctorSchema = new Schema<DoctorDocument>(
       type: String,
       lowercase: true,
       trim: true
+    },
+    address: {
+      type: String,
+      trim: true
+    },
+    city: {
+      type: String,
+      trim: true
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point"
+      },
+      coordinates: {
+        type: [Number],
+        default: [0, 0]
+      }
     }
   },
 
@@ -150,6 +174,9 @@ const DoctorSchema = new Schema<DoctorDocument>(
     timestamps: true
   }
 );
+
+DoctorSchema.index({ mobileNumber: 1, roleId: 1 }, { unique: true });
+DoctorSchema.index({ location: "2dsphere" });
 
 export default mongoose.model<DoctorDocument>(
   "staff",

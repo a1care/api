@@ -4,6 +4,7 @@ import {
     getMyNotifications,
     markNotificationRead,
     markAllNotificationsRead,
+    clearAllNotifications,
     updatePatientFcmToken,
     updatePartnerFcmToken,
 } from "./notification.controller.js";
@@ -17,6 +18,7 @@ const notificationRoutes = Router();
 // In-app inbox
 notificationRoutes.get("/", protect, getMyNotifications);
 notificationRoutes.put("/read-all", protect, markAllNotificationsRead);
+notificationRoutes.delete("/clear-all", protect, clearAllNotifications);
 notificationRoutes.put("/:id/read", protect, markNotificationRead);
 
 // FCM token registration
