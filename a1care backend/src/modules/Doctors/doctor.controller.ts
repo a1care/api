@@ -150,6 +150,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
           }
         }
       }
+      if (!staff) throw new ApiError(500, "Account lookup failed. Please try again.");
 
       const token = jwt.sign(
         { staffId: staff._id },
