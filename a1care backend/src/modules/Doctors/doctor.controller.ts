@@ -118,41 +118,23 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     const storedOtp = await RedisClient.get(`otp:staff:${cleanMobile}`);
     if (storedOtp && String(storedOtp) === String(otp)) {
       console.log(`[OTP] ✅ Verified via Redis for: ${cleanMobile}`);
-
-      if (!resolvedRoleId) throw new ApiError(400, "Role context is required.");
       
       // Cleanup OTP
       await RedisClient.del(`otp:staff:${cleanMobile}`);
 
-      // 1. Strictly find by Phone + Role to keep profiles separate
+      // Revert to original: Find by mobile number only
       let staff = await doctorModel.findOne({
-        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] },
-        roleId: resolvedRoleId
+        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
       });
 
-      // 2. If no record for THIS role exists, create a brand new one (Fresh Registration)
       if (!staff) {
-        try {
-          staff = await doctorModel.create({ 
-            mobileNumber: `+91${cleanMobile}`,
-            roleId: resolvedRoleId,
-            isRegistered: false // This triggers the fresh registration flow in the app
-          });
-        } catch (error: any) {
-          // If the DB still has the old unique index, we need to handle it
-          if (error.code === 11000) {
-             // Fallback: If we can't create a new one due to old DB rules, 
-             // we'll have to use the existing one but this shouldn't happen after the index fix.
-             console.log("[DB FIX] Duplicate key on mobileNumber. Attempting to find existing...");
-             staff = await doctorModel.findOne({
-                mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
-             });
-          } else {
-             throw error;
-          }
-        }
+        // Create new if doesn't exist (Original behavior)
+        staff = await doctorModel.create({ 
+          mobileNumber: `+91${cleanMobile}`,
+          roleId: roleId || undefined,
+          isRegistered: false 
+        });
       }
-      if (!staff) throw new ApiError(500, "Account lookup failed. Please try again.");
 
       const token = jwt.sign(
         { staffId: staff._id },
@@ -222,13 +204,13 @@ export const registerStaff = asyncHandler(async (req, res) => {
   const updateData: any = {};
   const fields = [
     'name', 'email', 'gender', 'startExperience', 'specialization', 'about',
-    'workingHours', 'serviceRadius', 'consultationFee', 'homeConsultationFee',
+    'workingHours', 'serviceRadius', 'roleId', 'consultationFee', 'homeConsultationFee',
     'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage',
     'city', 'address', 'location'
   ];
 
   fields.forEach(field => {
-    if (req.body[field] !== undefined && field !== 'mobileNumber' && field !== 'roleId') {
+    if (req.body[field] !== undefined) {
       updateData[field] = req.body[field];
     }
   });
