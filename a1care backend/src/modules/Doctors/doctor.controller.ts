@@ -222,13 +222,13 @@ export const registerStaff = asyncHandler(async (req, res) => {
   const updateData: any = {};
   const fields = [
     'name', 'email', 'gender', 'startExperience', 'specialization', 'about',
-    'workingHours', 'serviceRadius', 'roleId', 'consultationFee', 'homeConsultationFee',
+    'workingHours', 'serviceRadius', 'consultationFee', 'homeConsultationFee',
     'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage',
     'city', 'address', 'location'
   ];
 
   fields.forEach(field => {
-    if (req.body[field] !== undefined) {
+    if (req.body[field] !== undefined && field !== 'mobileNumber' && field !== 'roleId') {
       updateData[field] = req.body[field];
     }
   });
