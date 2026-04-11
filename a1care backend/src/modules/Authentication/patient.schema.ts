@@ -11,7 +11,11 @@ export const patientValidation = z.object({
     gender: z.enum(["Male", "Female", "Other"]).optional(),
     dateOfBirth: z.coerce.date().optional(),
     fcmToken: z.string().optional(),
-    isRegistered: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(false)
+    isRegistered: z.preprocess((val) => {
+        if (typeof val === 'string') return val.toLowerCase().trim() === 'true';
+        if (typeof val === 'boolean') return val;
+        return false;
+    }, z.boolean()).default(false)
 })
 
 export type patientType = z.infer<typeof patientValidation>
