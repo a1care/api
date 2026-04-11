@@ -48,9 +48,9 @@ const startServer = async () => {
         
         // --- DATABASE BOOTSTRAP: Ensure all roles exist ---
         const rolesToSeed = [
-            { name: "Doctor", code: "DOCTOR", requiresLicense: true, capabilities: ["HOME_VISIT", "VIRTUAL"] },
-            { name: "Nurse", code: "NURSE", requiresLicense: true, capabilities: ["HOME_VISIT"] },
-            { name: "Ambulance Driver", code: "AMBULANCE", requiresLicense: true, capabilities: ["HOME_VISIT"] },
+            { name: "Doctor", code: "DOCTOR", requiresLicense: true, licenseType: "Medical Registration", capabilities: ["HOME_VISIT", "VIRTUAL"] },
+            { name: "Nurse", code: "NURSE", requiresLicense: true, licenseType: "Nursing License", capabilities: ["HOME_VISIT"] },
+            { name: "Ambulance Driver", code: "AMBULANCE", requiresLicense: true, licenseType: "Driving License", capabilities: ["HOME_VISIT"] },
             { name: "Medical Rental", code: "RENTAL", requiresLicense: false, capabilities: ["HOME_VISIT"] },
         ];
 
