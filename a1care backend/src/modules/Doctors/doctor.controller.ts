@@ -68,7 +68,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
   }
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
-  
+
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -98,8 +98,6 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
-  
-  console.log(`[AUTH SPY] Attempting login. Phone: ${cleanMobile}, Role: ${role}, RoleId: ${roleId}`);
   // if (String(otp) === DEV_BYPASS_OTP) {
   //   console.log(`[DEV BYPASS] ✅ Partner bypass activated for: ${cleanMobile}`);
   //   ... (rest of bypass logic commented out)
@@ -118,14 +116,16 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     const storedOtp = await RedisClient.get(`otp:staff:${cleanMobile}`);
     if (storedOtp && String(storedOtp) === String(otp)) {
       console.log(`[OTP] ✅ Verified via Redis for: ${cleanMobile}`);
-      
+
+      if (!resolvedRoleId) throw new ApiError(400, "Role context is required.");
+
       // Cleanup OTP
       await RedisClient.del(`otp:staff:${cleanMobile}`);
 
-      // Revert to original: Find by mobile number only
+      // Revert to original: Find by mobile number only (Registered first)
       let staff = await doctorModel.findOne({
         mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
-      });
+      }).sort({ isRegistered: -1 });
 
       if (!staff) {
         // Create new if doesn't exist (Original behavior)
@@ -146,7 +146,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         new ApiResponse(200, "Login successful", { token, user: staff })
       );
     } else if (storedOtp) {
-       throw new ApiError(400, "Invalid OTP provided.");
+      throw new ApiError(400, "Invalid OTP provided.");
     }
   }
 
@@ -187,11 +187,11 @@ export const registerStaff = asyncHandler(async (req, res) => {
   if (!parsed.success) {
     const errorDetails = parsed.error.format();
     console.error("Validation Error Details:", JSON.stringify(errorDetails, null, 2));
-    
+
     // Extract a readable error message
     const firstError = Object.entries(errorDetails).find(([key, val]) => key !== '_errors');
-    const message = firstError 
-      ? `Validation failed for: ${firstError[0]}` 
+    const message = firstError
+      ? `Validation failed for: ${firstError[0]}`
       : "Validation failed! Please check all required fields.";
 
     throw new ApiError(400, message);
@@ -240,7 +240,7 @@ export const registerStaff = asyncHandler(async (req, res) => {
       status: "Active",
       endDate: { $gte: new Date() }
     });
-    
+
     // IF we want to strictly enforce it:
     // if (!activeSub) throw new ApiError(403, "Active subscription required to go online.");
   }
