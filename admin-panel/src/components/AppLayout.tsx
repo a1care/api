@@ -31,15 +31,19 @@ import {
   Banknote,
   Receipt,
   Package,
-  X
+  X,
+  LayoutGrid,
+  Tag
 } from "lucide-react";
 
-const mainNav = [
+const mainNav = (role: string) => [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/bookings", label: "Main Bookings", icon: CalendarCheck },
   { to: "/op-bookings", label: "OP Bookings", icon: ClipboardList },
-  { to: "/partner-revenue-model", label: "Partner Revenue", icon: BarChart3 },
-  { to: "/payouts", label: "Payouts", icon: Banknote },
+  ...(role === "super_admin" ? [
+    { to: "/partner-revenue-model", label: "Partner Revenue", icon: BarChart3 },
+    { to: "/payouts", label: "Payouts", icon: Banknote },
+  ] : []),
   { to: "/kyc-verification", label: "KYC Verification", icon: ShieldCheck },
   { to: "/reviews", label: "User Reviews", icon: MessageSquare },
   { to: "/support-tickets", label: "Tickets", icon: Ticket },
@@ -75,8 +79,9 @@ export function AppLayout() {
     { label: "Nurse Management", to: "/manage-nurses", icon: "🏥", cat: "Users" },
     { label: "Ambulance Fleet", to: "/manage-ambulances", icon: "🚑", cat: "Users" },
     { label: "Asset Rentals", to: "/manage-rentals", icon: "📦", cat: "Users" },
-    { label: "Service Catalog", to: "/service-management", icon: "📂", cat: "Services" },
-    { label: "Service Categories", to: "/service-categories", icon: "📁", cat: "Services" },
+    {label: "Healthcare Catalog", to: "/service-categories", icon: "📂", cat: "Services" },
+    { label: "Sub-Categories", to: "/service-subcategories", icon: "📁", cat: "Services" },
+    { label: "Catalog Items", to: "/service-child-services", icon: "🏷️", cat: "Services" },
     { label: "Health Packages", to: "/health-packages", icon: "📦", cat: "Services" },
     { label: "System Config", to: "/manage-system-config", icon: "⚙️", cat: "Admin" },
     { label: "Payment Audit Logs", to: "/payment-logs", icon: "🧾", cat: "Admin" },
@@ -166,7 +171,7 @@ export function AppLayout() {
             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] opacity-60">Control Center</span>
           </div>
 
-          {mainNav.map((item) => (
+          {mainNav(user?.role || "admin").map((item) => (
             <NavLink key={item.label} to={item.to} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]"}`}>
               <item.icon size={18} />
               <span>{item.label}</span>
@@ -204,69 +209,78 @@ export function AppLayout() {
             </div>
           )}
 
-          <button
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${servicesActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
-            onClick={() => setServicesOpen((prev) => !prev)}
-          >
-            <div className="flex items-center gap-3">
-              <Layers size={18} />
-              <span>Healthcare Catalog</span>
-            </div>
-            {servicesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
+          {user?.role === "super_admin" && (
+            <>
+              <button
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${servicesActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
+                onClick={() => setServicesOpen((prev) => !prev)}
+              >
+                <div className="flex items-center gap-3">
+                  <Layers size={18} />
+                  <span>Healthcare Catalog</span>
+                </div>
+                {servicesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
 
-          {servicesOpen && (
-            <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
-              {[
-                { to: "/service-management", label: "Catalog" },
-                { to: "/service-categories", label: "Categories" },
-                { to: "/service-subcategories", label: "Sub-Services" }
-              ].map(link => (
-                <NavLink key={link.to} to={link.to} className={({ isActive }) => `block py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
-                  {link.label}
-                </NavLink>
-              ))}
-              <NavLink to="/health-packages" className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
-                <Package size={13} /> Health Packages
-              </NavLink>
-            </div>
+              {servicesOpen && (
+                <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
+                  {[
+                    { to: "/service-categories", label: "Root Categories", icon: LayoutGrid },
+                    { to: "/service-subcategories", label: "Sub-Categories", icon: Layers },
+                    { to: "/service-child-services", label: "Catalog Items", icon: Tag }
+                  ].map(link => (
+                    <NavLink key={link.to} to={link.to} className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
+                      <link.icon size={13} /> {link.label}
+                    </NavLink>
+                  ))}
+                  <NavLink to="/health-packages" className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
+                    <Package size={13} /> Health Packages
+                  </NavLink>
+                </div>
+              )}
+            </>
           )}
 
-          <div className="pt-6 px-4 pb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] opacity-60">System Configuration</span>
-          </div>
+          {user?.role === "super_admin" && (
+            <>
+              <div className="pt-6 px-4 pb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] opacity-60">System Configuration</span>
+              </div>
 
-          <button
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${appsActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
-            onClick={() => setAppsOpen((prev) => !prev)}
-          >
-            <div className="flex items-center gap-3">
-              <AppWindow size={18} />
-              <span>App Deployment</span>
-            </div>
-            {appsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-
-          {appsOpen && (
-            <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
-              <NavLink to="/manage-customer-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">User Apps</NavLink>
-              <NavLink to="/manage-provider-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Provider Apps</NavLink>
-              <NavLink to="/audit-health-vault" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Health Vault Audit</NavLink>
-              <NavLink to="/payment-logs" className="flex items-center gap-2 py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">
-                <Receipt size={13} />
-                Payment Logs
-              </NavLink>
-              <NavLink
-                to="/manage-system-config"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-orange-500 font-bold" : "text-[var(--text-muted)] hover:text-orange-500"
-                  }`
-                }
+              <button
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${appsActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
+                onClick={() => setAppsOpen((prev) => !prev)}
               >
-                <ShieldCheck size={13} className="text-orange-400" />
-                System Credentials
-              </NavLink>
-            </div>
+                <div className="flex items-center gap-3">
+                  <AppWindow size={18} />
+                  <span>App Deployment</span>
+                </div>
+                {appsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+
+              {appsOpen && (
+                <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
+                  <NavLink to="/manage-customer-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">User Apps</NavLink>
+                  <NavLink to="/manage-provider-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Provider Apps</NavLink>
+                  <NavLink to="/audit-health-vault" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Health Vault Audit</NavLink>
+                  <NavLink to="/payment-logs" className="flex items-center gap-2 py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                    <Receipt size={13} />
+                    Payment Logs
+                  </NavLink>
+                  <NavLink
+                    to="/manage-system-config"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-orange-500 font-bold" : "text-[var(--text-muted)] hover:text-orange-500"
+                      }`
+                    }
+                  >
+                    <ShieldCheck size={13} className="text-orange-400" />
+                    System Credentials
+                  </NavLink>
+                  <NavLink to="/audit-logs" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Audit Logs</NavLink>
+                </div>
+              )}
+            </>
           )}
 
           <NavLink to="/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)] transition-all">

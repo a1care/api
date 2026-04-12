@@ -118,6 +118,8 @@ export function HealthPackagesPage() {
         onError: () => toast.error("Seed failed"),
     });
 
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         saveMutation.mutate({
@@ -128,6 +130,13 @@ export function HealthPackagesPage() {
             order: Number(form.order),
             testsIncluded: form.testsIncluded.split(",").map(t => t.trim()).filter(Boolean),
         });
+    };
+
+    const confirmDelete = () => {
+        if (deleteTargetId) {
+            deleteMutation.mutate(deleteTargetId);
+            setDeleteTargetId(null);
+        }
     };
 
     const discount = (orig: number, price: number) => orig > price ? Math.round(((orig - price) / orig) * 100) : 0;
@@ -267,7 +276,7 @@ export function HealthPackagesPage() {
 
                                 {/* Delete */}
                                 <button
-                                    onClick={() => { if (confirm("Delete this package?")) deleteMutation.mutate(pkg._id); }}
+                                    onClick={() => setDeleteTargetId(pkg._id)}
                                     className="logout-btn"
                                     style={{ padding: "8px", color: "#ef4444" }}
                                 >
@@ -373,6 +382,41 @@ export function HealthPackagesPage() {
                                 {saveMutation.isPending ? "Saving..." : editTarget ? "Update Package" : "Create Package"}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteTargetId && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: "420px", textAlign: "center", padding: "32px 24px" }}>
+                        <div style={{
+                            width: "64px", height: "64px", background: "#fee2e2", color: "#ef4444",
+                            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                            margin: "0 auto 20px"
+                        }}>
+                            <Trash2 size={32} />
+                        </div>
+                        <h3 className="brand-name" style={{ marginBottom: "8px" }}>Delete Health Package?</h3>
+                        <p className="muted" style={{ fontSize: "0.9rem", marginBottom: "32px" }}>
+                            This action cannot be undone. This package will be permanently removed from the catalog.
+                        </p>
+                        <div style={{ display: "flex", gap: "12px" }}>
+                            <button
+                                className="button secondary full-width"
+                                onClick={() => setDeleteTargetId(null)}
+                                style={{ height: "48px" }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="button primary full-width"
+                                onClick={confirmDelete}
+                                style={{ background: "#ef4444", color: "white", height: "48px" }}
+                            >
+                                Delete Permanently
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -27,6 +27,18 @@ export function UserManagementPage({ category }: { category: string }) {
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [viewingDocument, setViewingDocument] = useState<any | null>(null);
+    const [deleteConfig, setDeleteConfig] = useState<{ id: string, type: 'patient' | 'doctor' | 'nurse' | 'ambulance' | 'rental' } | null>(null);
+
+    const confirmGenericDelete = () => {
+        if (!deleteConfig) return;
+        const { id, type } = deleteConfig;
+        api.delete(`/admin/users/${type}/${id}`).then(() => {
+            queryClient.invalidateQueries({ queryKey: ["category_users", category] });
+            setSelectedUser(null);
+            setDeleteConfig(null);
+            toast.success("Signature purged.");
+        });
+    };
 
     // Add User Form State
     const [newName, setNewName] = useState("");
@@ -390,15 +402,7 @@ export function UserManagementPage({ category }: { category: string }) {
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-6">Danger Zone</h3>
                                         <button 
                                             className="w-full h-12 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest border border-rose-500/20 transition-all"
-                                            onClick={() => {
-                                                if(confirm("Confirm full wipe of this member signature?")) {
-                                                    api.delete(`/admin/users/${category}/${selectedUser._id}`).then(() => {
-                                                        queryClient.invalidateQueries({ queryKey: ["category_users", category] });
-                                                        setSelectedUser(null);
-                                                        toast.success("Signature purged.");
-                                                    });
-                                                }
-                                            }}
+                                            onClick={() => setDeleteConfig({ id: selectedUser._id, type: category as any })}
                                         >
                                             Purge Record
                                         </button>
@@ -423,17 +427,18 @@ export function UserManagementPage({ category }: { category: string }) {
                         </div>
                         <form className="w-full space-y-5" onSubmit={handleAddUser}>
                             {[
-                                { label: "Legal Name", value: newName, set: setNewName, type: "text" },
-                                { label: "Mobile Identity", value: newMobile, set: setNewMobile, type: "tel" },
-                                { label: "Email Node", value: newEmail, set: setNewEmail, type: "email" }
+                                { label: "Legal Name", value: newName, set: setNewName, type: "text", placeholder: "e.g. John Doe" },
+                                { label: "Mobile Identity", value: newMobile, set: setNewMobile, type: "tel", placeholder: "+91 XXXXX XXXXX" },
+                                { label: "Email Node", value: newEmail, set: setNewEmail, type: "email", placeholder: "john@example.com" }
                             ].map(field => (
                                 <div className="space-y-2" key={field.label}>
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">{field.label}</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-200/50 ml-2">{field.label}</label>
                                     <input 
                                         type={field.type}
-                                        className="w-full h-14 bg-white/5 border border-white/5 rounded-[20px] px-6 text-white font-bold placeholder:text-white/10 focus:ring-2 focus:ring-indigo-500/50"
+                                        className="w-full h-14 bg-white border-none rounded-[20px] px-6 text-slate-900 font-bold placeholder:text-indigo-900/40 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all shadow-inner"
                                         value={field.value}
                                         onChange={e => field.set(e.target.value)}
+                                        placeholder={field.placeholder}
                                         required={field.label !== "Email Node"}
                                     />
                                 </div>
@@ -445,6 +450,25 @@ export function UserManagementPage({ category }: { category: string }) {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfig && (
+                <div className="modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-xl">
+                    <div className="modal-content !bg-slate-900 border border-white/10 w-full max-w-md p-10 rounded-[40px] shadow-3xl flex flex-col items-center text-center gap-6">
+                        <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                            <Trash2 size={40} />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-white text-2xl font-black tracking-tight">Purge Member Signature?</h2>
+                            <p className="text-white/40 text-sm font-medium">This operation will permanently wipe this record from the grid. This action is irreversible.</p>
+                        </div>
+                        <div className="flex gap-4 w-full">
+                            <button className="flex-1 h-14 rounded-2xl bg-white/5 text-white/40 font-black uppercase tracking-widest text-[10px]" onClick={() => setDeleteConfig(null)}>Abort</button>
+                            <button className="flex-1 h-14 rounded-2xl bg-rose-600 text-white font-black uppercase tracking-widest text-[10px]" onClick={confirmGenericDelete}>Purge Record</button>
+                        </div>
                     </div>
                 </div>
             )}

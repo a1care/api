@@ -9,7 +9,9 @@ import { AdminManagementPage } from "@/pages/AdminManagementPage";
 import { AuditLogsPage } from "@/pages/AuditLogsPage";
 import { AppManagementPage } from "@/pages/AppManagementPage";
 import { SystemSettingsPage } from "@/pages/SystemSettingsPage";
-import { ServiceManagementPage } from "@/pages/ServiceManagementPage";
+import { ServiceCategoriesPage } from "@/pages/ServiceCategoriesPage";
+import { ServiceSubServicesPage } from "@/pages/ServiceSubServicesPage";
+import { ServiceChildServicesPage } from "@/pages/ServiceChildServicesPage";
 import { UserManagementPage } from "@/pages/UserManagementPage";
 import { BookingOperationsPage } from "@/pages/BookingOperationsPage";
 import { OPBookingsPage } from "@/pages/OPBookingsPage";
@@ -36,10 +38,10 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
 
             {/* Service Management Hierarchy */}
-            <Route path="/service-management" element={<ServiceManagementPage />} />
-            <Route path="/service-categories" element={<ServiceManagementPage />} />
-            <Route path="/service-subcategories" element={<ServiceManagementPage />} />
-            <Route path="/service-child-services" element={<ServiceManagementPage />} />
+            <Route path="/service-management" element={<Navigate to="/service-categories" replace />} />
+            <Route path="/service-categories" element={<ServiceCategoriesPage />} />
+            <Route path="/service-subcategories" element={<ServiceSubServicesPage />} />
+            <Route path="/service-child-services" element={<ServiceChildServicesPage />} />
             <Route path="/health-packages" element={<HealthPackagesPage />} />
 
             {/* Revenue & Subscriptions */}

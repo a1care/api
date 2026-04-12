@@ -28,7 +28,7 @@ export const createSubService = asyncHandler(async (req, res) => {
     }
 
     const newSubService = new SubService(payload)
-    newSubService.save()
+    await newSubService.save()
     return res.status(201).json(new ApiResponse(201, "Sub service created", newSubService))
 })
 

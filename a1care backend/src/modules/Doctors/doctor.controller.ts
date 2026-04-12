@@ -14,6 +14,7 @@ import sendAlotsSms from "../../utils/alotsSms.js";
 import mongoose from "mongoose";
 import { RoleModel } from "../roles/role.model.js";
 import { sendPartnerWelcomeEmail } from "../../utils/email.js";
+import { enqueueSms } from "../../queues/communicationQueue.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
 // const DEV_BYPASS_OTP = "123456";
@@ -75,16 +76,9 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
   // Store in Redis with 10-minute expiry
   await RedisClient.setEx(`otp:staff:${cleanMobile}`, 600, otp);
 
-  // Send via Alots
-  const result = await sendAlotsSms(cleanMobile, otp);
-
-  if (!result.success) {
-    console.error("[OTP Send Failed]", result.message);
-    // Even if SMS fails, we'll return 200 for now to not block frontend, 
-    // but in production we'd want to handle this.
-  }
-
-  console.log(`[OTP] Sent ${otp} to ${cleanMobile}`);
+  // Send via Alots (Background Queue)
+  console.log(`[Staff OTP] Enqueueing ${otp} for ${cleanMobile}`);
+  await enqueueSms({ mobileNumber: cleanMobile, otp });
 
   return res.status(200).json(
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })

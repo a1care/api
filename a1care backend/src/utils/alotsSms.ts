@@ -27,7 +27,7 @@ export const sendAlotsSms = async (mobileNumber: string, otp: string | number) =
         dcs: 0,
         flashSms: 0,
         peId: peId,
-        text: `${otp} is your OTP for verifying your DAY CATCH Account. Please do not share it with anyone.`,
+        text: `${otp} is your OTP for verifying your A1Care Account. Please do not share it with anyone.`,
         dltTemplateId: dltTemplateId,
         chainValue: chainValue,
         messageId: `msg_${Date.now()}`,

@@ -9,6 +9,7 @@ import { enqueueEmail } from "../../queues/communicationQueue.js";
 import { formatZodError } from "../../utils/formatZodError.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import RedisClient from "../../configs/redisConnect.js";
+import { enqueueSms } from "../../queues/communicationQueue.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
 // const DEV_BYPASS_OTP = "123456";
@@ -43,14 +44,9 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
   // Store in Redis with 10-minute expiry
   await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, otp);
 
-  // Send via Alots
-  const result = await sendAlotsSms(cleanMobile, otp);
-
-  if (!result.success) {
-    console.error("[Patient OTP Send Failed]", result.message);
-  }
-
-  console.log(`[Patient OTP] Sent ${otp} to ${cleanMobile}`);
+  // Send via Alots (Background Queue)
+  console.log(`[Patient OTP] Enqueueing ${otp} for ${cleanMobile}`);
+  await enqueueSms({ mobileNumber: cleanMobile, otp });
 
   return res.status(200).json(
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })

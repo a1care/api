@@ -1510,24 +1510,32 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
   ]);
 
   const combined = [
-    ...appts.map(a => ({
-      id: a._id,
-      type: "Appointment",
-      patient: (a.patientId as any)?.name || "Unknown",
-      provider: (a.doctorId as any)?.name || "Doctor",
-      status: a.status,
-      amount: a.totalAmount,
-      createdAt: (a as any).createdAt
-    })),
-    ...services.map(s => ({
-      id: s._id,
-      type: "Service",
-      patient: (s.userId as any)?.name || "Unknown",
-      provider: (s.childServiceId as any)?.name || "Service",
-      status: s.status,
-      amount: s.price,
-      createdAt: (s as any).createdAt
-    }))
+    ...appts.map(a => {
+      const p = a.patientId as any;
+      const d = a.doctorId as any;
+      return {
+        id: a._id,
+        type: "Appointment",
+        patient: p?.name || (p?.mobileNumber ? `Patient (${p.mobileNumber})` : "Missing Patient"),
+        provider: d?.name || (d?.mobileNumber ? `Dr. (${d.mobileNumber})` : "Doctor"),
+        status: a.status,
+        amount: a.totalAmount,
+        createdAt: (a as any).createdAt
+      };
+    }),
+    ...services.map(s => {
+      const u = s.userId as any;
+      const cs = s.childServiceId as any;
+      return {
+        id: s._id,
+        type: "Service",
+        patient: u?.name || (u?.mobileNumber ? `User (${u.mobileNumber})` : "Missing User"),
+        provider: cs?.name || "Service",
+        status: s.status,
+        amount: s.price,
+        createdAt: (s as any).createdAt
+      };
+    })
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
 
   return res.status(200).json(new ApiResponse(200, "Recent activity fetched", combined));

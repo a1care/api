@@ -11,6 +11,7 @@ export interface ChildServiceDocument extends Document {
   isFeatured: boolean;
   allowedRoleIds: string[];
   imageUrl: string;
+  fulfillmentMode: "HOME_VISIT" | "HOSPITAL_VISIT" | "VIRTUAL";
   /** Optional hospital/partner who gets first notification (10s window) before broadcast to all */
   hospitalProviderId?: Schema.Types.ObjectId;
   rating: number;
@@ -72,6 +73,11 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
 
     imageUrl: {
       type: String,
+    },
+    fulfillmentMode: {
+      type: String,
+      enum: ["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL"],
+      default: "HOME_VISIT",
     },
     hospitalProviderId: {
       type: Schema.Types.ObjectId,

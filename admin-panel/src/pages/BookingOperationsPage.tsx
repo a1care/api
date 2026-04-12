@@ -242,13 +242,13 @@ export function BookingOperationsPage() {
 
                 <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center bg-[var(--bg-main)] p-1 rounded-2xl border border-[var(--border-color)]">
-                        <div className="relative group min-w-[300px]">
-                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-blue-500 dark:text-blue-400 transition-colors" />
+                        <div className="relative group min-w-[320px]">
+                            <Search size={20} className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
                             <input
                                 type="text"
-                                placeholder="Search ID, Name..."
-                                className="w-full pr-4 bg-transparent border-none h-11 text-sm focus:ring-0"
-                                style={{ paddingLeft: '48px' }}
+                                placeholder="Search Patient name, ID or Mobile..."
+                                className="w-full bg-transparent border-none text-sm font-semibold"
+                                style={{ paddingLeft: '60px', height: '48px' }}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />

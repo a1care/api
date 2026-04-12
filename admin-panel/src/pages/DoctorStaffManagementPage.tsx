@@ -279,12 +279,12 @@ export function DoctorStaffManagementPage() {
 
             <div className="card p-0 overflow-hidden shadow-xl shadow-slate-200/50" style={{ border: 'none', borderRadius: '24px' }}>
                 <div className="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
-                    <div className="relative group w-full md:w-[380px]">
-                        <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={16} style={{ left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <div className="relative group w-full md:w-[420px]">
+                        <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
                         <input
                             placeholder="Search by name, phone or specialty..."
-                            className="w-full bg-[var(--bg-main)] border-none px-4 text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
-                            style={{ paddingLeft: '44px', height: '48px', borderRadius: '14px' }}
+                            className="w-full bg-[var(--bg-main)] border-none text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
+                            style={{ paddingLeft: '60px', height: '56px', borderRadius: '18px' }}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -405,15 +405,32 @@ export function DoctorStaffManagementPage() {
                         <form className="w-full space-y-5" onSubmit={handleAddProvider}>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Full Legal Identity</label>
-                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newName} onChange={e => setNewName(e.target.value)} required />
+                                <input 
+                                    className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                                    value={newName} 
+                                    onChange={e => setNewName(e.target.value)} 
+                                    placeholder="e.g. Dr. Sarah Jenkins"
+                                    required 
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Primary Phone Network</label>
-                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newMobile} onChange={e => setNewMobile(e.target.value)} required />
+                                <input 
+                                    className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                                    value={newMobile} 
+                                    onChange={e => setNewMobile(e.target.value)} 
+                                    placeholder="e.g. +91 98765 43210"
+                                    required 
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Digital Communication (Mail)</label>
-                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                                <input 
+                                    className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                                    value={newEmail} 
+                                    onChange={e => setNewEmail(e.target.value)} 
+                                    placeholder="sarah.j@a1care.com"
+                                />
                             </div>
                             <div className="pt-4 flex gap-4">
                                 <button type="button" className="flex-1 h-14 rounded-[20px] bg-[var(--bg-main)] text-[var(--text-muted)] font-black uppercase text-[10px]" onClick={() => setIsAddModalOpen(false)}>Abort</button>

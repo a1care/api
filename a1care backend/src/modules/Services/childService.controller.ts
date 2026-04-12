@@ -10,11 +10,14 @@ export const createChildService = asyncHandler(async (req, res) => {
     const { serviceId, subServiceId } = req.params
     console.log("this is request", req.body)
     const payload = {
-        ...req.body,
+        name: req.body.name,
+        description: req.body.description,
         serviceId,
         subServiceId,
         imageUrl: req.fileUrl,
-        price: Number(req.body.price)
+        price: Number(req.body.price),
+        selectionType: req.body.selectionType || "SELECT",
+        fulfillmentMode: req.body.fulfillmentMode || "HOME_VISIT"
     }
 
     const parsed = childServiceValidation.safeParse(payload);

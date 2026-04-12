@@ -19,6 +19,7 @@ import {
     Star
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface Category {
     _id: string;
@@ -43,8 +44,6 @@ interface ChildService {
     rating: number;
     completed: number;
 }
-
-import { useLocation, useNavigate } from "react-router-dom";
 
 export function ServiceManagementPage() {
     const queryClient = useQueryClient();
@@ -78,12 +77,23 @@ export function ServiceManagementPage() {
     const [isCatModalOpen, setIsCatModalOpen] = useState(false);
     const [isSubModalOpen, setIsSubModalOpen] = useState(false);
     const [isChildModalOpen, setIsChildModalOpen] = useState(false);
+    const [deleteConfig, setDeleteConfig] = useState<{ id: string, type: 'category' | 'subservice' | 'child' } | null>(null);
 
     // Form States
     const [catName, setCatName] = useState("");
     const [catTitle, setCatTitle] = useState("");
     const [catType, setCatType] = useState("doctor");
     const [catFile, setCatFile] = useState<File | null>(null);
+
+    const [subName, setSubName] = useState("");
+    const [subDesc, setSubDesc] = useState("");
+    const [subFile, setSubFile] = useState<File | null>(null);
+
+    const [childName, setChildName] = useState("");
+    const [childDesc, setChildDesc] = useState("");
+    const [childPrice, setChildPrice] = useState("");
+    const [fulfillmentMode, setFulfillmentMode] = useState("HOME_VISIT");
+    const [childFile, setChildFile] = useState<File | null>(null);
 
     // ── Data Cleaning Helper ──
     const cleanName = (name: string) => {
@@ -125,11 +135,6 @@ export function ServiceManagementPage() {
         }
     });
 
-    // Sub-Service Form States
-    const [subName, setSubName] = useState("");
-    const [subDesc, setSubDesc] = useState("");
-    const [subFile, setSubFile] = useState<File | null>(null);
-
     const createSubMutation = useMutation({
         mutationFn: async (formData: FormData) => {
             if (!selectedCatId) throw new Error("Category not selected");
@@ -159,13 +164,6 @@ export function ServiceManagementPage() {
         },
         onError: () => toast.error("Failed to delete sub-service.")
     });
-
-    // Child-Service Form States
-    const [childName, setChildName] = useState("");
-    const [childDesc, setChildDesc] = useState("");
-    const [childPrice, setChildPrice] = useState("");
-    const [fulfillmentMode, setFulfillmentMode] = useState("HOME_VISIT");
-    const [childFile, setChildFile] = useState<File | null>(null);
 
     const createChildMutation = useMutation({
         mutationFn: async (formData: FormData) => {
@@ -209,6 +207,15 @@ export function ServiceManagementPage() {
         },
         onError: () => toast.error("Failed to update popular status.")
     });
+
+    const confirmGenericDelete = () => {
+        if (!deleteConfig) return;
+        const { id, type } = deleteConfig;
+        if (type === 'category') deleteCatMutation.mutate(id);
+        else if (type === 'subservice') deleteSubMutation.mutate(id);
+        else if (type === 'child') deleteChildMutation.mutate(id);
+        setDeleteConfig(null);
+    };
 
     // ── Fetching Data ──
     const { data: categories, isLoading: loadingCats } = useQuery({
@@ -270,7 +277,7 @@ export function ServiceManagementPage() {
                                 <LayoutGrid size={22} />
                             </div>
                             <button
-                                onClick={(e) => { e.stopPropagation(); if (confirm('Archive category?')) deleteCatMutation.mutate(cat._id); }}
+                                onClick={(e) => { e.stopPropagation(); setDeleteConfig({ id: cat._id, type: 'category' }); }}
                                 className="logout-btn"
                                 style={{ padding: '6px' }}
                             >
@@ -336,7 +343,7 @@ export function ServiceManagementPage() {
                                     <Layers size={22} />
                                 </div>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Archive sub-service?')) deleteSubMutation.mutate(sub._id); }}
+                                    onClick={(e) => { e.stopPropagation(); setDeleteConfig({ id: sub._id, type: 'subservice' }); }}
                                     className="logout-btn"
                                     style={{ padding: '6px' }}
                                 >
@@ -426,7 +433,7 @@ export function ServiceManagementPage() {
                                     <Star size={18} fill={child.isFeatured ? '#f59e0b' : 'none'} />
                                 </button>
                                 <button
-                                    onClick={() => { if (confirm('Remove item permanently?')) deleteChildMutation.mutate(child._id); }}
+                                    onClick={() => setDeleteConfig({ id: child._id, type: 'child' })}
                                     className="logout-btn"
                                     style={{ padding: '8px', color: '#ef4444' }}
                                 >
@@ -563,7 +570,7 @@ export function ServiceManagementPage() {
                                     value={subDesc}
                                     onChange={(e) => setSubDesc(e.target.value)}
                                     placeholder="Brief details about this tier..."
-                                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#f8fafc', border: 'none', minHeight: '100px' }}
+                                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#f8fafc', border: 'none', minHeight: '100px', fontFamily: 'inherit' }}
                                 />
                             </div>
                             <div className="input-group">
@@ -626,7 +633,7 @@ export function ServiceManagementPage() {
                                     value={childDesc}
                                     onChange={(e) => setChildDesc(e.target.value)}
                                     placeholder="Service details..."
-                                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#f8fafc', border: 'none', minHeight: '80px' }}
+                                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#f8fafc', border: 'none', minHeight: '80px', fontFamily: 'inherit' }}
                                 />
                             </div>
 
@@ -642,8 +649,41 @@ export function ServiceManagementPage() {
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfig && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center', padding: '32px 24px' }}>
+                        <div style={{
+                            width: '64px', height: '64px', background: '#fee2e2', color: '#ef4444',
+                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 20px'
+                        }}>
+                            <Trash2 size={32} />
+                        </div>
+                        <h3 className="brand-name" style={{ marginBottom: '8px' }}>Archive this {deleteConfig.type}?</h3>
+                        <p className="muted" style={{ fontSize: '0.9rem', marginBottom: '32px' }}>
+                            Removing this node will affect all child services and active app listings. This action is permanent.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                className="button secondary full-width"
+                                onClick={() => setDeleteConfig(null)}
+                                style={{ height: '48px' }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="button primary full-width"
+                                onClick={confirmGenericDelete}
+                                style={{ background: '#ef4444', color: 'white', height: '48px' }}
+                            >
+                                Archive Node
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-
-// Add state for childDesc and fulfillmentMode in the main component
