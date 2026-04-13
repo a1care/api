@@ -25,6 +25,7 @@ import KYCVerificationPage from "./pages/KYCVerificationPage";
 import { HealthVaultAuditPage } from "./pages/HealthVaultAuditPage";
 import { PaymentLogsPage } from "./pages/PaymentLogsPage";
 import { HealthPackagesPage } from "./pages/HealthPackagesPage";
+import DeletionRequestsPage from "./pages/DeletionRequestsPage";
 
 export default function App() {
   return (
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="/manage-provider-app" element={<AppManagementPage appKey="provider_app" />} />
               <Route path="/manage-system-config" element={<SystemSettingsPage />} />
               <Route path="/payment-logs" element={<PaymentLogsPage />} />
+              <Route path="/deletion-requests" element={<DeletionRequestsPage />} />
             </Route>
           </Route>
         </Route>

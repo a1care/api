@@ -59,7 +59,7 @@ export function AppLayout() {
   const [usersOpen, setUsersOpen] = useState(true);
   const [appsOpen, setAppsOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("admin_theme") || "light");
-  
+
   // Search / Command Palette State
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,20 +79,21 @@ export function AppLayout() {
     { label: "Nurse Management", to: "/manage-nurses", icon: "🏥", cat: "Users" },
     { label: "Ambulance Fleet", to: "/manage-ambulances", icon: "🚑", cat: "Users" },
     { label: "Asset Rentals", to: "/manage-rentals", icon: "📦", cat: "Users" },
-    {label: "Healthcare Catalog", to: "/service-categories", icon: "📂", cat: "Services" },
+    { label: "Healthcare Catalog", to: "/service-categories", icon: "📂", cat: "Services" },
     { label: "Sub-Categories", to: "/service-subcategories", icon: "📁", cat: "Services" },
     { label: "Catalog Items", to: "/service-child-services", icon: "🏷️", cat: "Services" },
     { label: "Health Packages", to: "/health-packages", icon: "📦", cat: "Services" },
     { label: "System Config", to: "/manage-system-config", icon: "⚙️", cat: "Admin" },
     { label: "Payment Audit Logs", to: "/payment-logs", icon: "🧾", cat: "Admin" },
     { label: "Audit Logs", to: "/audit-logs", icon: "📜", cat: "Admin" },
+    { label: "Account Deletion Requests", to: "/deletion-requests", icon: "🗑️", cat: "Admin" },
   ], []);
 
   const filteredSearchItems = useMemo(() => {
     if (!searchQuery) return searchItems;
     const q = searchQuery.toLowerCase();
-    return searchItems.filter(item => 
-      item.label.toLowerCase().includes(q) || 
+    return searchItems.filter(item =>
+      item.label.toLowerCase().includes(q) ||
       item.cat.toLowerCase().includes(q)
     );
   }, [searchQuery, searchItems]);
@@ -278,6 +279,7 @@ export function AppLayout() {
                     System Credentials
                   </NavLink>
                   <NavLink to="/audit-logs" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Audit Logs</NavLink>
+                  <NavLink to="/deletion-requests" className="block py-2 text-[13px] font-medium text-rose-500 hover:text-rose-600 font-black">Deletion Requests</NavLink>
                 </div>
               )}
             </>
@@ -317,7 +319,7 @@ export function AppLayout() {
         <header className="content-header h-20 backdrop-blur-xl border-b px-8 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-6">
-              <div 
+              <div
                 onClick={() => setShowSearch(true)}
                 className="flex items-center gap-3 bg-slate-100/80 dark:bg-white/5 border border-transparent hover:border-blue-500/30 px-5 py-3 rounded-2xl text-slate-500 transition-all min-w-[380px] group cursor-pointer"
               >
@@ -362,69 +364,69 @@ export function AppLayout() {
         {/* Global Search / Command Palette Modal */}
         {showSearch && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-             <div onClick={() => setShowSearch(false)} className="absolute inset-0"></div>
-             <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 flex flex-col max-h-[70vh]">
-                <div className="p-6 border-b dark:border-slate-800 flex items-center gap-4">
-                   <Search size={22} className="text-blue-600" />
-                   <input 
-                    autoFocus
-                    type="text" 
-                    placeholder="Search anything..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
-                   />
-                   <button onClick={() => setShowSearch(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-400 transition-all">
-                      <X size={20} />
-                   </button>
-                </div>
+            <div onClick={() => setShowSearch(false)} className="absolute inset-0"></div>
+            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 flex flex-col max-h-[70vh]">
+              <div className="p-6 border-b dark:border-slate-800 flex items-center gap-4">
+                <Search size={22} className="text-blue-600" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search anything..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                />
+                <button onClick={() => setShowSearch(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-400 transition-all">
+                  <X size={20} />
+                </button>
+              </div>
 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                   {filteredSearchItems.length > 0 ? (
-                      <div className="space-y-6">
-                         {Array.from(new Set(filteredSearchItems.map(i => i.cat))).map(cat => (
-                            <div key={cat} className="space-y-2">
-                               <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{cat}</p>
-                               <div className="grid gap-1">
-                                  {filteredSearchItems.filter(i => i.cat === cat).map((item) => (
-                                     <button 
-                                      key={item.to}
-                                      onClick={() => handleNavigate(item.to)}
-                                      className="flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-blue-50 dark:hover:bg-blue-600/10 group transition-all text-left"
-                                     >
-                                        <div className="flex items-center gap-4">
-                                           <span className="text-xl">{item.icon}</span>
-                                           <span className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.label}</span>
-                                        </div>
-                                        <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
-                                     </button>
-                                  ))}
-                               </div>
-                            </div>
-                         ))}
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {filteredSearchItems.length > 0 ? (
+                  <div className="space-y-6">
+                    {Array.from(new Set(filteredSearchItems.map(i => i.cat))).map(cat => (
+                      <div key={cat} className="space-y-2">
+                        <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{cat}</p>
+                        <div className="grid gap-1">
+                          {filteredSearchItems.filter(i => i.cat === cat).map((item) => (
+                            <button
+                              key={item.to}
+                              onClick={() => handleNavigate(item.to)}
+                              className="flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-blue-50 dark:hover:bg-blue-600/10 group transition-all text-left"
+                            >
+                              <div className="flex items-center gap-4">
+                                <span className="text-xl">{item.icon}</span>
+                                <span className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.label}</span>
+                              </div>
+                              <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                   ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">
-                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                            <Search size={32} />
-                         </div>
-                         <p className="font-bold uppercase tracking-widest text-xs">No modules match your query</p>
-                      </div>
-                   )}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                      <Search size={32} />
+                    </div>
+                    <p className="font-bold uppercase tracking-widest text-xs">No modules match your query</p>
+                  </div>
+                )}
+              </div>
 
-                <div className="p-6 bg-slate-50 dark:bg-white/5 border-t dark:border-slate-800 flex items-center justify-between">
-                   <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                         <span className="px-1.5 py-0.5 bg-white dark:bg-white/10 rounded shadow-sm border dark:border-slate-700 text-slate-600 dark:text-slate-300">ESC</span> Close
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                         <span className="px-1.5 py-0.5 bg-white dark:bg-white/10 rounded shadow-sm border dark:border-slate-700 text-slate-600 dark:text-slate-300">↵</span> Navigate
-                      </div>
-                   </div>
-                   <p className="text-[10px] font-bold text-blue-500/60 uppercase tracking-widest">A1Care Intelligence Search</p>
+              <div className="p-6 bg-slate-50 dark:bg-white/5 border-t dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="px-1.5 py-0.5 bg-white dark:bg-white/10 rounded shadow-sm border dark:border-slate-700 text-slate-600 dark:text-slate-300">ESC</span> Close
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="px-1.5 py-0.5 bg-white dark:bg-white/10 rounded shadow-sm border dark:border-slate-700 text-slate-600 dark:text-slate-300">↵</span> Navigate
+                  </div>
                 </div>
-             </div>
+                <p className="text-[10px] font-bold text-blue-500/60 uppercase tracking-widest">A1Care Intelligence Search</p>
+              </div>
+            </div>
           </div>
         )}
       </main>

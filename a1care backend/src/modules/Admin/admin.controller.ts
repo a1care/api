@@ -806,17 +806,17 @@ export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
       { $group: { _id: null, total: { $sum: "$price" } } }
     ]),
     Patient.countDocuments({ createdAt: { $gte: startOfMonth } }),
-    Patient.countDocuments({ 
-      createdAt: { 
-        $gte: startOfPreviousMonth, 
-        $lt: startOfMonth 
-      } 
+    Patient.countDocuments({
+      createdAt: {
+        $gte: startOfPreviousMonth,
+        $lt: startOfMonth
+      }
     }),
     Payout.countDocuments({ status: "PENDING" })
   ]);
 
   const totalRevenue = (completedAppts[0]?.total || 0) + (completedServices[0]?.total || 0);
-  
+
   // Calculate onboarding trend percentage
   let onboardingTrend = 0;
   if (newPatientsPrevMonth > 0) {
@@ -1004,9 +1004,9 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
       patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
         name: obj.patientId.name || "",
         mobile: obj.patientId.mobileNumber || "No Profile"
-      } : { 
-        name: "Missing Profile", 
-        mobile: obj.patientId ? obj.patientId.toString() : "N/A" 
+      } : {
+        name: "Missing Profile",
+        mobile: obj.patientId ? obj.patientId.toString() : "N/A"
       },
       totalAmount: obj.totalAmount || 0,
       paymentStatus: obj.paymentStatus || "PENDING"
@@ -1061,12 +1061,12 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     return {
       ...obj,
       serviceId: obj.childServiceId || { name: "Unknown Service" },
-      patientId: (obj.userId && typeof obj.userId === 'object' && obj.userId._id) ? { 
-        name: obj.userId.name || "", 
-        mobile: obj.userId.mobileNumber || "No Profile" 
-      } : { 
-        name: "Missing Profile", 
-        mobile: obj.userId ? obj.userId.toString() : "N/A" 
+      patientId: (obj.userId && typeof obj.userId === 'object' && obj.userId._id) ? {
+        name: obj.userId.name || "",
+        mobile: obj.userId.mobileNumber || "No Profile"
+      } : {
+        name: "Missing Profile",
+        mobile: obj.userId ? obj.userId.toString() : "N/A"
       },
       totalAmount: obj.price || 0,
       paymentStatus: obj.status === "COMPLETED" ? "COMPLETED" : "PENDING"
@@ -1249,9 +1249,9 @@ export const getHospitalBookings = asyncHandler(async (req, res) => {
       patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
         name: obj.patientId.name || "",
         mobile: obj.patientId.mobileNumber || "No Profile"
-      } : { 
-        name: "Missing Profile", 
-        mobile: obj.patientId ? obj.patientId.toString() : "N/A" 
+      } : {
+        name: "Missing Profile",
+        mobile: obj.patientId ? obj.patientId.toString() : "N/A"
       }
     };
   });
@@ -1400,10 +1400,10 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
 
   const totalRevenue = (revenueData[0][0]?.total || 0) + (revenueData[1][0]?.total || 0);
   const monthRevenue = (revenueData[2][0]?.total || 0) + (monthlyServiceRev[0]?.total || 0);
-  
+
   const todayRevData = await Promise.all([
-     doctorAppointmentModel.aggregate([{ $match: { status: "Completed", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$totalAmount" } } }]),
-     serviceRequestModel.aggregate([{ $match: { status: "COMPLETED", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$price" } } }])
+    doctorAppointmentModel.aggregate([{ $match: { status: "Completed", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$totalAmount" } } }]),
+    serviceRequestModel.aggregate([{ $match: { status: "COMPLETED", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$price" } } }])
   ]);
   const todayRevenue = (todayRevData[0][0]?.total || 0) + (todayRevData[1][0]?.total || 0);
 
@@ -1441,7 +1441,7 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
 
 export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
-  
+
   const { from, to, search = "" } = req.query;
   const match: any = {};
   if (from && to) {
@@ -1555,7 +1555,7 @@ export const getAdminPayouts = asyncHandler(async (req, res) => {
 export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, adminNote } = req.body;
-  
+
   if (!status) throw new ApiError(400, "Status is required");
 
   const payout = await Payout.findByIdAndUpdate(id, { status, adminNote }, { new: true });
@@ -1565,7 +1565,7 @@ export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
   const partner = await Doctor.findById(payout.staffId);
   if (partner?.fcmToken) {
     const title = status === "COMPLETED" ? "Payment Settled! 💰" : "Payout Update";
-    const body = status === "COMPLETED" 
+    const body = status === "COMPLETED"
       ? `₹${payout.amount} has been transferred to your bank account.`
       : `Your payout request of ₹${payout.amount} was ${status.toLowerCase()}. ${adminNote || ""}`;
 
@@ -1621,7 +1621,7 @@ export const getHealthVaultAudit = asyncHandler(async (req, res) => {
 export const getUserWalletBalance = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const wallet = await WalletModel.findOne({ userId });
-  return res.status(200).json(new ApiResponse(200, "Wallet balance fetched", { 
+  return res.status(200).json(new ApiResponse(200, "Wallet balance fetched", {
     balance: wallet?.balance || 0,
     transactions: wallet?.transactions || []
   }));
@@ -1634,8 +1634,8 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
   if (!amount || isNaN(amount)) throw new ApiError(400, "Invalid amount");
 
   const onModel: "Patient" | "Staff" = category === 'patient' ? "Patient" : "Staff";
-  const user = onModel === 'Patient' 
-    ? await Patient.findById(userId) 
+  const user = onModel === 'Patient'
+    ? await Patient.findById(userId)
     : await Doctor.findById(userId);
 
   if (!user) throw new ApiError(404, "User not found");
@@ -1649,7 +1649,7 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
     wallet.balance += Number(amount);
   } else {
     if (wallet.balance < Number(amount)) {
-        throw new ApiError(400, "Insufficient wallet balance");
+      throw new ApiError(400, "Insufficient wallet balance");
     }
     wallet.balance -= Number(amount);
   }
@@ -1680,17 +1680,23 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
 export const getDeletionRequests = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
 
+  const deletionQuery = { deletionRequested: { $in: [true, "true", 1] } };
   const [patients, staff] = await Promise.all([
-    Patient.find({ deletionRequested: true }).sort({ deletionRequestedAt: -1 }),
-    Doctor.find({ deletionRequested: true }).sort({ deletionRequestedAt: -1 })
+    Patient.find(deletionQuery),
+    Doctor.find(deletionQuery)
   ]);
+
+  console.log(`[DEBUG] Doctor Model Collection: ${Doctor.collection.name}`);
+  const rawStaffCount = await mongoose.connection.db.collection('staffs').countDocuments({ deletionRequested: true });
+  console.log(`[DEBUG] Raw 'staffs' count: ${rawStaffCount}`);
+  console.log(`[DEBUG] Model 'Doctor' count: ${staff.length}`);
 
   const shapedPatients = patients.map(p => ({
     id: p._id,
     type: 'patient',
     name: p.name,
     mobileNumber: p.mobileNumber,
-    requestedAt: p.deletionRequestedAt
+    requestedAt: p.deletionRequestedAt || (p as any).updatedAt || (p as any).createdAt
   }));
 
   const shapedStaff = staff.map(s => ({
@@ -1698,10 +1704,14 @@ export const getDeletionRequests = asyncHandler(async (req, res) => {
     type: 'staff',
     name: s.name,
     mobileNumber: s.mobileNumber,
-    requestedAt: s.deletionRequestedAt
+    requestedAt: s.deletionRequestedAt || (s as any).updatedAt || (s as any).createdAt
   }));
 
-  return res.status(200).json(new ApiResponse(200, "Deletion requests fetched", [...shapedPatients, ...shapedStaff]));
+  const allRequests = [...shapedPatients, ...shapedStaff].sort(
+    (a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
+  );
+
+  return res.status(200).json(new ApiResponse(200, "Deletion requests fetched", allRequests));
 });
 
 export const approveDeletion = asyncHandler(async (req, res) => {
@@ -1722,7 +1732,7 @@ export const approveDeletion = asyncHandler(async (req, res) => {
   user.isDeleted = true;
   user.deletedAt = new Date();
   user.deletionRequested = false;
-  user.fcmToken = ""; 
+  user.fcmToken = "";
   await user.save();
 
   await AuditLog.create({
