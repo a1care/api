@@ -37,7 +37,9 @@ import {
   updateAdminPayoutStatus,
   getHealthVaultAudit,
   getUserWalletBalance,
-  adjustUserWallet
+  adjustUserWallet,
+  getDeletionRequests,
+  approveDeletion
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -129,5 +131,9 @@ adminRoutes.put("/reviews/:id/status", protectAdmin, requireAdminRole(["admin", 
 // Payment / Transaction Audit
 adminRoutes.get("/payments/orders", protectAdmin, requireAdminRole(["admin", "super_admin"]), adminListOrders);
 adminRoutes.get("/payments/logs/:txnId", protectAdmin, requireAdminRole(["admin", "super_admin"]), adminGetLogsForTxn);
+
+// Account Deletion Requests
+adminRoutes.get("/deletion-requests", protectAdmin, requireAdminRole(["super_admin"]), getDeletionRequests);
+adminRoutes.post("/deletion-approve/:id", protectAdmin, requireAdminRole(["super_admin"]), approveDeletion);
 
 export default adminRoutes;

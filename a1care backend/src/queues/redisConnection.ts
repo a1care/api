@@ -1,5 +1,7 @@
 import { Redis } from "ioredis";
 import type { Redis as RedisClient } from "ioredis";
+import dotenv from 'dotenv';
+dotenv.config();
 
 let connection: RedisClient | null = null;
 

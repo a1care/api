@@ -13,7 +13,11 @@ export interface PatientDocument extends Document {
   dateOfBirth: Date;
   fcmToken: string;
   isRegistered: boolean;
-  primaryAddressId: mongoose.Schema.Types.ObjectId
+  primaryAddressId: mongoose.Schema.Types.ObjectId;
+  deletionRequested: boolean;
+  deletionRequestedAt?: Date;
+  isDeleted: boolean;
+  deletedAt?: Date;
 }
 
 const PatientSchema = new Schema<PatientDocument>(
@@ -69,6 +73,20 @@ const PatientSchema = new Schema<PatientDocument>(
     primaryAddressId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "patient_addresses"
+    },
+    deletionRequested: {
+      type: Boolean,
+      default: false
+    },
+    deletionRequestedAt: {
+      type: Date
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date
     }
   },
   {

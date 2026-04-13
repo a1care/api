@@ -120,6 +120,14 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
       }).sort({ isRegistered: -1 });
 
+      if (staff && staff.isDeleted) {
+        // Staff wants a fresh start. Rename old mobile to free up prefix and create new record.
+        const originalMobile = staff.mobileNumber;
+        staff.mobileNumber = `${originalMobile}_deleted_${Date.now()}`;
+        await staff.save();
+        staff = null;
+      }
+
       if (!staff) {
         // Create new if doesn't exist (Original behavior)
         staff = await doctorModel.create({ 
@@ -270,4 +278,19 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
 
   await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
   return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
+});
+
+export const requestDeletionStaff = asyncHandler(async (req, res) => {
+  const staffId = req.user?.id;
+  const staff = await doctorModel.findById(staffId);
+  if (!staff) throw new ApiError(404, "Staff not found");
+
+  if (staff.isDeleted) throw new ApiError(400, "Account already deleted");
+  if (staff.deletionRequested) throw new ApiError(400, "Deletion request already pending approval");
+
+  staff.deletionRequested = true;
+  staff.deletionRequestedAt = new Date();
+  await staff.save();
+
+  res.status(200).json(new ApiResponse(200, "Deletion request submitted to admin for approval"));
 });

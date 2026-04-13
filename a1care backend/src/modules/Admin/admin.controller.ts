@@ -1676,3 +1676,62 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200, "Wallet adjusted successfully", wallet));
 });
+
+export const getDeletionRequests = asyncHandler(async (req, res) => {
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  const [patients, staff] = await Promise.all([
+    Patient.find({ deletionRequested: true }).sort({ deletionRequestedAt: -1 }),
+    Doctor.find({ deletionRequested: true }).sort({ deletionRequestedAt: -1 })
+  ]);
+
+  const shapedPatients = patients.map(p => ({
+    id: p._id,
+    type: 'patient',
+    name: p.name,
+    mobileNumber: p.mobileNumber,
+    requestedAt: p.deletionRequestedAt
+  }));
+
+  const shapedStaff = staff.map(s => ({
+    id: s._id,
+    type: 'staff',
+    name: s.name,
+    mobileNumber: s.mobileNumber,
+    requestedAt: s.deletionRequestedAt
+  }));
+
+  return res.status(200).json(new ApiResponse(200, "Deletion requests fetched", [...shapedPatients, ...shapedStaff]));
+});
+
+export const approveDeletion = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { type } = req.body; // 'patient' or 'staff'
+
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  let user;
+  if (type === 'patient') {
+    user = await Patient.findById(id);
+  } else {
+    user = await Doctor.findById(id);
+  }
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  user.isDeleted = true;
+  user.deletedAt = new Date();
+  user.deletionRequested = false;
+  user.fcmToken = ""; 
+  await user.save();
+
+  await AuditLog.create({
+    actorAdminId: (req as any).user?.id,
+    actorRole: (req as any).user?.role,
+    action: "ACCOUNT_DELETED_BY_ADMIN",
+    targetType: type === 'patient' ? "Patient" : "Doctor",
+    targetId: String(user._id),
+  });
+
+  return res.status(200).json(new ApiResponse(200, "Account successfully marked as deleted"));
+});

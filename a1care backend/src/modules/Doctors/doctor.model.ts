@@ -36,6 +36,10 @@ export interface DoctorDocument extends Document {
     type: "Point";
     coordinates: [number, number]; // [longitude, latitude]
   };
+  deletionRequested: boolean;
+  deletionRequestedAt?: Date;
+  isDeleted: boolean;
+  deletedAt?: Date;
 }
 
 const DoctorSchema = new Schema<DoctorDocument>(
@@ -167,6 +171,20 @@ const DoctorSchema = new Schema<DoctorDocument>(
         type: [Number],
         default: [0, 0]
       }
+    },
+    deletionRequested: {
+      type: Boolean,
+      default: false
+    },
+    deletionRequestedAt: {
+      type: Date
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date
     }
   },
 

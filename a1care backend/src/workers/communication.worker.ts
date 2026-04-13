@@ -42,7 +42,7 @@ new Worker(
       return;
     }
   },
-  { connection }
+  { connection, concurrency: 10 }
 );
 
 console.log("[Worker] communication worker started.");

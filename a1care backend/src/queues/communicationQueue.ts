@@ -33,6 +33,8 @@ const queue =
     ? new Queue("a1care-communications", { connection })
     : null;
 
+console.log(`[Queue] Initialized: ${!!queue}, ENABLE_QUEUE: ${process.env.ENABLE_QUEUE}`);
+
 export async function enqueuePush(payload: PushPayload) {
   if (!queue) {
     await sendPush(payload);
@@ -70,10 +72,16 @@ export async function enqueueEmail(payload: EmailJob) {
 
 export async function enqueueSms(payload: SmsJob) {
   if (!queue) {
+    console.log("[Queue] No queue found, sending SMS directly...");
     const sendAlotsSms = (await import("../utils/alotsSms.js")).default;
     await sendAlotsSms(payload.mobileNumber, payload.otp);
     return;
   }
 
-  await queue.add("sms", payload, { removeOnComplete: true, attempts: 3 });
+  console.log(`[Queue] Enqueueing SMS job for ${payload.mobileNumber}`);
+  await queue.add("sms", payload, { 
+    removeOnComplete: true, 
+    attempts: 3,
+    priority: 1 // Highest priority for OTPs
+  });
 }

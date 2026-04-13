@@ -77,6 +77,14 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       let patient = await Patient.findOne({
         mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
       });
+      if (patient && patient.isDeleted) {
+        // User wants a fresh start. Rename old mobile to free up prefix and create new record.
+        const originalMobile = patient.mobileNumber;
+        patient.mobileNumber = `${originalMobile}_deleted_${Date.now()}`;
+        await patient.save();
+        patient = null; 
+      }
+
       if (!patient) {
         patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
         await patient.save();
@@ -158,4 +166,19 @@ export const updateProfile = asyncHandler(async (req, res) => {
     success: true,
     data: updatedPatient
   });
+});
+
+export const requestDeletion = asyncHandler(async (req, res) => {
+  const patientId = req.user?.id;
+  const patient = await Patient.findById(patientId);
+  if (!patient) throw new ApiError(404, "Patient not found");
+
+  if (patient.isDeleted) throw new ApiError(400, "Account already deleted");
+  if (patient.deletionRequested) throw new ApiError(400, "Deletion request already pending approval");
+
+  patient.deletionRequested = true;
+  patient.deletionRequestedAt = new Date();
+  await patient.save();
+
+  res.status(200).json(new ApiResponse(200, "Deletion request submitted to admin for approval"));
 });

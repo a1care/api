@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
+import sendMessage from '../configs/twilioConfig.js';
 
 /**
  * Sends an OTP SMS using the Alots.io API
@@ -12,10 +13,13 @@ export const sendAlotsSms = async (mobileNumber: string, otp: string | number) =
     const peId = process.env.ALOTS_PE_ID;
     const dltTemplateId = process.env.ALOTS_DLT_TEMPLATE_ID;
     const chainValue = process.env.ALOTS_CHAIN_VALUE;
+    console.log(`[AlotsSMS] Entering sendAlotsSms for ${mobileNumber}`);
 
     if (!bearerToken || !peId || !dltTemplateId) {
-        console.error("[AlotsSMS] Missing configuration in .env");
-        return { success: false, message: "SMS configuration missing" };
+        console.warn("[AlotsSMS] Missing configuration in .env. Falling back to Twilio...");
+        // Twilio sendMessage takes (mobile, otp)
+        await sendMessage(Number(mobileNumber), Number(otp));
+        return { success: true, message: "Sent via Twilio fallback" };
     }
 
     // Ensure mobile is in array and has 91 prefix if not present
@@ -27,7 +31,7 @@ export const sendAlotsSms = async (mobileNumber: string, otp: string | number) =
         dcs: 0,
         flashSms: 0,
         peId: peId,
-        text: `${otp} is your OTP for verifying your A1Care Account. Please do not share it with anyone.`,
+        text: `${otp} is your OTP for verifying your DAY CATCH Account. Please do not share it with anyone.`,
         dltTemplateId: dltTemplateId,
         chainValue: chainValue,
         messageId: `msg_${Date.now()}`,
