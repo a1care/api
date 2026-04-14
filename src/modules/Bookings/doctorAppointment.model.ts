@@ -11,7 +11,10 @@ export interface DoctorAppointmentDocument extends Document {
   paymentMode?:'ONLINE' | 'OFFLINE' ;
   paymentStatus:'PENDING' | 'COMPLETED' | 'FAILED' ;
   status:'Pending' | 'Confirmed' | "Completed" | "Cancelled" , 
-  totalAmount?:number ;
+  totalAmount: number;
+  commissionPercentage?: number;
+  commissionAmount?: number;
+  partnerEarning?: number;
 }
 
 const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
@@ -64,9 +67,21 @@ const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
       enum:['PENDING' , 'COMPLETED' , 'FAILED'] ,
       required:true
     } ,
-    totalAmount:{
-      type:Number ,
-      required:true ,
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    commissionPercentage: {
+      type: Number,
+      default: 0
+    },
+    commissionAmount: {
+      type: Number,
+      default: 0
+    },
+    partnerEarning: {
+      type: Number,
+      default: 0
     }
   },
   {

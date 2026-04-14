@@ -1,6 +1,6 @@
 import multer from "multer";
 import multerS3 from "multer-s3";
-import  s3  from "../configs/aws.js";
+import s3 from "../configs/aws.js";
 import { ApiError } from "../utils/ApiError.js";
 import dotenv from 'dotenv'
 
@@ -14,7 +14,7 @@ interface UploadOptions {
 
 export function createS3Upload(options: UploadOptions) {
   const { folder, allowedMimeTypes, maxSizeMB } = options;
-    console.log("this is from create uploads" , process.env.S3_BUCKET_NAME)
+  console.log("this is from create uploads", process.env.S3_BUCKET_NAME)
   return multer({
     limits: {
       fileSize: maxSizeMB * 1024 * 1024
@@ -51,7 +51,22 @@ export const uploadServiceImage = createS3Upload({
 }).single("image");
 
 export const UploadProfileImage = createS3Upload({
-  folder:"profiles" , 
-  allowedMimeTypes:["image/jpeg", "image/png", "image/webp"] , 
-  maxSizeMB:5
+  folder: "profiles",
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+  maxSizeMB: 5
 }).single('profile')
+
+export const uploadStaffDocument = createS3Upload({
+  folder: "staff_documents",
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+  maxSizeMB: 10
+}).single('document')
+
+export const uploadMedicalRecordAssets = createS3Upload({
+  folder: "medical_records",
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+  maxSizeMB: 10
+}).fields([
+  { name: "prescriptions", maxCount: 10 },
+  { name: "labReports", maxCount: 10 }
+]);

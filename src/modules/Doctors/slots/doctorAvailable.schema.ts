@@ -1,7 +1,7 @@
 import * as z from 'zod'
 
 const doctorAvailabilityValidation = z.object({
-    doctorId:z.string() , 
+    // doctorId:z.string() , 
     weekDays:z.array(z.number()) , 
     startingTime:z.string() , 
     endingTime:z.string() , 

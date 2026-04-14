@@ -7,7 +7,7 @@ const objectId = z
 const scheduledSlotSchema = z.object({
     startTime: z.coerce.date(),
     endTime: z.coerce.date()
-}); 
+});
 
 const locationSchema = z.object({
     lat: z.number().min(-90).max(90),
@@ -15,10 +15,11 @@ const locationSchema = z.object({
 })
 
 const serviceRequestValiation = z.object({
-    childServiceId: objectId,
+    childServiceId: objectId.optional(),
+    healthPackageId: objectId.optional(),
     userId: objectId,
-    roleId: z.array(objectId).optional() ,
-    status: z.enum(["PENDING", "ACCEPTED", "CANCELLED"]).optional(),
+    roleId: z.array(objectId).optional(),
+    status: z.enum(["PENDING", "BROADCASTED", "ACCEPTED", "CANCELLED"]).optional(),
     addressId: objectId.optional(),
     fulfillmentMode: z.enum([
         "HOME_VISIT",
@@ -27,10 +28,13 @@ const serviceRequestValiation = z.object({
     ]),
     scheduledSlot: scheduledSlotSchema.optional(),
     location: locationSchema.optional(),
-    assignProviderId: objectId.optional(),
+    assignedProviderId: objectId.optional(),
     assignRoleId: objectId.optional(),
-    bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]) , 
-    price:z.number()
+    bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]),
+    price: z.number(),
+    notes: z.string().optional(),
+    paymentMode: z.enum(['ONLINE', 'OFFLINE']).optional(),
+    paymentStatus: z.enum(['PENDING', 'COMPLETED', 'FAILED']).optional(),
 })
 
 export default serviceRequestValiation

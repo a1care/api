@@ -3,20 +3,25 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { RoleModel } from "./role.model.js";
 import roleValidation from "./role.schema.js";
+import mongoose from "mongoose";
+import { MOCK_ROLES } from "../../utils/mockData.js";
 
-export const createRole = asyncHandler(async (req ,res)=>{
+export const createRole = asyncHandler(async (req, res) => {
     const parsed = roleValidation.safeParse(req.body)
-    if(!parsed.success){
+    if (!parsed.success) {
         console.error("validation failed while creating role", parsed.error)
-        throw new ApiError(401 , "Valiation failed!")
+        throw new ApiError(401, "Valiation failed!")
     }
 
     const newRole = new RoleModel(parsed.data)
     newRole.save()
-    return res.status(201).json(new ApiResponse(201 , "created role" , newRole))
+    return res.status(201).json(new ApiResponse(201, "created role", newRole))
 })
 
-export const getRoles = asyncHandler(async (req , res)=>{
+export const getRoles = asyncHandler(async (req, res) => {
+    if (mongoose.connection.readyState !== 1) {
+        throw new ApiError(503, "Database unavailable");
+    }
     const roles = await RoleModel.find()
-    return res.status(200).json(new ApiResponse(200 , "got roles" , roles))
+    return res.status(200).json(new ApiResponse(200, "got roles", roles))
 })

@@ -40,7 +40,7 @@ const RoleSchema = new Schema(
 
     licenseType: {
       type: String,
-      required: function () {
+      required: function (this: any) {
         return this.requiresLicense === true;
       }
     },

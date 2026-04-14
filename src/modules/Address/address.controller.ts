@@ -19,8 +19,20 @@ export const addAddress = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Validation failed!")
     }
 
+    // Ensure HOME and WORK labels are unique for the user
+    if (["HOME", "WORK"].includes(parsed.data.label)) {
+        const existing = await UserAddressModel.findOne({
+            userId,
+            label: parsed.data.label,
+            isDeleted: false
+        });
+        if (existing) {
+            throw new ApiError(400, `You already have an address labeled as ${parsed.data.label}. Please edit the existing one or use OTHERS.`);
+        }
+    }
+
     const newAddress = new UserAddressModel(parsed.data)
-    newAddress.save()
+    await newAddress.save()
 
     //setting it as primary address
     await Patient.findByIdAndUpdate(userId, { $set: { primaryAddressId: newAddress._id } })
@@ -34,13 +46,17 @@ export const getUserAddresses = asyncHandler(async (req, res) => {
     if (!userId) {
         throw new ApiError(401, "Not authorized")
     }
+
+    if (mongoose.connection.readyState !== 1) {
+        throw new ApiError(503, "Database unavailable");
+    }
+
     const address = await UserAddressModel.find({ userId, isDeleted: false })
+    const patientSorted = await Patient.findById(userId).select('primaryAddressId').lean()
 
-    const patient = await Patient.findOne({_id:new mongoose.Types.ObjectId(userId)})
-
-    const allAddress = address.map(item=>({
-        ...item.toObject() , 
-        isPrimary: item._id.toString() === patient?.primaryAddressId?.toString()
+    const allAddress = address.map(item => ({
+        ...item.toObject(),
+        isPrimary: patientSorted?.primaryAddressId ? String(item._id) === String(patientSorted.primaryAddressId) : false
     }))
 
     return res.json(new ApiResponse(200, "addresses fetched", allAddress))
@@ -74,7 +90,7 @@ export const softDeleteAddress = asyncHandler(async (req, res) => {
         $set: { primaryAddressId: null },
     })
 
-    console.log("updating user id" , userWithAddress)
+    console.log("updating user id", userWithAddress)
 
     return res.json(new ApiResponse(200, "Address deleted successfully", address))
 })
@@ -92,6 +108,46 @@ export const makePrimaryAddress = asyncHandler(async (req, res) => {
         userId: new mongoose.Types.ObjectId(userId)
     })
     if (!checkAddress) throw new ApiError(404, "Address not exist")
-    const updateAddress = await Patient.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(userId) }, { $set: { primaryAddressId: new mongoose.Types.ObjectId(addressId) } })
-    return res.status(200).json(new ApiResponse(200 , "Primary address set" , updateAddress))
+    const updateAddressData = await Patient.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(userId) }, { $set: { primaryAddressId: new mongoose.Types.ObjectId(addressId) } })
+    return res.status(200).json(new ApiResponse(200, "Primary address set", updateAddressData))
+})
+
+export const updateAddress = asyncHandler(async (req, res) => {
+    const { addressId } = req.params
+    const userId = req.user?.id
+
+    const payload = {
+        ...req.body,
+        userId
+    }
+
+    const parsed = addressValidation.safeParse(payload)
+    if (!parsed.success) {
+        throw new ApiError(401, "Validation failed!")
+    }
+
+    // Ensure HOME and WORK labels are unique for the user when updating
+    if (["HOME", "WORK"].includes(parsed.data.label)) {
+        const existing = await UserAddressModel.findOne({
+            userId,
+            label: parsed.data.label,
+            isDeleted: false,
+            _id: { $ne: new mongoose.Types.ObjectId(addressId) }
+        });
+        if (existing) {
+            throw new ApiError(400, `An address with label ${parsed.data.label} already exists. Please choose a different label.`);
+        }
+    }
+
+    const updatedAddress = await UserAddressModel.findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(addressId), userId: new mongoose.Types.ObjectId(userId) },
+        { $set: parsed.data },
+        { new: true }
+    )
+
+    if (!updatedAddress) {
+        throw new ApiError(404, "Address not found")
+    }
+
+    return res.json(new ApiResponse(200, "Address updated successfully", updatedAddress))
 })

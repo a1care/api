@@ -24,7 +24,8 @@ export const protect = asyncHandler(
       console.log("date from protected route" , decoded)
 
        req.user = {
-        id:decoded.userId ?? decoded.staffId
+        id: decoded.userId ?? decoded.staffId,
+        role: decoded.userId ? 'Patient' : 'Staff'
        }
 
     // 4. Continue
