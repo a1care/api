@@ -762,10 +762,8 @@ export const listDoctors = asyncHandler(async (_req, res) => {
     throw new ApiError(503, "Database unavailable");
   }
 
-  const role = await RoleModel.findOne({ code: 'DOCTOR' });
-  const filter = role ? { roleId: role._id } : {};
-
-  const doctors = await Doctor.find(filter).sort({ createdAt: -1 });
+  // Fetch all providers from the Doctor collection (includes Doctors, Nurses, Physios, etc.)
+  const doctors = await Doctor.find({}).sort({ createdAt: -1 });
   return res.status(200).json(new ApiResponse(200, "Doctors fetched", doctors));
 });
 
