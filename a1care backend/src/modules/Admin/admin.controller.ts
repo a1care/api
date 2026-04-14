@@ -1687,7 +1687,9 @@ export const getDeletionRequests = asyncHandler(async (req, res) => {
   ]);
 
   console.log(`[DEBUG] Doctor Model Collection: ${Doctor.collection.name}`);
-  const rawStaffCount = await mongoose.connection.db.collection('staffs').countDocuments({ deletionRequested: true });
+  const db = mongoose.connection.db;
+  if (!db) throw new ApiError(500, "Database connection lost");
+  const rawStaffCount = await db.collection('staffs').countDocuments({ deletionRequested: true });
   console.log(`[DEBUG] Raw 'staffs' count: ${rawStaffCount}`);
   console.log(`[DEBUG] Model 'Doctor' count: ${staff.length}`);
 

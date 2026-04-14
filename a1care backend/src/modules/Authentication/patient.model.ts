@@ -1,7 +1,7 @@
 import mongoose, { Schema, model, Document } from "mongoose";
 
 export interface PatientDocument extends Document {
-  mobileNumber: number;
+  mobileNumber: string;
   name: string;
   email: string;
   profileImage: string;
@@ -23,7 +23,7 @@ export interface PatientDocument extends Document {
 const PatientSchema = new Schema<PatientDocument>(
   {
     mobileNumber: {
-      type: Number,
+      type: String,
       required: true,
       unique: true
     },
