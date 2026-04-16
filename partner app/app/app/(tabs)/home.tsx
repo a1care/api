@@ -204,9 +204,11 @@ export default function HomeScreen() {
     useEffect(() => {
         if (staffData) {
             setIsOnline(staffData.status === "Active");
-            setUser({ ...user, ...staffData }); // Sync to global store to unlock tabs/layout
+            setUser({ ...(user || {}), ...staffData }); // Sync to global store to unlock tabs/layout
         }
     }, [staffData]);
+
+    const ratingText = typeof staffData?.rating === "number" ? staffData.rating.toFixed(1) : "N/A";
 
     const [period, setPeriod] = useState<"thisMonth" | "lastMonth">("thisMonth");
 
@@ -241,7 +243,7 @@ export default function HomeScreen() {
             { label: "Bookings", value: bookings.length.toString(), icon: "calendar-outline", color: "#6366F1" },
             { label: "Earning", value: `₹${earnings}`, icon: "cash-outline", color: "#2D935C" },
             { label: "Completed", value: completed.toString(), icon: "checkmark-circle-outline", color: "#10B981" },
-            { label: "Rating", value: staffData?.rating ? staffData.rating.toFixed(1) : "N/A", icon: "star-outline", color: "#F59E0B" },
+            { label: "Rating", value: ratingText, icon: "star-outline", color: "#F59E0B" },
         ];
     }, [bookings, staffData]);
 
@@ -254,7 +256,7 @@ export default function HomeScreen() {
         try {
             const newStatus = val ? "Active" : "Inactive";
             await api.put("/doctor/auth/register", { status: newStatus });
-            setUser({ ...user, status: newStatus });
+            setUser({ ...(user || {}), status: newStatus });
             Toast.show({
                 type: "success",
                 text1: val ? "You are now Online" : "You are now Offline",

@@ -44,7 +44,7 @@ export default function BankDetailsScreen() {
         return () => backHandler.remove();
     }, []);
 
-    const filteredBanks = COMMON_BANKS.filter(b => b.toLowerCase().includes(bankSearch.toLowerCase()));
+    const filteredBanks = COMMON_BANKS.filter(b => String(b || "").toLowerCase().includes(String(bankSearch || "").toLowerCase()));
 
     const { isLoading } = useQuery({
         queryKey: ["bankStaffDetails"],
@@ -144,7 +144,7 @@ export default function BankDetailsScreen() {
                                         {form.bankName === b && <Ionicons name="checkmark-circle" size={20} color="#2D935C" />}
                                     </TouchableOpacity>
                                 ))}
-                                {bankSearch.trim() && !COMMON_BANKS.some(b => b.toLowerCase() === bankSearch.toLowerCase()) && (
+                                {bankSearch.trim() && !COMMON_BANKS.some(b => String(b || "").toLowerCase() === String(bankSearch || "").toLowerCase()) && (
                                     <TouchableOpacity style={styles.customAddBtn} onPress={() => { setForm({ ...form, bankName: bankSearch }); setShowBankDropdown(false); }}>
                                         <Text style={{ color: '#2D935C', fontWeight: '700' }}>Add "{bankSearch}" as bank</Text>
                                     </TouchableOpacity>

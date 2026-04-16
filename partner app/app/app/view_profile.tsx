@@ -31,7 +31,8 @@ export default function ViewProfileScreen() {
     }
 
     const data = staffData || user;
-    const roleLabel = data?.role?.name || data?.role || "Partner";
+    const roleLabel = String(data?.role?.name || data?.role || "Partner");
+    const safeSpecialization = Array.isArray(data?.specialization) ? data.specialization : [];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -68,7 +69,7 @@ export default function ViewProfileScreen() {
                     
                     <View style={styles.ratingRow}>
                         <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{data?.rating?.toFixed(1) || "0.0"}</Text>
+                            <Text style={styles.statValue}>{typeof data?.rating === "number" ? data.rating.toFixed(1) : "0.0"}</Text>
                             <Text style={styles.statLabel}>Rating</Text>
                         </View>
                         <View style={styles.statDivider} />
@@ -88,11 +89,11 @@ export default function ViewProfileScreen() {
                 )}
 
                 {/* Specialties */}
-                {data?.specialization && data.specialization.length > 0 && (
+                {safeSpecialization.length > 0 && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Specializations</Text>
                         <View style={styles.specContainer}>
-                            {data.specialization.map((spec: string, idx: number) => (
+                            {safeSpecialization.map((spec: string, idx: number) => (
                                 <View key={idx} style={styles.specChip}>
                                     <Text style={styles.specText}>{spec}</Text>
                                 </View>

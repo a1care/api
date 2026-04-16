@@ -75,7 +75,7 @@ export default function ProfileEditScreen() {
     }, []);
 
     const filteredSpecs = SPECIALIZATIONS.filter(s =>
-        s.toLowerCase().includes(specSearch.toLowerCase())
+        String(s || "").toLowerCase().includes(String(specSearch || "").toLowerCase())
     );
 
     const { data: staffData, isLoading } = useQuery({

@@ -121,13 +121,13 @@ export default function SubscriptionsScreen() {
                     <View style={styles.plansList}>
                         {loadingPlans ? (
                             <ActivityIndicator size="large" color="#2D935C" style={{ marginTop: 40 }} />
-                        ) : plansData?.length > 0 ? (
+                        ) : Array.isArray(plansData) && plansData.length > 0 ? (
                             plansData.map((plan: any) => (
                                 <View key={plan._id} style={[
                                     styles.planCard,
-                                    plan.tier === "Premium" && styles.premiumCard
+                                    plan?.tier === "Premium" && styles.premiumCard
                                 ]}>
-                                    {plan.tier === "Premium" && (
+                                    {plan?.tier === "Premium" && (
                                         <View style={styles.premiumBadge}>
                                             <Ionicons name="sparkles" size={14} color="#FFF" />
                                             <Text style={styles.premiumBadgeText}>BEST VALUE</Text>
@@ -135,12 +135,12 @@ export default function SubscriptionsScreen() {
                                     )}
 
                                     <View style={styles.planHeader}>
-                                        <Text style={[styles.planCategory, plan.tier === "Premium" && { color: "#FFF" }]}>
-                                            {plan.category?.toUpperCase()} • {plan.tier.toUpperCase()}
+                                        <Text style={[styles.planCategory, plan?.tier === "Premium" && { color: "#FFF" }]}>
+                                            {String(plan?.category || "Plan").toUpperCase()} • {String(plan?.tier || "Basic").toUpperCase()}
                                         </Text>
-                                        <Text style={[styles.planTitle, plan.tier === "Premium" && { color: "#FFF" }]}>{plan.name}</Text>
-                                        <Text style={[styles.planCommission, plan.tier === "Premium" ? { color: "rgba(255,255,255,0.8)" } : { color: "#059669" }]}>
-                                            Commission: {plan.commissionPercentage}% per booking
+                                        <Text style={[styles.planTitle, plan?.tier === "Premium" && { color: "#FFF" }]}>{plan?.name || "Subscription Plan"}</Text>
+                                        <Text style={[styles.planCommission, plan?.tier === "Premium" ? { color: "rgba(255,255,255,0.8)" } : { color: "#059669" }]}>
+                                            Commission: {plan?.commissionPercentage ?? 0}% per booking
                                         </Text>
                                     </View>
 
@@ -149,12 +149,12 @@ export default function SubscriptionsScreen() {
 
                                     <View style={styles.planBody}>
                                         <View>
-                                            <Text style={[styles.planPriceLabel, plan.tier === "Premium" && { color: "rgba(255,255,255,0.7)" }]}>Price</Text>
-                                            <Text style={[styles.planPrice, plan.tier === "Premium" && { color: "#FFF" }]}>₹{plan.price}</Text>
+                                            <Text style={[styles.planPriceLabel, plan?.tier === "Premium" && { color: "rgba(255,255,255,0.7)" }]}>Price</Text>
+                                            <Text style={[styles.planPrice, plan?.tier === "Premium" && { color: "#FFF" }]}>₹{plan?.price ?? 0}</Text>
                                         </View>
-                                        <View style={[styles.validityBox, plan.tier === "Premium" && { backgroundColor: "rgba(255,255,255,0.1)" }]}>
-                                            <Text style={[styles.validityText, plan.tier === "Premium" && { color: "#FFF" }]}>
-                                                {formatValidity(plan.validityDays)} Validity
+                                        <View style={[styles.validityBox, plan?.tier === "Premium" && { backgroundColor: "rgba(255,255,255,0.1)" }]}>
+                                            <Text style={[styles.validityText, plan?.tier === "Premium" && { color: "#FFF" }]}>
+                                                {formatValidity(Number(plan?.validityDays || 0))} Validity
                                             </Text>
                                         </View>
                                     </View>
@@ -163,7 +163,7 @@ export default function SubscriptionsScreen() {
                                         <TouchableOpacity
                                             style={[
                                                 styles.buyButton,
-                                                plan.tier === "Premium" && styles.premiumBuyButton,
+                                                plan?.tier === "Premium" && styles.premiumBuyButton,
                                                 mySub?.planId?._id === plan._id && styles.activePlanButton
                                             ]}
                                             onPress={() => buySubscription.mutate(plan._id)}
@@ -172,12 +172,12 @@ export default function SubscriptionsScreen() {
                                             {buySubscription.isPending ? (
                                                 <ActivityIndicator size="small" color="#FFF" />
                                             ) : (
-                                                <Text style={[styles.buyButtonText, plan.tier === "Premium" && { color: "#000" }]}>
+                                                <Text style={[styles.buyButtonText, plan?.tier === "Premium" && { color: "#000" }]}>
                                                     {mySub?.planId?._id === plan._id
                                                         ? "Current Plan"
                                                         : mySub?.status === "Pending" && mySub?.planId?._id === plan._id
                                                             ? "Pending Admin Approval"
-                                                            : plan.tier === "Basic"
+                                                            : String(plan?.tier || "Basic") === "Basic"
                                                                 ? "Activate Free"
                                                                 : "Request Activation"}
                                                 </Text>
@@ -185,13 +185,13 @@ export default function SubscriptionsScreen() {
                                         </TouchableOpacity>
 
                                         <TouchableOpacity
-                                            style={[styles.infoButton, plan.tier === "Premium" && styles.premiumInfoButton]}
+                                            style={[styles.infoButton, plan?.tier === "Premium" && styles.premiumInfoButton]}
                                             onPress={() => setSelectedPlanForFeatures(plan)}
                                         >
                                             <Ionicons
                                                 name="eye-outline"
                                                 size={24}
-                                                color={plan.tier === "Premium" ? "#FFF" : "#2D935C"}
+                                                color={plan?.tier === "Premium" ? "#FFF" : "#2D935C"}
                                             />
                                         </TouchableOpacity>
                                     </View>
@@ -209,7 +209,7 @@ export default function SubscriptionsScreen() {
                     <View style={styles.historyList}>
                         {loadingHistory ? (
                             <ActivityIndicator size="large" color="#2D935C" style={{ marginTop: 40 }} />
-                        ) : historyData?.length > 0 ? (
+                        ) : Array.isArray(historyData) && historyData.length > 0 ? (
                             historyData.map((item: any) => (
                                 <View key={item._id} style={[
                                     styles.planCard,
@@ -219,7 +219,7 @@ export default function SubscriptionsScreen() {
                                     <View style={styles.planHeader}>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Text style={[styles.planCategory, item.planId?.tier === "Premium" && { color: "#FFF" }]}>
-                                                {item.planId?.tier?.toUpperCase()} PLAN
+                                                {String(item.planId?.tier || "Basic").toUpperCase()} PLAN
                                             </Text>
                                             <View style={[styles.statusTag, { backgroundColor: item.status === "Active" ? "#DCFCE7" : item.status === "Pending" ? "#FEF3C7" : "#F1F5F9" }]}>
                                                 <Text style={[styles.statusTagText, { color: item.status === "Active" ? "#166534" : item.status === "Pending" ? "#D97706" : "#64748B" }]}>
@@ -229,7 +229,7 @@ export default function SubscriptionsScreen() {
                                         </View>
                                         <Text style={[styles.planTitle, item.planId?.tier === "Premium" && { color: "#FFF" }]}>{item.planId?.name || "Premium Plan"}</Text>
                                         <Text style={[styles.historyDates, item.planId?.tier === "Premium" ? { color: "rgba(255,255,255,0.6)" } : { color: "#64748B" }]}>
-                                            {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
+                                            {item.startDate ? new Date(item.startDate).toLocaleDateString() : "N/A"} - {item.endDate ? new Date(item.endDate).toLocaleDateString() : "N/A"}
                                         </Text>
                                     </View>
 

@@ -61,19 +61,22 @@ export default function PartnerNotificationsScreen() {
     });
 
     useEffect(() => {
-        if (data?.notifications) {
+        if (Array.isArray(data?.notifications)) {
             setLocalList(data.notifications);
+        } else {
+            setLocalList([]);
         }
     }, [data]);
 
-    const unreadCount = localList.filter(n => !n.isRead).length;
+    const safeList = Array.isArray(localList) ? localList : [];
+    const unreadCount = safeList.filter(n => !n.isRead).length;
 
     // Mutations
     const markAllMutation = useMutation({
         mutationFn: () => api.put('/notifications/read-all'),
         onMutate: () => {
             setLocalList(prev => prev.map(n => ({ ...n, isRead: true })));
-            qc.setQueryData(['partner_notifications'], (prev: any) => prev ? { ...prev, unreadCount: 0, notifications: (prev.notifications || []).map((n: any) => ({ ...n, isRead: true })) } : prev);
+            qc.setQueryData(['partner_notifications'], (prev: any) => prev ? { ...prev, unreadCount: 0, notifications: Array.isArray(prev.notifications) ? prev.notifications.map((n: any) => ({ ...n, isRead: true })) : [] } : prev);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['partner_notifications'] });
@@ -131,7 +134,7 @@ export default function PartnerNotificationsScreen() {
     };
 
     const handleClearAll = () => {
-        if (localList.length === 0) return;
+        if (safeList.length === 0) return;
         Alert.alert(
             "Clear Notifications",
             "Delete all notifications forever?",
@@ -153,9 +156,9 @@ export default function PartnerNotificationsScreen() {
                     <Text style={styles.headerSub}>{unreadCount > 0 ? `${unreadCount} new alerts` : 'No unread alerts'}</Text>
                 </View>
                 <TouchableOpacity 
-                    style={[styles.clearBtn, localList.length === 0 && { opacity: 0.5 }]} 
+                    style={[styles.clearBtn, safeList.length === 0 && { opacity: 0.5 }]}
                     onPress={handleClearAll}
-                    disabled={localList.length === 0 || clearAllMutation.isPending}
+                    disabled={safeList.length === 0 || clearAllMutation.isPending}
                 >
                     {clearAllMutation.isPending ? <ActivityIndicator size="small" color="#EF4444" /> : <Text style={styles.clearBtnText}>Clear All</Text>}
                 </TouchableOpacity>
@@ -170,8 +173,8 @@ export default function PartnerNotificationsScreen() {
                     contentContainerStyle={styles.list}
                     refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2D935C" />}
                 >
-                    {localList.length > 0 ? (
-                        localList.map((n) => {
+                    {safeList.length > 0 ? (
+                        safeList.map((n) => {
                             const meta = getMeta(n.refType);
                             return (
                                 <TouchableOpacity 

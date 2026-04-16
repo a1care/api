@@ -12,6 +12,8 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-ico
 export default function ProfileScreen() {
     const { user, logout } = useAuthStore() as any;
     const router = useRouter();
+    const safeRole = String(user?.role || "Partner");
+    const safeRoleLabel = safeRole ? safeRole.charAt(0).toUpperCase() + safeRole.slice(1) : "Partner";
 
     const { data: staffData, isLoading: loadingStaff } = useQuery({
         queryKey: ["profileStaffDetails"],
@@ -20,6 +22,12 @@ export default function ProfileScreen() {
             return res.data.data;
         }
     });
+
+    const safeDocuments = Array.isArray(staffData?.documents)
+        ? staffData.documents
+        : Array.isArray(user?.documents)
+            ? user.documents
+            : [];
 
     const { data: bookings = [], refetch: refetchBookings } = useQuery({
         queryKey: ["profileBookings"],
@@ -110,7 +118,7 @@ export default function ProfileScreen() {
                     <View style={styles.userInfoText}>
                         <Text style={styles.greetingText}>Hello, {user?.name ?? "Partner"}</Text>
                         <Text style={styles.infoSubText}>Mobile: {user?.mobileNumber ?? "—"}</Text>
-                        <Text style={styles.infoSubText}>{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) + " A1care Partner" : "A1care Partner"}</Text>
+                        <Text style={styles.infoSubText}>{safeRoleLabel} A1care Partner</Text>
                     </View>
                     <View style={styles.avatarPlaceholder}>
                         {staffData?.profileImage || user?.profileImage ? (
@@ -192,9 +200,9 @@ export default function ProfileScreen() {
                 <View style={styles.docsContainer}>
                     {loadingStaff ? (
                         <ActivityIndicator size="small" color="#2D935C" />
-                    ) : (staffData?.documents || user?.documents)?.length > 0 ? (
+                    ) : safeDocuments.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 5 }}>
-                            {(staffData?.documents || user?.documents).map((doc: any, idx: number) => (
+                            {safeDocuments.map((doc: any, idx: number) => (
                                 <TouchableOpacity key={idx} style={styles.docItem} onPress={() => { setSelectedDoc(doc); setShowDocModal(true); }}>
                                     <View style={styles.docIconBox}>
                                         {doc.url?.match(/\.(jpg|jpeg|png|webp)/i) ? (
