@@ -33,7 +33,7 @@ export const createDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Validation Falied!")
   }
 
-  const newDoctor = new doctorModel(payload)
+  const newDoctor = new doctorModel(parsed.data)
   await newDoctor.save()
   return res.status(201).json(new ApiResponse(201, "Hurray..! Doctor created.", newDoctor))
 })
@@ -51,7 +51,11 @@ export const getStaffByRoleId = asyncHandler(async (req, res) => {
   if (!roleId) throw new ApiError(404, "Role id is missing")
 
   const roleIds = (roleId as string).split(',').map(id => id.trim());
-  const query: any = { roleId: { $in: roleIds }, status: 'Active' };
+  const query: any = {
+    roleId: { $in: roleIds },
+    status: 'Active',
+    name: { $exists: true, $type: 'string', $ne: '' }
+  };
 
   if (specialization) {
     query.specialization = { $in: [(specialization as string).trim()] };
@@ -279,7 +283,6 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
   await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
   return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
 });
-
 export const requestDeletionStaff = asyncHandler(async (req, res) => {
   const staffId = req.user?.id;
   const staff = await doctorModel.findById(staffId);
