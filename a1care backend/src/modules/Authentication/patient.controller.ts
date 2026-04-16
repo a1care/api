@@ -1,34 +1,38 @@
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { Patient } from "./patient.model.js";
 import { patientValidation } from "./patient.schema.js";
-import mongoose from 'mongoose';
-import { enqueueEmail } from "../../queues/communicationQueue.js";
+import mongoose from "mongoose";
+import { enqueueEmail, enqueueSms } from "../../queues/communicationQueue.js";
 import { formatZodError } from "../../utils/formatZodError.js";
-import sendAlotsSms from "../../utils/alotsSms.js";
 import RedisClient from "../../configs/redisConnect.js";
-import { enqueueSms } from "../../queues/communicationQueue.js";
 
-// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-// const DEV_BYPASS_OTP = "123456";
-// ─────────────────────────────────────────────────────────────────────────────
+const TEST_MOBILE_NUMBER = "8309470360";
+const TEST_OTP = "123456";
+
+const normalizeMobileNumber = (mobileNumber: string) =>
+  String(mobileNumber || "")
+    .replace(/^\+91/, "")
+    .replace(/\D/g, "")
+    .slice(-10);
+
+const isTestOtpLogin = (mobileNumber: string, otp?: string | number) =>
+  normalizeMobileNumber(mobileNumber) === TEST_MOBILE_NUMBER && String(otp) === TEST_OTP;
 
 export const getPatientDetailsById = asyncHandler(async (req, res) => {
-  const patientId = req.user?.id
+  const patientId = req.user?.id;
 
   if (mongoose.connection.readyState !== 1) {
     throw new ApiError(503, "Database unavailable");
   }
 
-  const userDetails = await Patient.findById(patientId).populate('primaryAddressId')
+  const userDetails = await Patient.findById(patientId).populate("primaryAddressId");
 
-  if (userDetails) return res.status(200).json(new ApiResponse(200, "data fetched", userDetails))
-  else {
-    throw new ApiError(404, "No user found")
-  }
-})
+  if (userDetails) return res.status(200).json(new ApiResponse(200, "data fetched", userDetails));
+  throw new ApiError(404, "No user found");
+});
 
 export const sentOtpForPatient = asyncHandler(async (req, res) => {
   const { mobileNumber } = req.body;
@@ -36,53 +40,85 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Mobile number is required");
   }
 
-  const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
-  
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const cleanMobile = normalizeMobileNumber(mobileNumber);
 
-  // Store in Redis with 10-minute expiry
+  if (!cleanMobile) {
+    throw new ApiError(400, "Valid mobile number is required");
+  }
+
+  if (cleanMobile === TEST_MOBILE_NUMBER) {
+    await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, TEST_OTP);
+    return res.status(200).json(
+      new ApiResponse(200, "OTP sent successfully", {
+        mobileNumber: cleanMobile,
+        otp: TEST_OTP,
+      })
+    );
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, otp);
 
-  // Send via Alots (Background Queue)
   console.log(`[Patient OTP] Enqueueing ${otp} for ${cleanMobile}`);
   await enqueueSms({ mobileNumber: cleanMobile, otp });
 
   return res.status(200).json(
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
   );
-})
+});
 
-// verify otp 
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
-  const { idToken, mobileNumber, otp } = req.body
+  const { mobileNumber, otp } = req.body;
+  const cleanMobile = normalizeMobileNumber(mobileNumber);
 
-  // ─── DEV BYPASS CHECK (Enabled for Development) ──────────────────────────
-  const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
+  if (!cleanMobile) {
+    throw new ApiError(400, "Mobile number is required");
+  }
 
-  // if (String(otp) === DEV_BYPASS_OTP) {
-  //    ...
-  // }
-  // ─────────────────────────────────────────────────────────────────────────────
+  if (isTestOtpLogin(cleanMobile, otp)) {
+    console.log(`[OTP] Patient test OTP accepted for: ${cleanMobile}`);
+    await RedisClient.del(`otp:patient:${cleanMobile}`).catch(() => undefined);
 
-  // Check Redis for manual OTP if provided
+    let patient = await Patient.findOne({
+      mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] },
+    });
+
+    if (patient && patient.isDeleted) {
+      const originalMobile = patient.mobileNumber;
+      patient.mobileNumber = `${originalMobile}_deleted_${Date.now()}`;
+      await patient.save();
+      patient = null;
+    }
+
+    if (!patient) {
+      patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
+      await patient.save();
+    }
+
+    const token = jwt.sign(
+      { mobileNumber: patient.mobileNumber, userId: patient._id },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json(new ApiResponse(200, "Verification successful", { token }));
+  }
+
   if (otp && cleanMobile) {
     const storedOtp = await RedisClient.get(`otp:patient:${cleanMobile}`);
     if (storedOtp && String(storedOtp) === String(otp)) {
-      console.log(`[OTP] ✅ Patient verified via Redis for: ${cleanMobile}`);
-      
-      // Cleanup OTP
+      console.log(`[OTP] Patient verified via Redis for: ${cleanMobile}`);
+
       await RedisClient.del(`otp:patient:${cleanMobile}`);
 
       let patient = await Patient.findOne({
-        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
+        mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] },
       });
       if (patient && patient.isDeleted) {
-        // User wants a fresh start. Rename old mobile to free up prefix and create new record.
         const originalMobile = patient.mobileNumber;
         patient.mobileNumber = `${originalMobile}_deleted_${Date.now()}`;
         await patient.save();
-        patient = null; 
+        patient = null;
       }
 
       if (!patient) {
@@ -98,29 +134,23 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
       return res.status(200).json(new ApiResponse(200, "Verification successful", { token }));
     } else if (storedOtp) {
-       throw new ApiError(400, "Invalid OTP provided.");
+      throw new ApiError(400, "Invalid OTP provided.");
     }
   }
 
-  // If we reach here, no OTP was provided or matched
   throw new ApiError(400, "Valid OTP is required for login.");
-})
+});
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  // 1. Validate input
-  console.log("this is the body we are getting..", req.body)
+  console.log("this is the body we are getting..", req.body);
   const parsed = patientValidation.safeParse(req.body);
   if (!parsed.success) {
-    throw new ApiError(
-      400,
-      formatZodError(parsed.error)
-    );
+    throw new ApiError(400, formatZodError(parsed.error));
   }
 
   const patientId = req.user?.id;
   console.log("[UpdateProfile] Patient ID:", patientId, "Parsed Data:", parsed.data);
 
-  // 3. Update profile
   const updatedPatient = await Patient.findByIdAndUpdate(
     { _id: patientId },
     {
@@ -132,21 +162,19 @@ export const updateProfile = asyncHandler(async (req, res) => {
         dateOfBirth: parsed.data.dateOfBirth,
         location: parsed.data.location,
         fcmToken: parsed.data.fcmToken || null,
-        isRegistered: true
-      }
+        isRegistered: true,
+      },
     },
     {
       new: true,
-      runValidators: true
+      runValidators: true,
     }
   );
 
-  // 4. Handle not found
   if (!updatedPatient) {
     throw new ApiError(404, "Patient not found");
   }
 
-  // 5. Send Welcome Email if registering for first time
   if (updatedPatient.email && !parsed.data.isRegistered) {
     try {
       await enqueueEmail({
@@ -161,10 +189,9 @@ export const updateProfile = asyncHandler(async (req, res) => {
     }
   }
 
-  // 6. Respond
   res.status(200).json({
     success: true,
-    data: updatedPatient
+    data: updatedPatient,
   });
 });
 
