@@ -127,7 +127,7 @@ export function ServiceSubServicesPage() {
                     <div className="card p-6 border-none shadow-sm" style={{ borderRadius: '24px' }}>
                         <div className="flex items-center gap-2 mb-6">
                             <Filter size={14} className="text-blue-600" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sector Selection</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Category Selection</span>
                         </div>
                         <div className="flex-col gap-2">
                             {categories?.map(cat => (
@@ -160,7 +160,7 @@ export function ServiceSubServicesPage() {
                     {!selectedCatId ? (
                         <div className="p-20 text-center card-ghost">
                             <Layers size={48} className="mx-auto mb-4 opacity-20" />
-                            <p className="font-bold text-slate-400">Select a primary sector to view its organizational units</p>
+                            <p className="font-bold text-slate-400">Select a primary category to view its organizational units</p>
                         </div>
                     ) : (
                         <div className="grid-2">
@@ -203,7 +203,7 @@ export function ServiceSubServicesPage() {
                                 </article>
                             ))}
                             {filtered?.length === 0 && !isLoading && (
-                                <div className="col-span-2 text-center py-20 opacity-50 font-bold">No units found in this sector.</div>
+                                <div className="col-span-2 text-center py-20 opacity-50 font-bold">No units found in this category.</div>
                             )}
                         </div>
                     )}

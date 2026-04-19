@@ -260,10 +260,10 @@ export function DoctorStaffManagementPage() {
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Inventory</span>
                         <ChevronRight size={10} className="text-slate-300" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Providers</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Doctors</span>
                     </div>
-                    <h1 className="brand-name" style={{ fontSize: '2rem', letterSpacing: '-0.03em' }}>Service Providers</h1>
-                    <p className="text-xs muted font-bold uppercase tracking-wider mt-1">Review credentials and verify partner network</p>
+                    <h1 className="brand-name" style={{ fontSize: '2rem', letterSpacing: '-0.03em' }}>Doctor Registry</h1>
+                    <p className="text-xs muted font-bold uppercase tracking-wider mt-1">Review credentials and verify specialized partner network</p>
                 </div>
                 <div className="flex gap-2">
                     <button className="button secondary shadow-sm px-4 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => toast.info("Displaying recent provider audit telemetry.")}>
@@ -272,19 +272,19 @@ export function DoctorStaffManagementPage() {
                     </button>
                     <button className="button primary shadow-lg h-11 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => setIsAddModalOpen(true)}>
                         <Plus size={16} />
-                        <span>Add Provider</span>
+                        <span>Add Doctor</span>
                     </button>
                 </div>
             </header>
 
             <div className="card p-0 overflow-hidden shadow-xl shadow-slate-200/50" style={{ border: 'none', borderRadius: '24px' }}>
                 <div className="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
-                    <div className="relative group w-full md:w-[420px]">
-                        <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <div className="relative flex-1 group">
+                        <Search className="absolute text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
                         <input
-                            placeholder="Search by name, phone or specialty..."
-                            className="w-full bg-[var(--bg-main)] border-none text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
-                            style={{ paddingLeft: '60px', height: '56px', borderRadius: '18px' }}
+                            placeholder="Search doctor registry by name, mobile or city..."
+                            className="w-full bg-[var(--bg-main)] border-none font-semibold text-slate-700"
+                            style={{ paddingLeft: '60px', height: '56px', borderRadius: '16px' }}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

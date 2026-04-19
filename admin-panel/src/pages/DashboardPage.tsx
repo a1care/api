@@ -29,7 +29,6 @@ export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"appointments" | "services">("appointments");
   const [sortField, setSortField] = useState<string>("stats.total");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
   // --- Data Fetching ---
   const { data: overview, isLoading: isOverviewLoading } = useQuery({
@@ -60,7 +59,7 @@ export function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center p-20 space-y-4">
         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-        <p className="font-bold text-slate-500 animate-pulse">Synchronizing operational intelligence...</p>
+        <p className="font-bold text-slate-500 animate-pulse">Loading dashboard analytics...</p>
       </div>
     );
   }
@@ -108,10 +107,10 @@ export function DashboardPage() {
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Network Command</span>
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">System Status</span>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Administrative Intelligence</h1>
-          <p className="text-slate-500 font-medium text-lg">Operational command center for global A1Care systems.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Admin Dashboard</h1>
+          <p className="text-slate-500 font-medium text-lg">Central control center for A1Care healthcare network.</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -129,23 +128,15 @@ export function DashboardPage() {
 
       {/* KPI Intelligence Cluster */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-5">
-        <StatCard title="Total Patients" value={kpis?.patients} icon={Users} color="blue" onClick={() => setSelectedMetric("Patients")} />
-        <StatCard title="Active Staff" value={kpis?.activeStaff} icon={Stethoscope} color="indigo" onClick={() => setSelectedMetric("Doctors")} />
-        <StatCard title="Pending Verif" value={kpis?.pendingVerifications} icon={ShieldCheck} color="amber" onClick={() => setSelectedMetric("Verifications")} />
-        <StatCard title="Total Volume" value={kpis?.totalBookings} icon={Calendar} color="sky" onClick={() => setSelectedMetric("Bookings")} />
-        <StatCard title="Today Rev" value={kpis?.revenue?.today ? `₹${kpis.revenue.today.toLocaleString()}` : "₹0"} icon={TrendingUp} color="emerald" onClick={() => setSelectedMetric("Revenue Today")} />
-        <StatCard title="Monthly Rev" value={kpis?.revenue?.month ? `₹${kpis.revenue.month.toLocaleString()}` : "₹0"} icon={CreditCard} color="blue" onClick={() => setSelectedMetric("Revenue Month")} />
-        <StatCard title="Total Assets" value={kpis?.revenue?.total ? `₹${kpis.revenue.total.toLocaleString()}` : "₹0"} icon={Activity} color="slate" onClick={() => setSelectedMetric("Revenue Total")} />
+        <StatCard title="Total Patients" value={kpis?.patients} icon={Users} color="blue" onClick={() => navigate("/manage-patients")} />
+        <StatCard title="Active Staff" value={kpis?.activeStaff} icon={Stethoscope} color="indigo" onClick={() => navigate("/manage-doctors")} />
+        <StatCard title="Pending Verif" value={kpis?.pendingVerifications} icon={ShieldCheck} color="amber" onClick={() => navigate("/kyc-verification")} />
+        <StatCard title="Total Volume" value={kpis?.totalBookings} icon={Calendar} color="sky" onClick={() => navigate("/bookings")} />
+        <StatCard title="Today Rev" value={kpis?.revenue?.today ? `₹${kpis.revenue.today.toLocaleString()}` : "₹0"} icon={TrendingUp} color="emerald" onClick={() => navigate("/payment-logs")} />
+        <StatCard title="Monthly Rev" value={kpis?.revenue?.month ? `₹${kpis.revenue.month.toLocaleString()}` : "₹0"} icon={CreditCard} color="blue" onClick={() => navigate("/payment-logs")} />
+        <StatCard title="Total Assets" value={kpis?.revenue?.total ? `₹${kpis.revenue.total.toLocaleString()}` : "₹0"} icon={Activity} color="slate" onClick={() => navigate("/payment-logs")} />
       </section>
 
-      {/* Metric Detail Overlay System */}
-      {selectedMetric && (
-        <MetricDetailModal 
-          metric={selectedMetric} 
-          data={overview} 
-          onClose={() => setSelectedMetric(null)} 
-        />
-      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Left Column: Bookings Overview & Activity */}
@@ -157,8 +148,8 @@ export function DashboardPage() {
               <div className="flex items-center gap-4">
                 <div className="w-2 h-8 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)]"></div>
                 <div>
-                  <h2 className="text-2xl font-black tracking-tight text-slate-900">Distribution Matrix</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time status allocation</p>
+                  <h2 className="text-2xl font-black tracking-tight text-slate-900">Booking Statistics</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time status distribution</p>
                 </div>
               </div>
               <div className="flex p-1.5 bg-slate-100/50 backdrop-blur-sm rounded-2xl border border-slate-200/50">
@@ -166,19 +157,23 @@ export function DashboardPage() {
                   onClick={() => setActiveTab("appointments")}
                   className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'appointments' ? 'bg-white shadow-lg text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-800'}`}
                 >
-                  Doctor Intel
+                  Appointments
                 </button>
                 <button 
                   onClick={() => setActiveTab("services")}
                   className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'services' ? 'bg-white shadow-lg text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-800'}`}
                 >
-                  Service Core
+                  Services
                 </button>
               </div>
             </div>
             <div className="p-10 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {(activeTab === "appointments" ? bookings?.appointments : bookings?.services)?.map((status: any) => (
-                <div key={status._id} className="p-6 bg-slate-50/50 border border-slate-100 rounded-[28px] text-center group/item hover:bg-white hover:border-blue-200 transition-all duration-500 cursor-default shadow-sm hover:shadow-xl hover:-translate-y-1">
+                <div 
+                  key={status._id} 
+                  onClick={() => navigate(activeTab === "appointments" ? `/op-bookings?status=${status._id}` : `/bookings?status=${status._id}`)}
+                  className="p-6 bg-slate-50/50 border border-slate-100 rounded-[28px] text-center group/item hover:bg-white hover:border-blue-200 transition-all duration-500 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1"
+                >
                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 group-hover/item:text-blue-500 transition-colors">{status._id || "NEW"}</div>
                    <div className="text-3xl font-black text-slate-900 group-hover/item:scale-110 transition-transform duration-500">{status.count}</div>
                 </div>
@@ -201,15 +196,15 @@ export function DashboardPage() {
                <div className="flex items-center gap-4">
                 <div className="w-2 h-8 bg-slate-900 rounded-full"></div>
                 <div>
-                  <h2 className="text-2xl font-black tracking-tight text-slate-900">Activity Analytics</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global transaction stream</p>
+                  <h2 className="text-2xl font-black tracking-tight text-slate-900">Recent Activity</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Latest network transactions</p>
                 </div>
               </div>
               <button 
                 onClick={() => navigate("/audit-logs")}
                 className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-slate-200"
               >
-                Audit Full Protocol
+                View Full Audit
               </button>
             </div>
             <div className="overflow-x-auto">
@@ -306,7 +301,7 @@ export function DashboardPage() {
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-[80px] -ml-20 -mb-20"></div>
               
               <div className="relative z-10">
-                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-6">Network Diagnostics</h4>
+                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-6">System Health</h4>
                 <div className="space-y-8">
                   <div className="group/metric">
                      <div className="flex justify-between text-xs font-black mb-3">
@@ -331,7 +326,7 @@ export function DashboardPage() {
                   onClick={() => navigate("/audit-health-vault")}
                   className="w-full mt-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95"
                 >
-                  Launch deep diagnostics
+                  View System Audit
                 </button>
               </div>
            </div>
@@ -346,8 +341,8 @@ export function DashboardPage() {
                <Stethoscope size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black tracking-tight">Doctor Productivity Portfolio</h2>
-              <p className="text-sm text-slate-500 font-medium">Performance analytics and engagement metrics per provider.</p>
+              <h2 className="text-2xl font-black tracking-tight">Doctor Performance</h2>
+              <p className="text-sm text-slate-500 font-medium">Performance analytics and booking volume per provider.</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -463,13 +458,16 @@ function StatCard({ title, value, icon: Icon, color, onClick }: { title: string,
        </div>
        <div className="space-y-1">
          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none mb-1">{title}</p>
-         <h2 className="text-2xl font-black text-slate-900 truncate leading-none py-1">{value?.toLocaleString() || "0"}</h2>
+         <h2 className="text-2xl font-black text-slate-900 truncate leading-none py-1">
+           {typeof value === 'number' ? value.toLocaleString() : (value || "0")}
+         </h2>
        </div>
     </article>
   );
 }
 
-function AlertItem({ title, count, icon: Icon, description, color, link }: { title: string, count: number, icon: any, description: string, color: string, link?: string }) {
+function AlertItem({ title, count, icon: Icon, description, color, link }: { title: string, count: number, icon: any, description: string, color: string, link: string }) {
+  const navigate = useNavigate();
   const colors: any = {
     amber: "bg-amber-50 text-amber-600 border-amber-100",
     blue: "bg-blue-50 text-blue-600 border-blue-100",
@@ -483,7 +481,10 @@ function AlertItem({ title, count, icon: Icon, description, color, link }: { tit
   };
 
   return (
-    <a href={link} className={`block p-4 bg-white border rounded-2xl shadow-sm hover:shadow-md transition-all group ${count > 0 ? 'border-l-4 border-l-' + color + '-500' : 'opacity-70 grayscale-[0.5]'}`}>
+    <button 
+      onClick={() => navigate(link)}
+      className={`w-full text-left block p-4 bg-white border rounded-2xl shadow-sm hover:shadow-md transition-all group ${count > 0 ? 'border-l-4 border-l-' + color + '-500' : 'opacity-70 grayscale-[0.5]'}`}
+    >
        <div className="flex items-center justify-between mb-2">
          <div className={`w-10 h-10 ${colors[color]} border rounded-xl flex items-center justify-center`}>
            <Icon size={20} />
@@ -497,93 +498,8 @@ function AlertItem({ title, count, icon: Icon, description, color, link }: { tit
        </div>
        <div className="font-bold text-sm text-slate-900">{title}</div>
        <p className="text-[10px] font-medium text-slate-500 mt-1">{description}</p>
-    </a>
+    </button>
   );
 }
 
-function MetricDetailModal({ metric, data, onClose }: { metric: string, data: any, onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-300">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-4">
-             <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-               <Activity size={24} />
-             </div>
-             <div>
-               <h3 className="text-2xl font-black text-slate-900 tracking-tight">{metric} Intelligence</h3>
-               <p className="text-sm font-medium text-slate-500">Real-time deep dive into network metrics.</p>
-             </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="w-10 h-10 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-xl flex items-center justify-center transition-all border border-slate-200 shadow-sm"
-          >
-            <XCircle size={20} />
-          </button>
-        </div>
-
-        <div className="p-8 max-h-[60vh] overflow-y-auto">
-          {metric.includes("Revenue") ? (
-             <div className="space-y-6">
-                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-3xl">
-                  <div className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">Total Validated Income</div>
-                  <div className="text-4xl font-black text-emerald-900">₹{data?.kpis?.revenue?.total?.toLocaleString()}</div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 text-center">Avg Transaction</div>
-                     <div className="text-xl font-black text-slate-900 text-center">₹3,420</div>
-                   </div>
-                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 text-center">Growth Rate</div>
-                     <div className="text-xl font-black text-emerald-600 text-center">+12.4%</div>
-                   </div>
-                </div>
-             </div>
-          ) : metric === "Patients" ? (
-            <div className="space-y-6">
-               <div className="flex items-center justify-between p-6 bg-blue-50 border border-blue-100 rounded-3xl">
-                 <div>
-                    <div className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">Total Registered</div>
-                    <div className="text-4xl font-black text-blue-900">{data?.kpis?.patients}</div>
-                 </div>
-                 <Users size={48} className="text-blue-200" />
-               </div>
-               <div className="space-y-3">
-                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Registration Trends</h4>
-                 <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between group hover:bg-white hover:border-blue-200 border border-transparent transition-all">
-                    <span className="text-sm font-bold text-slate-700">Last 7 Days</span>
-                    <span className="text-sm font-black text-blue-600">+8 new</span>
-                 </div>
-                 <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between group hover:bg-white hover:border-blue-200 border border-transparent transition-all">
-                    <span className="text-sm font-bold text-slate-700">Returning Patients</span>
-                    <span className="text-sm font-black text-slate-900">64%</span>
-                 </div>
-               </div>
-            </div>
-          ) : (
-            <div className="py-20 text-center">
-               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                 <Search size={32} className="text-slate-200" />
-               </div>
-               <p className="text-lg font-bold text-slate-400 italic font-mono italic">Advanced telemetry for "{metric}" is synchronizing...</p>
-               <p className="text-sm text-slate-400 mt-2">Checking global network nodes for real-time distribution.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-           <p className="text-xs font-medium text-slate-500">Live operational data synced at {new Date().toLocaleTimeString()}</p>
-           <button 
-             onClick={onClose}
-             className="px-6 py-2.5 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-all shadow-lg"
-           >
-             Close Intel
-           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 

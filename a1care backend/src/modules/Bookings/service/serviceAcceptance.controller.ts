@@ -40,7 +40,7 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         .findById(serviceRequestId)
         .populate("userId");
 
-    if (!serviceRequestDetails || serviceRequestDetails.status !== "PENDING") {
+    if (!serviceRequestDetails || !["PENDING", "BROADCASTED"].includes(serviceRequestDetails.status)) {
         throw new ApiError(404, "Service Request not found or already accepted");
     }
 

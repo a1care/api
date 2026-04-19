@@ -225,9 +225,13 @@ export function PayoutsPage() {
                                     <div className="flex gap-4 mt-12">
                                         <button 
                                             onClick={() => {
-                                                if (window.confirm("Authorize full settlement of ₹" + payout.amount + "?")) {
-                                                    updateStatusMutation.mutate({ id: payout._id, status: 'COMPLETED' });
-                                                }
+                                                toast.info("Confirm Settlement?", {
+                                                    description: "Authorize full disbursement of ₹" + payout.amount + "?",
+                                                    action: {
+                                                        label: "Authorize",
+                                                        onClick: () => updateStatusMutation.mutate({ id: payout._id, status: 'COMPLETED' })
+                                                    }
+                                                });
                                             }}
                                             className="flex-1 bg-slate-900 hover:bg-black text-white h-16 rounded-[24px] font-black text-[12px] uppercase tracking-widest shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 active:scale-95"
                                         >

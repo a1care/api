@@ -159,14 +159,14 @@ export function ServiceChildServicesPage() {
                     <div className="card p-6 border-none shadow-sm" style={{ borderRadius: '24px' }}>
                         <div className="flex items-center gap-2 mb-4">
                             <LayoutGrid size={14} className="text-blue-600" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sector</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Category</span>
                         </div>
                         <select 
                             className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-xs font-bold mb-6 outline-none"
                             value={activeCatId}
                             onChange={(e) => setActiveCatId(e.target.value)}
                         >
-                            <option value="">Select Sector...</option>
+                            <option value="">Select Category...</option>
                             {categories?.map(cat => (
                                 <option key={cat._id} value={cat._id}>{cat.name.replace(/SELECT|ASSIGN/g, "")}</option>
                             ))}
@@ -177,7 +177,7 @@ export function ServiceChildServicesPage() {
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sub-Category</span>
                         </div>
                         <div className="flex-col gap-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                            {!activeCatId && <p className="text-[10px] text-slate-400 italic">Select a sector first</p>}
+                            {!activeCatId && <p className="text-[10px] text-slate-400 italic">Select a category first</p>}
                             {subServices?.map(sub => (
                                 <button
                                     key={sub._id}

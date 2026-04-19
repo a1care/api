@@ -1,4 +1,5 @@
 import { useState, useDeferredValue } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Clock, CheckCircle2, XCircle, User, Calendar, MapPin, CreditCard, Briefcase, ChevronRight, Search, Filter, Eye, Check, CheckCheck, X, RefreshCw, Loader2 } from "lucide-react";
@@ -32,11 +33,12 @@ interface HospitalBooking extends BaseBooking {
 }
 
 export function BookingOperationsPage() {
+    const [searchParams] = useSearchParams();
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<"doctors" | "services" | "hospital">("doctors");
     const [searchQuery, setSearchQuery] = useState("");
 
-    const [statusFilter, setStatusFilter] = useState("All");
+    const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "All");
     const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     
@@ -230,10 +232,10 @@ export function BookingOperationsPage() {
     });
 
     return (
-        <div className="space-y-8 animate-in">
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-8 rounded-3xl shadow-sm border border-[var(--border-color)]">
-                <div className="space-y-2">
-                    <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)]">Booking Desk</h1>
+        <div className="space-y-8 animate-in text-left items-start">
+            <header className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-8 rounded-3xl shadow-sm border border-[var(--border-color)] text-left items-start">
+                <div className="space-y-2 text-left items-start">
+                    <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)]">Service Orders</h1>
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-50 dark:bg-green-500/100 rounded-full animate-pulse"></span>
                         <p className="text-sm font-medium text-[var(--text-muted)] tracking-wide">LIVE OPERATIONS MONITOR</p>
@@ -272,13 +274,13 @@ export function BookingOperationsPage() {
                             onClick={() => setActiveTab("services")}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === "services" ? "bg-[var(--card-bg)] text-blue-600 dark:text-blue-400 shadow-sm scale-100" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}
                         >
-                            Service Tasks
+                            Service Requests
                         </button>
                         <button
                             onClick={() => setActiveTab("hospital")}
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === "hospital" ? "bg-[var(--card-bg)] text-blue-600 dark:text-blue-400 shadow-sm scale-100" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}
                         >
-                            My Bookings
+                            Hospital Bookings
                         </button>
                     </div>
 

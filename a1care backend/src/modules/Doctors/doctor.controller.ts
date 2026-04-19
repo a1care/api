@@ -9,6 +9,7 @@ import jwt from "jsonwebtoken";
 import { RoleModel } from "../roles/role.model.js";
 import { sendPartnerWelcomeEmail } from "../../utils/email.js";
 import { enqueueSms } from "../../queues/communicationQueue.js";
+import { notifyAdmin } from "../Notifications/notification.controller.js";
 
 const TEST_MOBILE_NUMBER = "8309470360";
 const TEST_OTP = "123456";
@@ -267,6 +268,14 @@ export const registerStaff = asyncHandler(async (req, res) => {
       email: updateData.email || findStaff.email,
       fullName: updateData.name || findStaff.name || "Partner",
     }).catch((err) => console.error("Welcome email failed:", err));
+
+    // ── Notify Admin ────────────────────────────────────────────────────────
+    notifyAdmin(
+      "📝 New KYC Application",
+      `Partner ${updateData.name || findStaff.name} has submitted their credentials for review.`,
+      "Partner",
+      String(staffId)
+    );
   }
 
   const updatedStaff = await doctorModel.findByIdAndUpdate(staffId, { $set: updateData }, { new: true });
@@ -294,6 +303,14 @@ export const requestDeletionStaff = asyncHandler(async (req, res) => {
   staff.deletionRequested = true;
   staff.deletionRequestedAt = new Date();
   await staff.save();
+
+  // ── Notify Admin ────────────────────────────────────────────────────────
+  notifyAdmin(
+    "⚠️ Deletion Request",
+    `Partner ${staff.name || staffId} has requested account deletion.`,
+    "Partner",
+    String(staffId)
+  );
 
   res.status(200).json(new ApiResponse(200, "Deletion request submitted to admin for approval"));
 });

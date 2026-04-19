@@ -42,9 +42,14 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
   }).select("partnerId");
   const subscribedPartnerIds = activeSubs.map(s => s.partnerId);
 
+  // Cast string IDs → ObjectId so $in matches doctor.roleId (ObjectId field)
+  const allowedRoleObjectIds = allowedRoleIds
+    .filter(id => mongoose.Types.ObjectId.isValid(id.toString()))
+    .map(id => new mongoose.Types.ObjectId(id.toString()));
+
   const activePartners = await DoctorModel.find({
     _id: { $in: subscribedPartnerIds },
-    roleId: { $in: allowedRoleIds },
+    roleId: { $in: allowedRoleObjectIds },
     status: "Active",
     fcmToken: { $exists: true, $ne: null },
   }).select("_id fcmToken serviceRadius");

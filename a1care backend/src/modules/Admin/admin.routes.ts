@@ -41,7 +41,7 @@ import {
   getDeletionRequests,
   approveDeletion
 } from "./admin.controller.js";
-import { adminListNotifications, adminBroadcastNotification } from "../Notifications/notification.controller.js";
+import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
 import { adminListOrders, adminGetLogsForTxn } from "../Payments/payment.controller.js";
@@ -119,6 +119,7 @@ adminRoutes.put("/system-config", protectAdmin, updateSystemConfig);
 // Notification Management
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
 adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);
+adminRoutes.delete("/notifications/clear", protectAdmin, adminClearNotifications);
 
 // Payout Management
 adminRoutes.get("/payouts", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminPayouts);

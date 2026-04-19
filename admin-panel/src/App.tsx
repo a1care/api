@@ -25,6 +25,7 @@ import KYCVerificationPage from "./pages/KYCVerificationPage";
 import { HealthVaultAuditPage } from "./pages/HealthVaultAuditPage";
 import { PaymentLogsPage } from "./pages/PaymentLogsPage";
 import { HealthPackagesPage } from "./pages/HealthPackagesPage";
+import { ServiceVerticalsPage } from "./pages/ServiceVerticalsPage";
 import DeletionRequestsPage from "./pages/DeletionRequestsPage";
 
 export default function App() {
@@ -38,8 +39,8 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
 
-            {/* Service Management Hierarchy */}
-            <Route path="/service-management" element={<Navigate to="/service-categories" replace />} />
+            <Route path="/service-management" element={<Navigate to="/service-portfolio" replace />} />
+            <Route path="/service-portfolio" element={<ServiceVerticalsPage />} />
             <Route path="/service-categories" element={<ServiceCategoriesPage />} />
             <Route path="/service-subcategories" element={<ServiceSubServicesPage />} />
             <Route path="/service-child-services" element={<ServiceChildServicesPage />} />
@@ -58,6 +59,8 @@ export default function App() {
             <Route path="/manage-nurses" element={<UserManagementPage category="nurse" />} />
             <Route path="/manage-ambulances" element={<UserManagementPage category="ambulance" />} />
             <Route path="/manage-rentals" element={<UserManagementPage category="rental" />} />
+            <Route path="/manage-labs" element={<UserManagementPage category="lab" />} />
+            <Route path="/manage-services" element={<UserManagementPage category="service" />} />
 
             {/* Compatibility Redirects */}
             <Route path="/patients" element={<Navigate to="/manage-patients" replace />} />

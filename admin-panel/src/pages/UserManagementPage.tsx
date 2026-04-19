@@ -36,7 +36,7 @@ export function UserManagementPage({ category }: { category: string }) {
             queryClient.invalidateQueries({ queryKey: ["category_users", category] });
             setSelectedUser(null);
             setDeleteConfig(null);
-            toast.success("Signature purged.");
+            toast.success("Member record deleted.");
         });
     };
 
@@ -44,6 +44,7 @@ export function UserManagementPage({ category }: { category: string }) {
     const [newName, setNewName] = useState("");
     const [newMobile, setNewMobile] = useState("");
     const [newEmail, setNewEmail] = useState("");
+    const [newSpecialization, setNewSpecialization] = useState("");
 
     const isAnyModalOpen = !!selectedUser || isAddModalOpen || !!viewingDocument;
 
@@ -55,6 +56,14 @@ export function UserManagementPage({ category }: { category: string }) {
             document.body.style.overflow = previousOverflow;
         };
     }, [isAnyModalOpen]);
+
+    const { data: categories } = useQuery({
+        queryKey: ["admin_categories_list"],
+        queryFn: async () => {
+            const res = await api.get("/services");
+            return res.data.data as any[];
+        }
+    });
 
     const { data: stats } = useQuery({
         queryKey: ["category_stats", category],
@@ -109,7 +118,12 @@ export function UserManagementPage({ category }: { category: string }) {
     const handleAddUser = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newName || !newMobile) return toast.error("Required fields missing.");
-        createMutation.mutate({ name: newName, mobileNumber: newMobile, email: newEmail });
+        createMutation.mutate({ 
+            name: newName, 
+            mobileNumber: newMobile, 
+            email: newEmail,
+            specialization: newSpecialization ? [newSpecialization] : []
+        });
     };
 
     const filteredUsers = useMemo(() => {
@@ -132,7 +146,9 @@ export function UserManagementPage({ category }: { category: string }) {
         if (category === 'doctor') return "Doctors";
         if (category === 'nurse') return "Nurses";
         if (category === 'ambulance') return "Ambulances";
-        if (category === 'rental') return "Medical Rental Providers";
+        if (category === 'rental') return "Medical Rentals";
+        if (category === 'lab') return "Diagnostic Labs";
+        if (category === 'service') return "Extra Services";
         return category;
     };
 
@@ -141,7 +157,7 @@ export function UserManagementPage({ category }: { category: string }) {
     if (isLoading) return (
         <div className="p-4 py-20 text-center">
             <Activity className="animate-pulse mx-auto text-indigo-500 dark:text-indigo-400 mb-4" size={48} />
-            <p className="muted font-bold tracking-wider uppercase" style={{ fontSize: '0.75rem' }}>Loading {title} Database...</p>
+            <p className="muted font-bold tracking-wider uppercase" style={{ fontSize: '0.75rem' }}>Loading {title} Directory...</p>
         </div>
     );
 
@@ -162,14 +178,14 @@ export function UserManagementPage({ category }: { category: string }) {
                         <ChevronRight size={10} className="text-slate-300" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{title} Registry</span>
                     </div>
-                    <h1 className="brand-name" style={{ fontSize: '2.25rem', letterSpacing: '-0.04em' }}>{title}</h1>
+                    <h1 className="brand-name" style={{ fontSize: '2.25rem', letterSpacing: '-0.04em' }}>{title} Registry</h1>
                     <p className="text-xs muted font-extrabold uppercase tracking-widest" style={{ marginTop: '4px', opacity: 0.8 }}>
-                        Strategic Management and Operational Metrics for {category}s
+                        Strategic Management and Operational Metrics
                     </p>
                 </div>
                 <button className="button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all uppercase tracking-widest text-[10px] font-black" onClick={() => setIsAddModalOpen(true)}>
                     <UserPlus size={18} className="group-hover:rotate-12 transition-transform" />
-                    <span>Inject {title.slice(0, -1)}</span>
+                    <span>Add {title.slice(0, -1)}</span>
                 </button>
             </header>
 
@@ -177,8 +193,8 @@ export function UserManagementPage({ category }: { category: string }) {
             <div className="flex-col gap-4">
                 <div className="grid-5 gap-4">
                     {statCards.map((stat) => (
-                        <div key={stat.label} className="card p-6 flex flex-col gap-4 text-center hover:scale-[1.02] hover:shadow-xl transition-all duration-300" style={{ borderRadius: '24px' }}>
-                            <div className="icon-box" style={{ background: `${stat.color}10`, color: stat.color, width: '52px', height: '52px', margin: '0 auto', borderRadius: '18px', border: `1px solid ${stat.color}20` }}>
+                        <div key={stat.label} className="card p-6 flex flex-col gap-4 text-left hover:scale-[1.02] hover:shadow-xl transition-all duration-300" style={{ borderRadius: '24px' }}>
+                            <div className="icon-box" style={{ background: `${stat.color}10`, color: stat.color, width: '52px', height: '52px', borderRadius: '18px', border: `1px solid ${stat.color}20` }}>
                                 <stat.icon size={26} />
                             </div>
                             <div>
@@ -224,9 +240,9 @@ export function UserManagementPage({ category }: { category: string }) {
                                     </>
                                 )}
                             </select>
-                             <button className="button secondary h-14 px-6 text-[10px] font-black uppercase tracking-[0.2em] gap-2 border border-[var(--border-color)] group hover:border-blue-500/50" style={{ borderRadius: '18px' }} onClick={() => toast.info("Parametric filters are enabled automatically based on search telemetry.")}>
+                             <button className="button secondary h-14 px-6 text-[10px] font-black uppercase tracking-[0.2em] gap-2 border border-[var(--border-color)] group hover:border-blue-500/50" style={{ borderRadius: '18px' }} onClick={() => toast.info("Advanced filters are enabled automatically based on search criteria.")}>
                                 <Filter size={18} className="group-hover:text-blue-500 transition-colors" />
-                                <span>Parametric Filters</span>
+                                <span>Advanced Filters</span>
                             </button>
                         </div>
                     </div>
@@ -235,12 +251,12 @@ export function UserManagementPage({ category }: { category: string }) {
                         <table className="management-table">
                             <thead>
                                 <tr className="bg-[var(--bg-main)]/50">
-                                    <th className="!bg-transparent !text-[var(--text-muted)] p-6 pl-8">SL NO</th>
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">MEMBER IDENTITY</th>
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">COMMUNICATION DNA</th>
-                                    {category !== 'patient' && <th className="!bg-transparent !text-[var(--text-muted)]">SECTOR FOCUS</th>}
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">GRID STATUS</th>
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">ENTRY DATE</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)] p-6 pl-8">#</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">MEMBER NAME</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">CONTACT INFO</th>
+                                    {category !== 'patient' && <th className="!bg-transparent !text-[var(--text-muted)]">SPECIALIZATION</th>}
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">STATUS</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">REG. DATE</th>
                                     <th className="text-center !bg-transparent !text-[var(--text-muted)] pr-8">ACTIONS</th>
                                 </tr>
                             </thead>
@@ -257,7 +273,15 @@ export function UserManagementPage({ category }: { category: string }) {
                                                 </div>
                                                 <div>
                                                     <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{user.name || "Anonymous Member"}</div>
-                                                    <div className="text-[10px] text-[var(--text-muted)] mt-1.5 uppercase font-black tracking-widest">ID: {user._id.slice(-8).toUpperCase()}</div>
+                                                    <div className="flex items-center gap-2 mt-1.5 ">
+                                                        <div className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">ID: {user._id.slice(-8).toUpperCase()}</div>
+                                                        {category === 'service' && user.specialization?.[0] && (
+                                                            <>
+                                                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{user.specialization[0]}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -312,8 +336,8 @@ export function UserManagementPage({ category }: { category: string }) {
                                                     <Users size={32} className="text-[var(--text-muted)] opacity-30" />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <p className="font-black text-[var(--text-main)] uppercase tracking-[0.3em] text-sm">Registry Void</p>
-                                                    <p className="text-xs muted font-bold max-w-[280px]">No member signatures detected matching your current telemetry filter.</p>
+                                                    <p className="font-black text-[var(--text-main)] uppercase tracking-[0.3em] text-sm">NO MEMBERS FOUND</p>
+                                                    <p className="text-xs muted font-bold max-w-[280px]">No member records detected matching your current search criteria.</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -353,7 +377,7 @@ export function UserManagementPage({ category }: { category: string }) {
                                 <div className="min-w-0">
                                     <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight truncate">{selectedUser.name || "Member Profile"}</h2>
                                     <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] mt-2">
-                                        <div className="flex items-center gap-2 font-mono text-[9px] bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-white/60">NODE_ID: {selectedUser._id}</div>
+                                        <div className="flex items-center gap-2 font-mono text-[9px] bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-white/60">USER_ID: {selectedUser._id}</div>
                                     </div>
                                 </div>
                             </div>
@@ -365,14 +389,14 @@ export function UserManagementPage({ category }: { category: string }) {
                                 <div className="lg:col-span-8 space-y-12">
                                     <section>
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 mb-6 flex items-center gap-4">
-                                            <span className="w-10 h-[2px] bg-indigo-500/30"></span> Basic Discovery
+                                            <span className="w-10 h-[2px] bg-indigo-500/30"></span> Personal Details
                                         </h3>
                                         <div className="bg-white/5 backdrop-blur-3xl p-7 rounded-[32px] border border-white/5 grid grid-cols-2 gap-6">
                                             {[
-                                                { label: "Phone Identity", value: selectedUser.mobileNumber },
-                                                { label: "Email Protocol", value: selectedUser.email || "No Email" },
-                                                { label: "Gender Orientation", value: selectedUser.gender || "Undefined" },
-                                                { label: "Registry Status", value: category === 'patient' ? (selectedUser.isRegistered ? "Verified" : "Unverified") : selectedUser.status }
+                                                { label: "Mobile Number", value: selectedUser.mobileNumber },
+                                                { label: "Email Address", value: selectedUser.email || "No Email" },
+                                                { label: "Gender", value: selectedUser.gender || "Unspecified" },
+                                                { label: "Verification Status", value: category === 'patient' ? (selectedUser.isRegistered ? "Verified" : "Unverified") : selectedUser.status }
                                             ].map(item => (
                                                 <div key={item.label}>
                                                     <dt className="text-[9px] font-black text-white/20 uppercase tracking-widest">{item.label}</dt>
@@ -386,25 +410,33 @@ export function UserManagementPage({ category }: { category: string }) {
 
                                 <div className="lg:col-span-4 space-y-8">
                                     <div className="bg-white/5 rounded-[32px] p-7 border border-white/10">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">Sector Documents</h3>
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">KYC Documents</h3>
                                         <div className="space-y-3">
                                             {(selectedUser.documents || []).length > 0 ? (
                                                 selectedUser.documents.map((doc: any, i: number) => (
                                                     <div key={i} className="p-4 bg-black/40 rounded-2xl flex items-center justify-between border border-white/5">
                                                         <span className="text-[10px] font-bold text-white uppercase truncate">{doc.type}</span>
-                                                        <button className="text-[9px] font-black text-indigo-400 hover:text-white uppercase" onClick={() => setViewingDocument(doc)}>Watch</button>
+                                                        <button className="text-[9px] font-black text-indigo-400 hover:text-white uppercase" onClick={() => setViewingDocument(doc)}>View</button>
                                                     </div>
                                                 ))
-                                            ) : <p className="text-[10px] text-white/20 font-black">No artifacts available.</p>}
+                                            ) : <p className="text-[10px] text-white/20 font-black">No documents uploaded.</p>}
                                         </div>
                                     </div>
                                     <div className="bg-white/5 rounded-[32px] p-7 border border-white/10">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-6">Danger Zone</h3>
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-6">Account Management</h3>
                                         <button 
                                             className="w-full h-12 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest border border-rose-500/20 transition-all"
-                                            onClick={() => setDeleteConfig({ id: selectedUser._id, type: category as any })}
+                                            onClick={() => {
+                                                toast.error("Confirm Account Deletion", {
+                                                    description: "Are you sure you want to permanently remove this user record? This action cannot be undone.",
+                                                    action: {
+                                                        label: "Delete",
+                                                        onClick: () => confirmGenericDelete()
+                                                    }
+                                                });
+                                            }}
                                         >
-                                            Purge Record
+                                            Delete Account
                                         </button>
                                     </div>
                                 </div>
@@ -422,14 +454,14 @@ export function UserManagementPage({ category }: { category: string }) {
                             <UserPlus size={40} />
                         </div>
                         <div className="text-center space-y-2">
-                            <h2 className="text-white text-2xl font-black tracking-tight">Create New {title.slice(0, -1)}</h2>
-                            <p className="text-white/30 text-sm font-medium">Injecting a new {title.slice(0, -1).toLowerCase()} into the production registry.</p>
+                            <h2 className="text-white text-2xl font-black tracking-tight">Add New {title.slice(0, -1)}</h2>
+                            <p className="text-white/30 text-sm font-medium">Adding a new {title.slice(0, -1).toLowerCase()} to the A1Care directory.</p>
                         </div>
                         <form className="w-full space-y-5" onSubmit={handleAddUser}>
                             {[
-                                { label: "Legal Name", value: newName, set: setNewName, type: "text", placeholder: "e.g. John Doe" },
-                                { label: "Mobile Identity", value: newMobile, set: setNewMobile, type: "tel", placeholder: "+91 XXXXX XXXXX" },
-                                { label: "Email Node", value: newEmail, set: setNewEmail, type: "email", placeholder: "john@example.com" }
+                                { label: "Full Name", value: newName, set: setNewName, type: "text", placeholder: "e.g. John Doe" },
+                                { label: "Mobile Number", value: newMobile, set: setNewMobile, type: "tel", placeholder: "+91 XXXXX XXXXX" },
+                                { label: "Email Address", value: newEmail, set: setNewEmail, type: "email", placeholder: "john@example.com" }
                             ].map(field => (
                                 <div className="space-y-2" key={field.label}>
                                     <label className="text-[10px] font-black uppercase tracking-widest text-indigo-200/50 ml-2">{field.label}</label>
@@ -439,14 +471,31 @@ export function UserManagementPage({ category }: { category: string }) {
                                         value={field.value}
                                         onChange={e => field.set(e.target.value)}
                                         placeholder={field.placeholder}
-                                        required={field.label !== "Email Node"}
+                                        required={field.label !== "Email Address"}
                                     />
                                 </div>
                             ))}
+
+                            {category === 'service' && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-200/50 ml-2">Service Specialization</label>
+                                    <select 
+                                        className="w-full h-14 bg-white border-none rounded-[20px] px-6 text-slate-900 font-bold focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all shadow-inner"
+                                        value={newSpecialization}
+                                        onChange={e => setNewSpecialization(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Select Service...</option>
+                                        {categories?.filter(c => c.type === 'service').map(c => (
+                                            <option key={c._id} value={c.name.replace(/SELECT|ASSIGN/g, "").trim()}>{c.name.replace(/SELECT|ASSIGN/g, "").trim()}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="pt-4 flex gap-4">
                                 <button type="button" className="flex-1 h-14 rounded-[20px] bg-white/5 text-white/40 font-black uppercase tracking-widest text-[10px]" onClick={() => setIsAddModalOpen(false)}>Abort</button>
                                 <button type="submit" disabled={createMutation.isPending} className="flex-1 h-14 rounded-[20px] bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20">
-                                    {createMutation.isPending ? "Syncing..." : "Finalize Entry"}
+                                    {createMutation.isPending ? "Saving..." : "Create Record"}
                                 </button>
                             </div>
                         </form>
@@ -539,17 +588,17 @@ function WalletSection({ user, category }: { user: any, category: string }) {
     return (
         <section className="space-y-6">
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 flex items-center gap-4">
-                <span className="w-10 h-[2px] bg-indigo-500/30"></span> Wallet Protocol
+                <span className="w-10 h-[2px] bg-indigo-500/30"></span> Wallet Management
             </h3>
             <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl overflow-hidden relative group">
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><CreditCard size={100} className="text-indigo-500" /></div>
                 <div className="relative z-10">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Grid Balance</p>
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Available Balance</p>
                     <h4 className="text-5xl font-black text-white">{isLoading ? "---" : `₹${wallet?.balance || 0}`}</h4>
                 </div>
                 
                 {!isAdjusting ? (
-                    <button onClick={() => setIsAdjusting(true)} className="h-14 px-10 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Execute Delta Adjust</button>
+                    <button onClick={() => setIsAdjusting(true)} className="h-14 px-10 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Adjust Balance</button>
                 ) : (
                     <div className="w-full md:w-[320px] space-y-3 p-4 bg-black/40 rounded-3xl border border-white/5 animate-in zoom-in-95">
                         <input type="number" placeholder="Enter Amount to Credit/Debit..." value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-white border border-white/10 h-12 px-5 rounded-2xl text-slate-900 font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" />

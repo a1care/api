@@ -13,6 +13,7 @@ import { scheduleBroadcastToAll } from "../../../queues/bookingQueue.js";
 import { HealthPackageModel } from "../../HealthPackages/healthPackage.model.js";
 import HospitalBooking from "../hospitalBooking.model.js";
 import { getActiveCommissionRate } from "../../PartnerSubscription/subscription.controller.js";
+import { notifyAdmin } from "../../Notifications/notification.controller.js";
 
 
 export const createServiceRequest = asyncHandler(async (req, res) => {
@@ -61,6 +62,14 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
 
     const newServiceRequest = new serviceRequestModel(payload);
     await newServiceRequest.save();
+
+    // ── Notify Admin ────────────────────────────────────────────────────────
+    notifyAdmin(
+        "🆕 New Booking Request", 
+        `Patient ${payload.userId} has booked a ${bookingName}. Value: ₹${finalPrice}`,
+        "ServiceRequest",
+        String(newServiceRequest._id)
+    );
 
     // ── Send Confirmation Email ─────────────────────────────────────────────
     try {
@@ -129,18 +138,22 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         } 
         // 3. Broadcast to all matching roles
         else {
-            const allowedRoleIds = childSvc?.allowedRoleIds ?? healthPkg?.allowedRoleIds;
-            if (allowedRoleIds?.length) {
+            const rawAllowedRoleIds = childSvc?.allowedRoleIds ?? healthPkg?.allowedRoleIds;
+            if (rawAllowedRoleIds?.length) {
+                // Cast string IDs → ObjectId so the $in matches doctor.roleId (ObjectId field)
+                const allowedRoleObjectIds = rawAllowedRoleIds
+                    .filter(id => mongoose.Types.ObjectId.isValid(id))
+                    .map(id => new mongoose.Types.ObjectId(id));
                 const matchingPartners = await DoctorModel.find({
-                    roleId: { $in: allowedRoleIds },
+                    roleId: { $in: allowedRoleObjectIds },
                     status: "Active",
                     fcmToken: { $exists: true, $ne: null },
                 }).select("_id fcmToken");
-                console.log(`[Push] Found ${matchingPartners.length} matching active partners for role(s): ${allowedRoleIds}`);
+                console.log(`[Push] Found ${matchingPartners.length} matching active partners for role(s): ${rawAllowedRoleIds}`);
                 if (matchingPartners.length > 0) {
                     console.log(`[Push] Partner IDs to notify: ${matchingPartners.map(p => p._id).join(', ')}`);
                 } else {
-                    console.warn(`[Push] NO ACTIVE PARTNERS FOUND with roles: ${allowedRoleIds}`);
+                    console.warn(`[Push] NO ACTIVE PARTNERS FOUND with roles: ${rawAllowedRoleIds}`);
                 }
 
                 await enqueuePushToMany(

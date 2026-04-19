@@ -1,4 +1,5 @@
 import { useState, useDeferredValue, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Clock, CheckCircle2, XCircle, Calendar, CreditCard, Search, Eye, Check, CheckCheck, X, Filter, ChevronDown, RefreshCw, Loader2 } from "lucide-react";
@@ -18,9 +19,10 @@ interface ServiceBooking {
 }
 
 export function OPBookingsPage() {
+    const [searchParams] = useSearchParams();
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All");
+    const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "All");
     const [selectedBooking, setSelectedBooking] = useState<ServiceBooking | null>(null);
 
     // Advanced Filters State
@@ -133,10 +135,10 @@ export function OPBookingsPage() {
         <div className="space-y-6 animate-in">
             <header className="flex flex-col gap-2 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden">
                 <div className="relative z-10">
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">OP Token Orders</h1>
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">Doctor Appointments</h1>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Bookings • OP Token Orders</p>
+                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Bookings • Doctor Appointments</p>
                     </div>
                 </div>
                 {/* Decorative background element reminiscent of the user's screenshot */}

@@ -13,6 +13,7 @@ import {
     CheckCircle2,
     ChevronRight
 } from "lucide-react";
+import { toast } from "sonner";
 
 type SubscriptionTier = "Basic" | "Standard" | "Premium";
 
@@ -54,6 +55,10 @@ export function SubscriptionManagementPage() {
         onSuccess: () => {
             setEditingPlan(null);
             qc.invalidateQueries({ queryKey: ["all-subscription-plans"] });
+            toast.success("Service model updated successfully.");
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || "Failed to update service model.");
         }
     });
 
@@ -63,6 +68,7 @@ export function SubscriptionManagementPage() {
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["all-subscription-plans"] });
+            toast.success("Plan tier deleted.");
         }
     });
 
@@ -90,15 +96,15 @@ export function SubscriptionManagementPage() {
                             <ChevronRight size={12} />
                             <span>Subscriptions</span>
                         </div>
-                        <h1 className="text-4xl font-black mb-2">Revenue Infrastructure</h1>
-                        <p className="text-blue-100 font-medium max-w-md">Hybrid commission + subscription modeling for the A1Care provider network.</p>
+                        <h1 className="text-4xl font-black mb-2">Partner Plans</h1>
+                        <p className="text-blue-100 font-medium max-w-md">Manage commission rates and subscription tiers for the A1Care provider network.</p>
                     </div>
                     <div className="absolute right-[-40px] top-[-40px] w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
                     <Crown size={120} className="text-white/10 relative z-0 rotate-12" />
                 </div>
                 <div className="bg-white/10 backdrop-blur-md p-4 flex gap-4 px-10">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-blue-50 uppercase tracking-widest">Active Focus:</span>
+                        <span className="text-xs font-black text-blue-50 uppercase tracking-widest">Category:</span>
                         <div className="flex gap-2 bg-black/10 p-1 rounded-xl">
                             {CATEGORIES.map(cat => (
                                 <button
@@ -143,7 +149,7 @@ export function SubscriptionManagementPage() {
 
                                 <div className="mb-6">
                                     <h3 className="text-3xl font-black text-[var(--text-main)] tracking-tight">{tier} Tier</h3>
-                                    <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mt-2">Operational Node</p>
+                                    <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mt-2">Service Model</p>
                                 </div>
 
                                 {plan ? (
@@ -151,7 +157,7 @@ export function SubscriptionManagementPage() {
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-5xl font-black text-[var(--text-main)] leading-none">₹{plan.price}</span>
-                                                <span className="text-[var(--text-muted)] font-bold text-sm tracking-widest uppercase">/ Cycle</span>
+                                                <span className="text-[var(--text-muted)] font-bold text-sm tracking-widest uppercase">/ Plan</span>
                                             </div>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <div className="badge primary px-3 py-1 text-[10px] font-black uppercase tracking-widest">
@@ -293,7 +299,13 @@ export function SubscriptionManagementPage() {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            if (confirm("Confirm deletion of this plan tier?")) deleteMutation.mutate(editingPlan._id!);
+                                            toast.error("Confirm deletion?", {
+                                                description: "This will permanently remove this tier.",
+                                                action: {
+                                                    label: "Delete",
+                                                    onClick: () => deleteMutation.mutate(editingPlan._id!)
+                                                }
+                                            });
                                         }}
                                         className="w-16 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-colors"
                                     >
@@ -324,7 +336,10 @@ function PendingSubscriptionList({ qc }: { qc: any }) {
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["pending-subscriptions"] });
-            alert("Subscription approved successfully!");
+            toast.success("Subscription approved successfully!");
+        },
+        onError: () => {
+            toast.error("Failed to approve subscription.");
         }
     });
 

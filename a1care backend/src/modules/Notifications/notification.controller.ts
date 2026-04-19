@@ -7,6 +7,26 @@ import { Patient } from "../Authentication/patient.model.js";
 import DoctorModel from "../Doctors/doctor.model.js";
 import { enqueuePush, enqueuePushToMany } from "../../queues/communicationQueue.js";
 
+/**
+ * Utility to notify all admins (super_admin and admin roles)
+ * via the in-app notification bell.
+ */
+export const notifyAdmin = async (title: string, body: string, refType?: string, refId?: string) => {
+    try {
+        await NotificationModel.create({
+            recipientId: new mongoose.Types.ObjectId("000000000000000000000000"), // Virtual systemic ID for global admin pool
+            recipientType: "admin",
+            title,
+            body,
+            refType: refType as any,
+            refId: refId ? new mongoose.Types.ObjectId(refId) : undefined,
+            fcmStatus: "skipped"
+        });
+    } catch (e) {
+        console.error("[NotifyAdmin] Failed to create system alert:", e);
+    }
+};
+
 // ─── FCM Token Registration ───────────────────────────────────────────────────
 
 /**
@@ -249,4 +269,13 @@ export const adminBroadcastNotification = asyncHandler(async (req, res) => {
     return res.json(
         new ApiResponse(200, `Broadcast sent to ${sent} recipient(s)`, { sent, audience })
     );
+});
+
+/**
+ * DELETE /api/admin/notifications/clear
+ * Admin clicks "Clear All" on their bell notification list.
+ */
+export const adminClearNotifications = asyncHandler(async (req, res) => {
+    await NotificationModel.deleteMany({ recipientType: "admin" });
+    return res.json(new ApiResponse(200, "All system alerts cleared", null));
 });

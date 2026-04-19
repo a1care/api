@@ -33,21 +33,28 @@ import {
   Package,
   X,
   LayoutGrid,
-  Tag
+  Tag,
+  Briefcase,
+  Trash2,
+  Calendar,
+  CheckCircle
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { format } from "date-fns";
 
 const mainNav = (role: string) => [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/bookings", label: "Main Bookings", icon: CalendarCheck },
-  { to: "/op-bookings", label: "OP Bookings", icon: ClipboardList },
+  { to: "/bookings", label: "Service Orders", icon: CalendarCheck },
+  { to: "/op-bookings", label: "Doctor Appointments", icon: ClipboardList },
   ...(role === "super_admin" ? [
-    { to: "/partner-revenue-model", label: "Partner Revenue", icon: BarChart3 },
+    { to: "/partner-revenue-model", label: "Partner Plans", icon: BarChart3 },
     { to: "/payouts", label: "Payouts", icon: Banknote },
   ] : []),
   { to: "/kyc-verification", label: "KYC Verification", icon: ShieldCheck },
   { to: "/reviews", label: "User Reviews", icon: MessageSquare },
   { to: "/support-tickets", label: "Tickets", icon: Ticket },
-  { to: "/notifications", label: "Broadcast", icon: Bell },
+  { to: "/notifications", label: "Push Notifications", icon: Bell },
 ];
 
 export function AppLayout() {
@@ -75,13 +82,13 @@ export function AppLayout() {
     { label: "Support Tickets", to: "/support-tickets", icon: "🎫", cat: "Support" },
     { label: "Broadcast Notifications", to: "/notifications", icon: "🔔", cat: "Support" },
     { label: "Patient Registry", to: "/manage-patients", icon: "👤", cat: "Users" },
-    { label: "Doctor Portfolio", to: "/manage-doctors", icon: "🩺", cat: "Users" },
-    { label: "Nurse Management", to: "/manage-nurses", icon: "🏥", cat: "Users" },
+    { label: "Doctor Registry", to: "/manage-doctors", icon: "🩺", cat: "Users" },
+    { label: "Nurse Registry", to: "/manage-nurses", icon: "🏥", cat: "Users" },
     { label: "Ambulance Fleet", to: "/manage-ambulances", icon: "🚑", cat: "Users" },
-    { label: "Asset Rentals", to: "/manage-rentals", icon: "📦", cat: "Users" },
-    { label: "Healthcare Catalog", to: "/service-categories", icon: "📂", cat: "Services" },
+    { label: "Rental Inventory", to: "/manage-rentals", icon: "📦", cat: "Users" },
+    { label: "Service Categories", to: "/service-categories", icon: "📂", cat: "Services" },
     { label: "Sub-Categories", to: "/service-subcategories", icon: "📁", cat: "Services" },
-    { label: "Catalog Items", to: "/service-child-services", icon: "🏷️", cat: "Services" },
+    { label: "Service Items", to: "/service-child-services", icon: "🏷️", cat: "Services" },
     { label: "Health Packages", to: "/health-packages", icon: "📦", cat: "Services" },
     { label: "System Config", to: "/manage-system-config", icon: "⚙️", cat: "Admin" },
     { label: "Payment Audit Logs", to: "/payment-logs", icon: "🧾", cat: "Admin" },
@@ -146,9 +153,31 @@ export function AppLayout() {
     [location.pathname]
   );
 
+  // ── Notification Intelligence ─────────────────────────────────────────────
+  const queryClient = useQueryClient();
+  const [showBell, setShowBell] = useState(false);
+
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["admin-system-alerts"],
+    queryFn: async () => {
+      const res = await api.get("/admin/notifications?recipientType=admin&limit=10");
+      return res.data.data.notifications as any[];
+    },
+    refetchInterval: 30000 // Poll every 30s
+  });
+
+  const clearAlertsMutation = useMutation({
+    mutationFn: async () => api.delete("/admin/notifications/clear"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-system-alerts"] });
+      toast.success("Intelligence logs cleared.");
+      setShowBell(false);
+    }
+  });
+
   return (
-    <div className="shell">
-      <aside className="sidebar border-r border-[var(--border-color)] dark:border-slate-800">
+    <div className="shell min-h-screen">
+      <aside className="sidebar border-r border-[var(--border-color)] dark:border-slate-800 relative z-[60]">
         <div className="sidebar-brand py-8 px-6 flex items-center gap-4">
           <div className="relative group">
             <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
@@ -173,7 +202,7 @@ export function AppLayout() {
           </div>
 
           {mainNav(user?.role || "admin").map((item) => (
-            <NavLink key={item.label} to={item.to} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]"}`}>
+            <NavLink key={item.label} to={item.to} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]"}`}>
               <item.icon size={18} />
               <span>{item.label}</span>
             </NavLink>
@@ -189,7 +218,7 @@ export function AppLayout() {
           >
             <div className="flex items-center gap-3">
               <Users size={18} />
-              <span>User Base</span>
+              <span>User Directory</span>
             </div>
             {usersOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
@@ -201,7 +230,9 @@ export function AppLayout() {
                 { to: "/manage-doctors", label: "Doctors" },
                 { to: "/manage-nurses", label: "Nurses" },
                 { to: "/manage-ambulances", label: "Ambulances" },
-                { to: "/manage-rentals", label: "Rentals" }
+                { to: "/manage-rentals", label: "Rental Inventory" },
+                { to: "/manage-labs", label: "Lab Registry" },
+                { to: "/manage-services", label: "Extra Services" }
               ].map(link => (
                 <NavLink key={link.to} to={link.to} className={({ isActive }) => `block py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
                   {link.label}
@@ -226,17 +257,16 @@ export function AppLayout() {
               {servicesOpen && (
                 <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
                   {[
-                    { to: "/service-categories", label: "Root Categories", icon: LayoutGrid },
+                    { to: "/service-portfolio", label: "Portfolios Hub", icon: Briefcase },
+                    { to: "/service-categories", label: "Master Categories", icon: LayoutGrid },
                     { to: "/service-subcategories", label: "Sub-Categories", icon: Layers },
-                    { to: "/service-child-services", label: "Catalog Items", icon: Tag }
+                    { to: "/service-child-services", label: "Catalog Offerings", icon: Tag },
+                    { to: "/health-packages", label: "Service Bundles", icon: Package }
                   ].map(link => (
                     <NavLink key={link.to} to={link.to} className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
                       <link.icon size={13} /> {link.label}
                     </NavLink>
                   ))}
-                  <NavLink to="/health-packages" className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
-                    <Package size={13} /> Health Packages
-                  </NavLink>
                 </div>
               )}
             </>
@@ -337,10 +367,74 @@ export function AppLayout() {
 
             <div className="w-px h-6 bg-slate-200"></div>
 
-            <button className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors">
-              <Bell size={20} className="text-[var(--text-muted)]" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowBell(!showBell)}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${showBell ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'hover:bg-slate-100 text-[var(--text-muted)]'}`}
+              >
+                <Bell size={20} />
+                {alerts.length > 0 && <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>}
+              </button>
+
+              {showBell && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowBell(false)}></div>
+                  <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden z-50 animate-in slide-in-from-top-4 duration-300">
+                    <div className="p-6 border-b dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">System Alerts</h3>
+                        <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{alerts.length} Pending Actions</p>
+                      </div>
+                      <button 
+                        onClick={() => clearAlertsMutation.mutate()}
+                        className="text-[9px] font-black text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                      >
+                        <Trash2 size={10} /> Clear All
+                      </button>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                      {alerts.length > 0 ? (
+                        alerts.map((alert) => (
+                          <div key={alert._id} className="p-6 border-b dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer group">
+                             <div className="flex gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-110 transition-transform">
+                                   {alert.refType === 'ServiceRequest' ? <Calendar size={18} /> : 
+                                    alert.refType === 'Partner' ? <ShieldCheck size={18} /> : 
+                                    <Bell size={18} />}
+                                </div>
+                                <div className="space-y-1">
+                                   <p className="text-xs font-black text-slate-900 dark:text-white leading-tight">{alert.title}</p>
+                                   <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{alert.body}</p>
+                                   <p className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest pt-1">
+                                      {format(new Date(alert.createdAt), 'MMM d, h:mm a')}
+                                   </p>
+                                </div>
+                             </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-12 text-center space-y-3">
+                           <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                             <CheckCircle size={32} />
+                           </div>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Queue Clean</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 bg-slate-50/50 dark:bg-white/5 text-center">
+                       <button 
+                        onClick={() => { navigate('/notifications'); setShowBell(false); }}
+                        className="w-full py-3 rounded-2xl text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                       >
+                          View Full Intelligence Log
+                       </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="flex items-center gap-3 pl-2">
               <div className="text-right hidden sm:block">
