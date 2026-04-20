@@ -22,7 +22,6 @@ import {
   Sun,
   Truck,
   Box,
-  HeartPulse,
   Stethoscope,
   UserSquare2,
   BarChart3,
@@ -178,21 +177,12 @@ export function AppLayout() {
   return (
     <div className="shell min-h-screen">
       <aside className="sidebar border-r border-[var(--border-color)] dark:border-slate-800 relative z-[60]">
-        <div className="sidebar-brand py-8 px-6 flex items-center gap-4">
+        <div className="sidebar-brand py-8 px-6 flex justify-center border-b border-[var(--border-color)]/50">
           <div className="relative group">
-            <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg relative z-10 transition-transform group-hover:rotate-6 duration-500">
-              <HeartPulse size={28} color="white" strokeWidth={2.5} />
+            <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-10 group-hover:opacity-30 transition-opacity"></div>
+            <div className="w-28 h-28 flex items-center justify-center relative z-10 transition-all group-hover:scale-105 duration-500">
+              <img src="/a1care_logo1.png" alt="A1Care Logo" className="w-full h-full object-contain rounded-[1.5rem] shadow-xl border border-[var(--border-color)]/20" />
             </div>
-          </div>
-
-          <div className="flex flex-col">
-            <h2 className="text-3xl font-black italic tracking-tighter text-blue-600 leading-none">
-              24/7
-            </h2>
-            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 mt-1.5 opacity-70">
-              Global Systems
-            </p>
           </div>
         </div>
 

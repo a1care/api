@@ -104,7 +104,7 @@ export function DashboardPage() {
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-16 px-2">
       {/* Dynamic Header Experience */}
       <header className="relative flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
-        <div className="space-y-2">
+        <div className="flex flex-col items-start text-left space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">System Status</span>

@@ -37,7 +37,26 @@ export const getServices = asyncHandler(async (req, res) => {
 })
 
 //update service
+export const updateService = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const existingService = await Service.findById(id);
+  
+  if (!existingService) {
+    throw new ApiError(404, "Service not found");
+  }
 
+  const payload = {
+    name: req.body.name || existingService.name,
+    title: req.body.title || existingService.title,
+    type: req.body.type || existingService.type,
+    imageUrl: req.fileUrl || existingService.imageUrl,
+    isActive: req.body.isActive !== undefined ? req.body.isActive === 'true' : existingService.isActive
+  };
+
+  const updatedService = await Service.findByIdAndUpdate(id, payload, { new: true });
+
+  res.status(200).json(new ApiResponse(200, "Service updated", updatedService));
+});
 //delete service
 export const deleteService = asyncHandler(async (req, res) => {
   const { id } = req.params

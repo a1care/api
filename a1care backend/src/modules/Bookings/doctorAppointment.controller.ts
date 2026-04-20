@@ -63,6 +63,8 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
                     date: new Date(newAppointment.date).toDateString(),
                     time: `${newAppointment.startingTime} - ${newAppointment.endingTime}`,
                     location: "Clinic / In-App Video",
+                    price: totalAmount,
+                    paymentMode: payload.paymentMode,
                 },
             });
         }

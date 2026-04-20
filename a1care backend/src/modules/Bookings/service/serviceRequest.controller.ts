@@ -84,6 +84,8 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                     date: new Date().toDateString(),
                     time: "In-Progress Verification",
                     location: patient.primaryAddressId ? "Stored Patient Address" : "Current Location",
+                    price: finalPrice,
+                    paymentMode: payload.paymentMode,
                 },
             });
         }

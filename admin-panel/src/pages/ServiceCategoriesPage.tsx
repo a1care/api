@@ -11,7 +11,8 @@ import {
     Search,
     Image,
     UploadCloud,
-    CheckCircle2
+    CheckCircle2,
+    Edit2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -19,7 +20,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 interface Category {
     _id: string;
     name: string;
+    title: string;
     type?: string;
+    imageUrl?: string;
 }
 
 export function ServiceCategoriesPage() {
@@ -58,6 +61,7 @@ export function ServiceCategoriesPage() {
     const [type, setType] = useState(filterType || "doctor");
     const [file, setFile] = useState<File | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
     const { data: categories, isLoading } = useQuery({
         queryKey: ["admin_categories"],
@@ -77,13 +81,39 @@ export function ServiceCategoriesPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin_categories"] });
             setIsModalOpen(false);
-            setName(""); setTitle(""); setFile(null);
+            resetForm();
             toast.success("Category published");
         },
         onError: (err: any) => {
             toast.error(err?.response?.data?.message || "Failed to publish category");
         }
     });
+
+    const updateMutation = useMutation({
+        mutationFn: async ({ id, formData }: { id: string, formData: FormData }) => {
+            const res = await api.put(`/services/${id}`, formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin_categories"] });
+            setIsModalOpen(false);
+            resetForm();
+            toast.success("Category updated");
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || "Failed to update category");
+        }
+    });
+
+    const resetForm = () => {
+        setName("");
+        setTitle("");
+        setType(filterType || "doctor");
+        setFile(null);
+        setEditingCategory(null);
+    };
 
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
@@ -136,7 +166,7 @@ export function ServiceCategoriesPage() {
                             Clear Filter
                         </button>
                     )}
-                    <button onClick={() => { setType(filterType || "doctor"); setIsModalOpen(true); }} className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95 font-black text-xs uppercase tracking-widest">
+                    <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95 font-black text-xs uppercase tracking-widest">
                         <Plus size={20} />
                         <span>Add Category</span>
                     </button>
@@ -150,7 +180,20 @@ export function ServiceCategoriesPage() {
                         className="group bg-[var(--card-bg)] border border-[var(--border-color)] rounded-[32px] p-6 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer overflow-hidden relative flex flex-col text-left items-start"
                         onClick={() => navigate(`/service-subcategories?category=${c.name}`)}
                     >
-                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingCategory(c);
+                                    setName(c.name);
+                                    setTitle(c.title);
+                                    setType(c.type || "doctor");
+                                    setIsModalOpen(true);
+                                }}
+                                className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"
+                            >
+                                <Edit2 size={18} />
+                            </button>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -187,10 +230,10 @@ export function ServiceCategoriesPage() {
                     <div className="modal-content" style={{ maxWidth: '500px' }}>
                         <div className="p-8 border-b flex justify-between items-center">
                             <div>
-                                <h2 className="brand-name">Create New Category</h2>
-                                <p className="text-xs muted font-bold uppercase tracking-widest mt-1">Define New Service Classification</p>
+                                <h2 className="brand-name">{editingCategory ? "Edit Category" : "Create New Category"}</h2>
+                                <p className="text-xs muted font-bold uppercase tracking-widest mt-1">{editingCategory ? "Update Service Classification" : "Define New Service Classification"}</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="logout-btn"><X size={24} /></button>
+                            <button onClick={() => { setIsModalOpen(false); setEditingCategory(null); }} className="logout-btn"><X size={24} /></button>
                         </div>
                         <form className="p-8 flex-col gap-5" onSubmit={(e) => {
                             e.preventDefault();
@@ -199,7 +242,12 @@ export function ServiceCategoriesPage() {
                             fd.append("title", title);
                             fd.append("type", type);
                             if (file) fd.append("image", file);
-                            createMutation.mutate(fd);
+
+                            if (editingCategory) {
+                                updateMutation.mutate({ id: editingCategory._id, formData: fd });
+                            } else {
+                                createMutation.mutate(fd);
+                            }
                         }}>
                             <div className="input-group">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">System Reference (Database ID)</label>
@@ -235,8 +283,8 @@ export function ServiceCategoriesPage() {
                             </div>
                             <div className="pt-4 flex gap-4">
                                 <button type="button" className="flex-1 h-14 rounded-2xl bg-white border border-slate-100 text-slate-400 font-black uppercase text-[10px]" onClick={() => setIsModalOpen(false)}>Abort</button>
-                                <button type="submit" disabled={createMutation.isPending} className="flex-1 h-14 rounded-2xl bg-blue-600 text-white font-black uppercase text-[10px] shadow-lg shadow-blue-100">
-                                    {createMutation.isPending ? "Publishing..." : "Finalize Category"}
+                                <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="flex-1 h-14 rounded-2xl bg-blue-600 text-white font-black uppercase text-[10px] shadow-lg shadow-blue-100">
+                                    {createMutation.isPending || updateMutation.isPending ? "Processing..." : (editingCategory ? "Update Category" : "Finalize Category")}
                                 </button>
                             </div>
                         </form>
