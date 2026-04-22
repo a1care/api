@@ -40,6 +40,32 @@ export const getServicesByServiceId = asyncHandler(async (req, res) => {
 
 })
 
+export const updateSubService = asyncHandler(async (req: any, res) => {
+    const { id } = req.params;
+    const body = req.body;
+
+    const updateData: any = {
+        name: body.name,
+        description: body.description,
+    };
+
+    if (req.fileUrl) {
+        updateData.imageUrl = req.fileUrl;
+    }
+
+    const updated = await SubService.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true }
+    );
+
+    if (!updated) {
+        throw new ApiError(404, "Sub-service not found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Sub-service updated", updated));
+});
+
 export const deleteSubService = asyncHandler(async (req, res) => {
     const { id } = req.params
     const deleteService = await SubService.findByIdAndDelete(id)

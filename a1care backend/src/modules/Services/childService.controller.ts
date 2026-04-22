@@ -68,6 +68,35 @@ export const getChildServiceById = asyncHandler(async (req, res) => {
     return res.json(new ApiResponse(200, "Child service fetched", childService));
 });
 
+export const updateChildService = asyncHandler(async (req: any, res) => {
+    const { id } = req.params;
+    const body = req.body;
+
+    const updateData: any = {
+        name: body.name,
+        description: body.description,
+        price: Number(body.price),
+        selectionType: body.selectionType || "SELECT",
+        fulfillmentMode: body.fulfillmentMode || "HOME_VISIT"
+    };
+
+    if (req.fileUrl) {
+        updateData.imageUrl = req.fileUrl;
+    }
+
+    const updated = await ChildServiceModel.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true }
+    );
+
+    if (!updated) {
+        throw new ApiError(404, "Child service not found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Child service updated", updated));
+});
+
 export const deleteChildService = asyncHandler(async (req, res) => {
     const { id } = req.params
     const deleted = await ChildServiceModel.findByIdAndDelete(id)
@@ -86,7 +115,7 @@ export const getFeaturedChildServices = asyncHandler(async (req, res) => {
             .sort({ rating: -1, completed: -1 })
             .limit(6);
     }
-        
+
     return res.json(new ApiResponse(200, "Featured child services fetched", featured));
 });
 

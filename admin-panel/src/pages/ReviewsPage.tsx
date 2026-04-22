@@ -60,16 +60,16 @@ export default function ReviewsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            User Feedback
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-          </h1>
-          <p className="text-slate-500 font-medium">Moderate and monitor platform reviews across all services.</p>
+      <header className="flex flex-col gap-4 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left items-start">
+        <div className="relative z-10 text-left items-start">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">User Reviews</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Engagement • User Reviews</p>
+          </div>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-4">
+
+        <div className="relative z-10 flex flex-wrap items-center gap-4">
           <div className="relative group w-full md:w-80">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
                 <Search className="text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
@@ -97,6 +97,8 @@ export default function ReviewsPage() {
             </div>
           </div>
         </div>
+        <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

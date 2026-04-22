@@ -12,7 +12,12 @@ import {
     LayoutGrid,
     CheckCircle2,
     Image,
-    UploadCloud
+    UploadCloud,
+    Stethoscope,
+    Syringe,
+    FlaskConical,
+    Ambulance,
+    Edit2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -54,7 +59,9 @@ export function ServiceChildServicesPage() {
     const [desc, setDesc] = useState("");
     const [fulfillment, setFulfillment] = useState("HOME_VISIT");
     const [file, setFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [editingItem, setEditingItem] = useState<ChildService | null>(null);
 
     const { data: categories } = useQuery({
         queryKey: ["admin_categories"],
@@ -86,22 +93,30 @@ export function ServiceChildServicesPage() {
         enabled: !!selectedSubId
     });
 
-    const createMutation = useMutation({
+    const submitMutation = useMutation({
         mutationFn: async (formData: FormData) => {
-            if (!selectedSubId || !activeCatId) throw new Error("Hierarchy context missing");
-            const res = await api.post(`/childService/create/${activeCatId}/${selectedSubId}`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            return res.data;
+            if (editingItem) {
+                const res = await api.put(`/childService/${editingItem._id}`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+                return res.data;
+            } else {
+                if (!selectedSubId || !activeCatId) throw new Error("Hierarchy context missing");
+                const res = await api.post(`/childService/create/${activeCatId}/${selectedSubId}`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+                return res.data;
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin_childservices", selectedSubId] });
             setIsModalOpen(false);
-            setName(""); setPrice(""); setDesc(""); setFile(null);
-            toast.success("Catalog item live");
+            setEditingItem(null);
+            setName(""); setPrice(""); setDesc(""); setFile(null); setPreview(null);
+            toast.success(editingItem ? "Catalog item updated" : "Catalog item live");
         },
         onError: (err: any) => {
-            toast.error(err?.response?.data?.message || "Creation failed");
+            toast.error(err?.response?.data?.message || "Operation failed");
         }
     });
 
@@ -127,11 +142,23 @@ export function ServiceChildServicesPage() {
         }
     });
 
-    const filtered = childServices?.filter(c => 
+    const filtered = childServices?.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const cleanName = (name: string) => name.replace(/SELECT|ASSIGN/g, "").trim();
+
+    const getChildIcon = (child: ChildService) => {
+        const name = child.name.toLowerCase();
+        const cat = categories?.find(c => c._id === activeCatId);
+        const catName = cat?.name.toLowerCase() || "";
+
+        if (name.includes('doctor') || catName.includes('doctor')) return Stethoscope;
+        if (name.includes('nurse') || name.includes('care') || catName.includes('nurse')) return Syringe;
+        if (name.includes('lab') || name.includes('diagnost') || catName.includes('lab')) return FlaskConical;
+        if (name.includes('ambul') || name.includes('emergen') || catName.includes('ambulance')) return Ambulance;
+        return Tag;
+    };
 
     return (
         <div className="flex-col gap-6">
@@ -145,9 +172,14 @@ export function ServiceChildServicesPage() {
                         <p className="muted font-bold tracking-wider uppercase text-[10px] mt-1">Bookable medical services & pricing</p>
                     </div>
                 </div>
-                <button 
+                <button
                     disabled={!selectedSubId}
-                    onClick={() => setIsModalOpen(true)} 
+                    onClick={() => {
+                        setEditingItem(null);
+                        setName(""); setPrice(""); setDesc(""); setFile(null); setPreview(null);
+                        setFulfillment("HOME_VISIT");
+                        setIsModalOpen(true);
+                    }}
                     className="button primary h-12 px-6 rounded-2xl gap-2 shadow-lg shadow-emerald-100"
                 >
                     <Plus size={18} /> New Catalog Item
@@ -161,7 +193,7 @@ export function ServiceChildServicesPage() {
                             <LayoutGrid size={14} className="text-blue-600" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Category</span>
                         </div>
-                        <select 
+                        <select
                             className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-xs font-bold mb-6 outline-none"
                             value={activeCatId}
                             onChange={(e) => setActiveCatId(e.target.value)}
@@ -203,7 +235,7 @@ export function ServiceChildServicesPage() {
                             <div className="card p-4 flex items-center gap-4 bg-white/50 backdrop-blur-md shadow-sm" style={{ borderRadius: '24px' }}>
                                 <div className="relative flex-1 group">
                                     <Search className="absolute text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
-                                    <input 
+                                    <input
                                         placeholder="Search catalog items..."
                                         className="w-full bg-[var(--bg-main)] border-none font-semibold text-slate-700"
                                         style={{ paddingLeft: '60px', height: '56px', borderRadius: '16px' }}
@@ -221,7 +253,10 @@ export function ServiceChildServicesPage() {
                                                 {child.imageUrl ? (
                                                     <img src={child.imageUrl} alt={child.name} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <Tag size={24} />
+                                                    (() => {
+                                                        const ChildIcon = getChildIcon(child);
+                                                        return <ChildIcon size={24} />;
+                                                    })()
                                                 )}
                                             </div>
                                             <div className="flex-col gap-1">
@@ -248,7 +283,7 @@ export function ServiceChildServicesPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-3">
                                             <button
                                                 title={child.isFeatured ? "Remove from Popular" : "Promote to Popular"}
@@ -256,6 +291,20 @@ export function ServiceChildServicesPage() {
                                                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${child.isFeatured ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400 hover:bg-amber-50"}`}
                                             >
                                                 <Star size={18} fill={child.isFeatured ? "currentColor" : "none"} />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingItem(child);
+                                                    setName(child.name);
+                                                    setPrice(String(child.price));
+                                                    setDesc(child.description || "");
+                                                    setFulfillment("HOME_VISIT"); // Default or from data if exists
+                                                    setPreview(child.imageUrl || null);
+                                                    setIsModalOpen(true);
+                                                }}
+                                                className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all shadow-sm"
+                                            >
+                                                <Edit2 size={18} />
                                             </button>
                                             <button
                                                 onClick={() => setDeleteId(child._id)}
@@ -283,8 +332,8 @@ export function ServiceChildServicesPage() {
                     <div className="modal-content" style={{ maxWidth: '600px' }}>
                         <div className="p-8 border-b flex justify-between items-center">
                             <div>
-                                <h2 className="brand-name">Publish Item</h2>
-                                <p className="text-xs muted font-bold uppercase tracking-widest mt-1">Final Tier Catalog Entry</p>
+                                <h2 className="brand-name">{editingItem ? 'Edit Offering' : 'Publish Item'}</h2>
+                                <p className="text-xs muted font-bold uppercase tracking-widest mt-1">{editingItem ? `Refining ${editingItem.name}` : 'Final Tier Catalog Entry'}</p>
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="logout-btn"><X size={24} /></button>
                         </div>
@@ -297,7 +346,7 @@ export function ServiceChildServicesPage() {
                             fd.append("fulfillmentMode", fulfillment);
                             fd.append("selectionType", "SELECT");
                             if (file) fd.append("image", file);
-                            createMutation.mutate(fd);
+                            submitMutation.mutate(fd);
                         }}>
                             <div className="grid-2">
                                 <div className="input-group">
@@ -319,29 +368,35 @@ export function ServiceChildServicesPage() {
                             </div>
                             <div className="input-group">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Protocol Description</label>
-                                <textarea 
-                                    className="w-full bg-slate-50 border-none px-5 py-4 rounded-2xl font-bold min-h-[80px] placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
-                                    value={desc} 
-                                    onChange={(e) => setDesc(e.target.value)} 
-                                    placeholder="Outline the service scope..." 
+                                <textarea
+                                    className="w-full bg-slate-50 border-none px-5 py-4 rounded-2xl font-bold min-h-[80px] placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+                                    value={desc}
+                                    onChange={(e) => setDesc(e.target.value)}
+                                    placeholder="Outline the service scope..."
                                 />
                             </div>
                             <div className="input-group">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Catalog Image</label>
-                                <label className={`flex items-center gap-3 w-full h-14 px-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${file ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100 hover:border-emerald-200"}`}>
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${file ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"}`}>
-                                        {file ? <CheckCircle2 size={16} /> : <UploadCloud size={16} />}
+                                <label className={`flex items-center gap-4 w-full h-16 px-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${preview ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100 hover:border-emerald-200"}`}>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${preview ? "bg-white shadow-sm" : "bg-slate-200 text-slate-500"}`}>
+                                        {preview ? <img src={preview} className="w-full h-full object-cover" /> : <UploadCloud size={20} />}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
-                                        <p className={`text-xs font-bold truncate ${file ? "text-emerald-700" : "text-slate-400"}`}>
-                                            {file ? file.name : "Select catalog image..."}
+                                        <p className={`text-xs font-bold truncate ${preview ? "text-emerald-700" : "text-slate-400"}`}>
+                                            {file ? file.name : (editingItem ? "Update catalog image..." : "Select catalog image...")}
                                         </p>
                                     </div>
-                                    <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                                    <input type="file" className="hidden" onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) {
+                                            setFile(f);
+                                            setPreview(URL.createObjectURL(f));
+                                        }
+                                    }} />
                                 </label>
                             </div>
-                            <button disabled={createMutation.isPending} className="button primary h-14 w-full rounded-2xl mt-4 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-100">
-                                {createMutation.isPending ? "Integrating..." : "Publish Bookable Service"}
+                            <button disabled={submitMutation.isPending} className="button primary h-14 w-full rounded-2xl mt-4 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-100">
+                                {submitMutation.isPending ? "Integrating..." : (editingItem ? "Finalize Clinical Entry" : "Publish Bookable Service")}
                             </button>
                         </form>
                     </div>

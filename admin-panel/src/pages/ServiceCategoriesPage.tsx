@@ -12,7 +12,11 @@ import {
     Image,
     UploadCloud,
     CheckCircle2,
-    Edit2
+    Edit2,
+    Stethoscope,
+    Syringe,
+    FlaskConical,
+    Ambulance
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -32,7 +36,7 @@ export function ServiceCategoriesPage() {
     const filterType = searchParams.get("type");
     const [searchTerm, setSearchTerm] = useState("");
 
-    const [availableTypes, setAvailableTypes] = useState<{id: string, title: string}[]>([
+    const [availableTypes, setAvailableTypes] = useState<{ id: string, title: string }[]>([
         { id: "doctor", title: "Doctor" },
         { id: "nurse", title: "Nurse" },
         { id: "lab", title: "Lab" },
@@ -60,8 +64,19 @@ export function ServiceCategoriesPage() {
     const [title, setTitle] = useState("");
     const [type, setType] = useState(filterType || "doctor");
     const [file, setFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+    useEffect(() => {
+        if (!file) {
+            setPreviewUrl(null);
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
 
     const { data: categories, isLoading } = useQuery({
         queryKey: ["admin_categories"],
@@ -134,6 +149,17 @@ export function ServiceCategoriesPage() {
 
     const cleanName = (name: string) => name.replace(/SELECT|ASSIGN/g, "").trim();
 
+    const getCategoryIcon = (category: Category) => {
+        const name = category.name.toLowerCase();
+        const type = category.type?.toLowerCase() || "";
+
+        if (name.includes('doctor') || type.includes('doctor')) return Stethoscope;
+        if (name.includes('nurse') || name.includes('care') || type.includes('nurse')) return Syringe;
+        if (name.includes('lab') || name.includes('diagnost') || type.includes('lab')) return FlaskConical;
+        if (name.includes('ambul') || name.includes('emergen') || type.includes('ambulance')) return Ambulance;
+        return LayoutGrid;
+    };
+
     return (
         <div className="space-y-8 animate-in text-left items-start">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--card-bg)] p-8 rounded-3xl border border-[var(--border-color)] shadow-sm text-left items-start">
@@ -159,7 +185,7 @@ export function ServiceCategoriesPage() {
                         />
                     </div>
                     {filterType && (
-                        <button 
+                        <button
                             onClick={() => setSearchParams({})}
                             className="h-12 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-[var(--text-muted)] font-black text-[10px] uppercase hover:bg-slate-200"
                         >
@@ -174,52 +200,59 @@ export function ServiceCategoriesPage() {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredCategories.map((c) => (
-                    <article
-                        key={c._id}
-                        className="group bg-[var(--card-bg)] border border-[var(--border-color)] rounded-[32px] p-6 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer overflow-hidden relative flex flex-col text-left items-start"
-                        onClick={() => navigate(`/service-subcategories?category=${c.name}`)}
-                    >
-                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingCategory(c);
-                                    setName(c.name);
-                                    setTitle(c.title);
-                                    setType(c.type || "doctor");
-                                    setIsModalOpen(true);
-                                }}
-                                className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"
-                            >
-                                <Edit2 size={18} />
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteId(c._id);
-                                }}
-                                className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
+                {filteredCategories.map((c) => {
+                    const CategoryIcon = getCategoryIcon(c);
+                    return (
+                        <article
+                            key={c._id}
+                            className="group bg-[var(--card-bg)] border border-[var(--border-color)] rounded-[32px] p-6 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer overflow-hidden relative flex flex-col text-left items-start"
+                            onClick={() => navigate(`/service-subcategories?category=${c.name}`)}
+                        >
+                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingCategory(c);
+                                        setName(c.name);
+                                        setTitle(c.title);
+                                        setType(c.type || "doctor");
+                                        setIsModalOpen(true);
+                                    }}
+                                    className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"
+                                >
+                                    <Edit2 size={18} />
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteId(c._id);
+                                    }}
+                                    className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
 
-                        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
-                            <LayoutGrid size={28} />
-                        </div>
+                            <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform overflow-hidden">
+                                {c.imageUrl ? (
+                                    <img src={c.imageUrl} alt={c.title} className="w-full h-full object-cover" />
+                                ) : (
+                                    <CategoryIcon size={28} />
+                                )}
+                            </div>
 
-                        <div className="space-y-1 mb-8 flex-1 text-left items-start">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600/60 mb-1 block">{c.type || "General Service"}</span>
-                            <h3 className="text-lg font-black text-[var(--text-main)] group-hover:text-blue-600 transition-colors uppercase tracking-tight">{cleanName(c.name)}</h3>
-                        </div>
+                            <div className="space-y-1 mb-8 flex-1 text-left items-start">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600/60 mb-1 block">{c.type || "General Service"}</span>
+                                <h3 className="text-lg font-black text-[var(--text-main)] group-hover:text-blue-600 transition-colors uppercase tracking-tight">{cleanName(c.name)}</h3>
+                            </div>
 
-                        <div className="pt-6 border-t border-[var(--border-color)] w-full flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manage Registry</span>
-                            <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-                        </div>
-                    </article>
-                ))}
+                            <div className="pt-6 border-t border-[var(--border-color)] w-full flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manage Registry</span>
+                                <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                            </div>
+                        </article>
+                    )
+                })}
             </div>
 
             {isLoading && <div className="p-20 text-center muted font-bold animate-pulse">Synchronizing sector data...</div>}
@@ -269,8 +302,14 @@ export function ServiceCategoriesPage() {
                                 <div className="input-group">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Visual Asset</label>
                                     <label className={`flex items-center gap-3 w-full h-14 px-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${file ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-100 hover:border-blue-200"}`}>
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${file ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"}`}>
-                                            {file ? <CheckCircle2 size={16} /> : <UploadCloud size={16} />}
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-slate-100 ${file || (editingCategory && editingCategory.imageUrl) ? "" : "text-slate-500"}`}>
+                                            {previewUrl ? (
+                                                <img src={previewUrl} className="w-full h-full object-cover" />
+                                            ) : editingCategory?.imageUrl ? (
+                                                <img src={editingCategory.imageUrl} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <UploadCloud size={20} />
+                                            )}
                                         </div>
                                         <div className="flex-1 overflow-hidden">
                                             <p className={`text-xs font-bold truncate ${file ? "text-blue-700" : "text-slate-400"}`}>

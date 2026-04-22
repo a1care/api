@@ -152,3 +152,19 @@ data/firebase-service-account.json
 # Local scripts and diagnostics
 *.cjs
 test-mongo.js
+
+# Backend local inspection / scratch files at repo root
+/check-*.ts
+/check_*.ts
+/find_*.ts
+/inspect_*.ts
+/list_*.ts
+/search_*.ts
+/cleanup_*.ts
+/create-test-*.ts
+/update-*.ts
+/tmp_*.js
+/tempSeed.mjs
+/test_easebuzz.js
+/test_token.txt
+/seed_output.txt

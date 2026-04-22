@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { 
-  Send, Users, User, Bell, 
-  CheckCircle2, AlertCircle, Search, 
+import {
+  Send, Users, User, Bell,
+  CheckCircle2, AlertCircle, Search,
   X, Info, History, Calendar,
   ArrowRight, Filter, UserSearch as UserSearchIcon,
   ShieldCheck, Trash2
@@ -88,17 +88,17 @@ export function NotificationsPage() {
       return res.data;
     },
     onSuccess: (data) => {
-       toast.success(data?.message || "Broadcast packet deployed to network units!");
-       setTitle("");
-       setBody("");
-       setDataPayload("");
-       setRecipientId("");
-       setRecipientName("");
-       refetchHistory();
+      toast.success(data?.message || "Broadcast packet deployed to network units!");
+      setTitle("");
+      setBody("");
+      setDataPayload("");
+      setRecipientId("");
+      setRecipientName("");
+      refetchHistory();
     },
     onError: (err: any) => {
-       const msg = err?.response?.data?.message || err.message || "Broadcast sync failure";
-       toast.error(msg);
+      const msg = err?.response?.data?.message || err.message || "Broadcast sync failure";
+      toast.error(msg);
     }
   });
 
@@ -128,35 +128,40 @@ export function NotificationsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Communication Center</h1>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest opacity-60 text-[10px]">Network Intelligence & Broadcast Control</p>
+      <header className="flex flex-col gap-4 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left items-start">
+        <div className="relative z-10 text-left items-start">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">Push Notifications</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Communication • Push Notifications</p>
+          </div>
         </div>
 
-        <div className="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
-           <button 
+        <div className="relative z-10 flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 w-fit">
+          <button
             onClick={() => setActiveTab('broadcast')}
             className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'broadcast' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-           >
-             Outbound Broadcast
-           </button>
-           <button 
+          >
+            Outbound Broadcast
+          </button>
+          <button
             onClick={() => setActiveTab('intelligence')}
             className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'intelligence' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-           >
-             System Intelligence
-           </button>
+          >
+            System Intelligence
+          </button>
         </div>
+        <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
       </header>
 
       {isSearchOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsSearchOpen(false)} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[40px] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-8 border-b dark:border-white/5 space-y-4">
+          <div className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-8 border-b space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Target Discovery</h3>
+                <h3 className="text-xl font-black text-slate-900">Target Discovery</h3>
                 <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors">
                   <X />
                 </button>
@@ -202,13 +207,13 @@ export function NotificationsPage() {
                 </div>
               ) : userSearchTerm.length >= 3 ? (
                 <div className="text-center py-10 text-slate-400 opacity-60">
-                   <UserSearchIcon size={32} className="mx-auto mb-2" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">No matching units found</p>
+                  <UserSearchIcon size={32} className="mx-auto mb-2" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">No matching units found</p>
                 </div>
               ) : (
                 <div className="text-center py-10 text-slate-400 opacity-60">
-                   <Search size={32} className="mx-auto mb-2" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Enter at least 3 characters</p>
+                  <Search size={32} className="mx-auto mb-2" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Enter at least 3 characters</p>
                 </div>
               )}
             </div>
@@ -219,12 +224,12 @@ export function NotificationsPage() {
       {activeTab === 'broadcast' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-8 space-y-6">
-            <section className="bg-white dark:bg-slate-900 rounded-[40px] p-10 border border-slate-100 dark:border-white/10 shadow-sm space-y-10">
+            <section className="bg-white rounded-[40px] p-10 border border-slate-100 shadow-sm space-y-10">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                   <Send size={20} />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Compose Announcement</h3>
+                <h3 className="text-xl font-black text-slate-900">Compose Announcement</h3>
               </div>
 
               <div className="space-y-8">
@@ -237,12 +242,12 @@ export function NotificationsPage() {
                       { id: "partners", label: "Partners Only", icon: User },
                       { id: "individual", label: "Direct Recipient", icon: Search },
                     ].map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setAudience(item.id as Audience)}
-                          className={`flex flex-col items-center justify-center p-5 rounded-3xl border-2 transition-all gap-2 cursor-pointer ${audience === item.id ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-100" : "bg-slate-50 dark:bg-white/5 border-transparent text-slate-500 hover:border-blue-200"}`}
-                        >
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setAudience(item.id as Audience)}
+                        className={`flex flex-col items-center justify-center p-5 rounded-3xl border-2 transition-all gap-2 cursor-pointer ${audience === item.id ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-100" : "bg-slate-50 dark:bg-white/5 border-transparent text-slate-500 hover:border-blue-200"}`}
+                      >
                         <item.icon size={20} />
                         <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
                       </button>
@@ -268,7 +273,7 @@ export function NotificationsPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Selection</label>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setIsSearchOpen(true)}
                         className={`w-full h-12 bg-slate-50 dark:bg-white/5 rounded-2xl px-5 flex items-center justify-between border-2 transition-all cursor-pointer ${recipientId ? "border-emerald-500/20" : "border-transparent hover:border-blue-100"}`}
@@ -288,7 +293,7 @@ export function NotificationsPage() {
                 <div className="grid gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notification Title</label>
-                    <input 
+                    <input
                       className="w-full h-14 bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 text-slate-900 dark:text-white font-bold text-lg focus:ring-2 focus:ring-blue-100 outline-none"
                       placeholder="Brief attention-grabbing title"
                       value={title}
@@ -298,7 +303,7 @@ export function NotificationsPage() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Message Body</label>
-                    <textarea 
+                    <textarea
                       className="w-full h-32 bg-slate-50 dark:bg-white/5 border-none rounded-3xl p-6 text-slate-900 dark:text-white font-bold leading-relaxed focus:ring-2 focus:ring-blue-100 outline-none"
                       placeholder="Enter the full announcement text here..."
                       value={body}
@@ -308,7 +313,7 @@ export function NotificationsPage() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deep-Link Data (JSON)</label>
-                    <input 
+                    <input
                       className="w-full h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-5 text-slate-900 dark:text-white font-mono text-xs font-bold focus:ring-2 focus:ring-blue-100 outline-none"
                       placeholder='{"screen": "offer", "id": "123"}'
                       value={dataPayload}
@@ -363,67 +368,67 @@ export function NotificationsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-           <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-600/10 p-6 rounded-[32px] border border-blue-100 dark:border-blue-500/20">
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-white dark:bg-blue-600 rounded-2xl flex items-center justify-center text-blue-600 dark:text-white shadow-sm">
-                    <Info size={24} />
-                 </div>
-                 <div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white">Admin Activity Log</h3>
-                    <p className="text-xs font-bold text-slate-500">Real-time alerts for bookings, KYC, and system events.</p>
-                 </div>
+          <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-600/10 p-6 rounded-[32px] border border-blue-100 dark:border-blue-500/20">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white dark:bg-blue-600 rounded-2xl flex items-center justify-center text-blue-600 dark:text-white shadow-sm">
+                <Info size={24} />
               </div>
-              <button 
-                onClick={() => clearAlertsMutation.mutate()}
-                className="px-6 py-3 bg-white dark:bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 border border-slate-100 dark:border-white/10 rounded-2xl shadow-sm transition-all"
-              >
-                Clear All Alerts
-              </button>
-           </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Admin Activity Log</h3>
+                <p className="text-xs font-bold text-slate-500">Real-time alerts for bookings, KYC, and system events.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => clearAlertsMutation.mutate()}
+              className="px-6 py-3 bg-white dark:bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 border border-slate-100 dark:border-white/10 rounded-2xl shadow-sm transition-all"
+            >
+              Clear All Alerts
+            </button>
+          </div>
 
-           <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-white/10 shadow-sm overflow-hidden">
-              <div className="p-10">
-                 {alerts.length > 0 ? (
-                   <div className="space-y-4">
-                      {alerts.map((alert) => (
-                        <div key={alert._id} className="p-6 rounded-[24px] border border-slate-50 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/30 hover:bg-slate-50 dark:hover:bg-blue-500/5 transition-all group">
-                           <div className="flex items-start justify-between">
-                              <div className="flex gap-6">
-                                 <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-white transition-all shadow-sm">
-                                    {alert.refType === 'ServiceRequest' ? <Calendar size={24} /> : 
-                                     alert.refType === 'Partner' ? <ShieldCheck size={24} /> : 
-                                     <Bell size={24} />}
-                                 </div>
-                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">{alert.refType || 'System'}</span>
-                                       <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                       <span className="text-[10px] font-bold text-slate-400">{new Date(alert.createdAt).toLocaleString()}</span>
-                                    </div>
-                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">{alert.title}</h3>
-                                    <p className="text-sm font-bold text-slate-500 max-w-2xl">{alert.body}</p>
-                                 </div>
-                              </div>
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <button className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
-                                    Take Action <ArrowRight size={14} />
-                                 </button>
-                              </div>
-                           </div>
+          <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="p-10">
+              {alerts.length > 0 ? (
+                <div className="space-y-4">
+                  {alerts.map((alert) => (
+                    <div key={alert._id} className="p-6 rounded-[24px] border border-slate-50 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/30 hover:bg-slate-50 dark:hover:bg-blue-500/5 transition-all group">
+                      <div className="flex items-start justify-between">
+                        <div className="flex gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-white transition-all shadow-sm">
+                            {alert.refType === 'ServiceRequest' ? <Calendar size={24} /> :
+                              alert.refType === 'Partner' ? <ShieldCheck size={24} /> :
+                                <Bell size={24} />}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">{alert.refType || 'System'}</span>
+                              <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                              <span className="text-[10px] font-bold text-slate-400">{new Date(alert.createdAt).toLocaleString()}</span>
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white">{alert.title}</h3>
+                            <p className="text-sm font-bold text-slate-500 max-w-2xl">{alert.body}</p>
+                          </div>
                         </div>
-                      ))}
-                   </div>
-                 ) : (
-                   <div className="py-20 text-center space-y-4">
-                      <div className="w-20 h-20 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-200">
-                         <CheckCircle2 size={40} />
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                            Take Action <ArrowRight size={14} />
+                          </button>
+                        </div>
                       </div>
-                      <h4 className="text-xl font-black text-slate-900 dark:text-white">All Caught Up!</h4>
-                      <p className="text-slate-500 font-medium font-bold opacity-60">There are no pending system intelligence alerts.</p>
-                   </div>
-                 )}
-              </div>
-           </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-20 text-center space-y-4">
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-200">
+                    <CheckCircle2 size={40} />
+                  </div>
+                  <h4 className="text-xl font-black text-slate-900 dark:text-white">All Caught Up!</h4>
+                  <p className="text-slate-500 font-medium font-bold opacity-60">There are no pending system intelligence alerts.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

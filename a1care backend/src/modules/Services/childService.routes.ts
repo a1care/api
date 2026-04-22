@@ -1,12 +1,13 @@
 import express from 'express'
-import { 
-    addRolesToChildService, 
-    createChildService, 
-    getChildServiceBySubserviceId, 
-    getChildServiceById, 
+import {
+    addRolesToChildService,
+    createChildService,
+    getChildServiceBySubserviceId,
+    getChildServiceById,
     deleteChildService,
     getFeaturedChildServices,
-    toggleFeaturedChildService
+    toggleFeaturedChildService,
+    updateChildService
 } from './childService.controller.js'
 import { uploadServiceImage } from '../../middlewares/upload.js'
 import { attachFileUrl } from '../../middlewares/attackFIle.js'
@@ -15,6 +16,7 @@ const router = express.Router()
 
 router.get('/featured', getFeaturedChildServices)
 router.post('/create/:serviceId/:subServiceId', uploadServiceImage, attachFileUrl, createChildService)
+router.put('/:id', uploadServiceImage, attachFileUrl, updateChildService)
 router.get('/:subServiceId', getChildServiceBySubserviceId)
 router.get('/detail/:id', getChildServiceById)
 router.put("/addroles/:childServiceId", addRolesToChildService)

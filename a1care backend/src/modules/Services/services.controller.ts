@@ -40,7 +40,7 @@ export const getServices = asyncHandler(async (req, res) => {
 export const updateService = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const existingService = await Service.findById(id);
-  
+
   if (!existingService) {
     throw new ApiError(404, "Service not found");
   }
@@ -50,10 +50,23 @@ export const updateService = asyncHandler(async (req, res) => {
     title: req.body.title || existingService.title,
     type: req.body.type || existingService.type,
     imageUrl: req.fileUrl || existingService.imageUrl,
-    isActive: req.body.isActive !== undefined ? req.body.isActive === 'true' : existingService.isActive
+    isActive: typeof req.body.isActive === 'string'
+      ? req.body.isActive === 'true'
+      : (req.body.isActive !== undefined ? req.body.isActive : existingService.isActive)
   };
 
-  const updatedService = await Service.findByIdAndUpdate(id, payload, { new: true });
+  const parsed = serviceValidation.safeParse(payload);
+
+  if (!parsed.success) {
+    console.error('validation failed!', parsed.error);
+    throw new ApiError(400, "Validation failed");
+  }
+
+  const updatedService = await Service.findByIdAndUpdate(
+    id,
+    { $set: parsed.data },
+    { new: true }
+  );
 
   res.status(200).json(new ApiResponse(200, "Service updated", updatedService));
 });

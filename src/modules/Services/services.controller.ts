@@ -16,7 +16,7 @@ export const createService = asyncHandler(async (req, res) => {
   const parsed = serviceValidation.safeParse(payload);
 
   if (!parsed.success) {
-    console.error('validation failed!' , parsed.error)
+    console.error('validation failed!', parsed.error)
     throw new ApiError(400, "Validation failed");
   }
 
@@ -30,16 +30,16 @@ export const createService = asyncHandler(async (req, res) => {
 
 
 //get all service 
-export const getServices = asyncHandler(async (req , res)=>{
+export const getServices = asyncHandler(async (req, res) => {
   const services = await Service.find().sort({ createdAt: 'desc' }).exec()
-  res.status(200).json(new ApiResponse(200 , "Services fetched" , services))
+  res.status(200).json(new ApiResponse(200, "Services fetched", services))
 })
 
 //update service
 
 //delete service
-export const deleteService = asyncHandler(async (req , res)=>{
-  const {id} = req.params
+export const deleteService = asyncHandler(async (req, res) => {
+  const { id } = req.params
   const deleteService = await Service.findByIdAndDelete(id)
-  res.status(200).json(new ApiResponse(200 , "Deleted Successfully" , deleteService))
+  res.status(200).json(new ApiResponse(200, "Deleted Successfully", deleteService))
 })

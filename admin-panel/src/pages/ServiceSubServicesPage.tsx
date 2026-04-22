@@ -12,7 +12,12 @@ import {
     Filter,
     Image,
     UploadCloud,
-    CheckCircle2
+    CheckCircle2,
+    Stethoscope,
+    Syringe,
+    FlaskConical,
+    Ambulance,
+    Edit2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -44,7 +49,9 @@ export function ServiceSubServicesPage() {
     const [name, setName] = useState("");
     const [desc, setDesc] = useState("");
     const [file, setFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [editingSub, setEditingSub] = useState<SubService | null>(null);
 
     const { data: categories } = useQuery({
         queryKey: ["admin_categories"],
@@ -64,22 +71,30 @@ export function ServiceSubServicesPage() {
         enabled: !!selectedCatId
     });
 
-    const createMutation = useMutation({
+    const submitMutation = useMutation({
         mutationFn: async (formData: FormData) => {
-            if (!selectedCatId) throw new Error("Category Required");
-            const res = await api.post(`/subservice/create/${selectedCatId}`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            return res.data;
+            if (editingSub) {
+                const res = await api.put(`/subservice/${editingSub._id}`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+                return res.data;
+            } else {
+                if (!selectedCatId) throw new Error("Category Required");
+                const res = await api.post(`/subservice/create/${selectedCatId}`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+                return res.data;
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin_subservices", selectedCatId] });
             setIsModalOpen(false);
-            setName(""); setDesc(""); setFile(null);
-            toast.success("Sub-service integrated");
+            setEditingSub(null);
+            setName(""); setDesc(""); setFile(null); setPreview(null);
+            toast.success(editingSub ? "Sub-service updated" : "Sub-service integrated");
         },
         onError: (err: any) => {
-            toast.error(err?.response?.data?.message || "Integration failed");
+            toast.error(err?.response?.data?.message || "Operation failed");
         }
     });
 
@@ -94,12 +109,23 @@ export function ServiceSubServicesPage() {
         }
     });
 
-    const filtered = subServices?.filter(s => 
+    const filtered = subServices?.filter(s =>
         s.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const cleanName = (name: string) => name.replace(/SELECT|ASSIGN/g, "").trim();
     const currentCategory = categories?.find(c => c._id === selectedCatId);
+
+    const getSubIcon = (sub: SubService) => {
+        const name = sub.name.toLowerCase();
+        const catName = currentCategory?.name.toLowerCase() || "";
+
+        if (name.includes('doctor') || catName.includes('doctor')) return Stethoscope;
+        if (name.includes('nurse') || name.includes('care') || catName.includes('nurse')) return Syringe;
+        if (name.includes('lab') || name.includes('diagnost') || catName.includes('lab')) return FlaskConical;
+        if (name.includes('ambul') || name.includes('emergen') || catName.includes('ambulance')) return Ambulance;
+        return Layers;
+    };
 
     return (
         <div className="flex-col gap-6">
@@ -113,9 +139,13 @@ export function ServiceSubServicesPage() {
                         <p className="muted font-bold tracking-wider uppercase text-[10px] mt-1">Tier 2 specialized medical units</p>
                     </div>
                 </div>
-                <button 
+                <button
                     disabled={!selectedCatId}
-                    onClick={() => setIsModalOpen(true)} 
+                    onClick={() => {
+                        setEditingSub(null);
+                        setName(""); setDesc(""); setFile(null); setPreview(null);
+                        setIsModalOpen(true);
+                    }}
                     className="button primary h-12 px-6 rounded-2xl gap-2 shadow-lg shadow-indigo-100 disabled:opacity-50"
                 >
                     <Plus size={18} /> New Sub-Category
@@ -147,7 +177,7 @@ export function ServiceSubServicesPage() {
                     <div className="card p-4 flex items-center gap-4 bg-white/50 backdrop-blur-md shadow-sm" style={{ borderRadius: '24px' }}>
                         <div className="relative flex-1 group">
                             <Search className="absolute text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
-                            <input 
+                            <input
                                 placeholder="Search sub-categories..."
                                 className="w-full bg-[var(--bg-main)] border-none font-semibold text-slate-700"
                                 style={{ paddingLeft: '60px', height: '56px', borderRadius: '16px' }}
@@ -176,16 +206,33 @@ export function ServiceSubServicesPage() {
                                             {sub.imageUrl ? (
                                                 <img src={sub.imageUrl} alt={sub.name} className="w-full h-full object-cover" />
                                             ) : (
-                                                <Layers size={22} />
+                                                (() => {
+                                                    const SubIcon = getSubIcon(sub);
+                                                    return <SubIcon size={22} />;
+                                                })()
                                             )}
                                         </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setDeleteId(sub._id); }}
-                                            className="logout-btn opacity-0 group-hover:opacity-100 transition-opacity"
-                                            style={{ padding: '8px' }}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingSub(sub);
+                                                    setName(sub.name);
+                                                    setDesc(sub.description || "");
+                                                    setPreview(sub.imageUrl || null);
+                                                    setIsModalOpen(true);
+                                                }}
+                                                className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <Edit2 size={18} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setDeleteId(sub._id); }}
+                                                className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="flex-col gap-2">
                                         <h3 className="font-black text-slate-800 text-lg">{cleanName(sub.name)}</h3>
@@ -218,8 +265,8 @@ export function ServiceSubServicesPage() {
                     <div className="modal-content" style={{ maxWidth: '500px' }}>
                         <div className="p-8 border-b flex justify-between items-center">
                             <div>
-                                <h2 className="brand-name">New Unit</h2>
-                                <p className="text-xs muted font-bold uppercase tracking-widest mt-1">Expanding {cleanName(currentCategory?.name || "")}</p>
+                                <h2 className="brand-name">{editingSub ? 'Refine Unit' : 'New Unit'}</h2>
+                                <p className="text-xs muted font-bold uppercase tracking-widest mt-1">{editingSub ? `Updating ${editingSub.name}` : `Expanding ${cleanName(currentCategory?.name || "")}`}</p>
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="logout-btn"><X size={24} /></button>
                         </div>
@@ -229,7 +276,7 @@ export function ServiceSubServicesPage() {
                             fd.append("name", name);
                             fd.append("description", desc || "Unit description");
                             if (file) fd.append("image", file);
-                            createMutation.mutate(fd);
+                            submitMutation.mutate(fd);
                         }}>
                             <div className="input-group">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Specialization Name</label>
@@ -237,29 +284,35 @@ export function ServiceSubServicesPage() {
                             </div>
                             <div className="input-group">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Detailed Brief</label>
-                                <textarea 
-                                    className="w-full bg-slate-50 border-none px-5 py-4 rounded-2xl font-bold min-h-[100px] placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
-                                    value={desc} 
-                                    onChange={(e) => setDesc(e.target.value)} 
-                                    placeholder="Describe the clinical focus..." 
+                                <textarea
+                                    className="w-full bg-slate-50 border-none px-5 py-4 rounded-2xl font-bold min-h-[100px] placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+                                    value={desc}
+                                    onChange={(e) => setDesc(e.target.value)}
+                                    placeholder="Describe the clinical focus..."
                                 />
                             </div>
                             <div className="input-group">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Identity Visual (Icon)</label>
-                                <label className={`flex items-center gap-3 w-full h-14 px-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${file ? "bg-indigo-50 border-indigo-200" : "bg-slate-50 border-slate-100 hover:border-indigo-200"}`}>
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${file ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"}`}>
-                                        {file ? <CheckCircle2 size={16} /> : <UploadCloud size={16} />}
+                                <label className={`flex items-center gap-4 w-full h-16 px-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${preview ? "bg-indigo-50 border-indigo-200" : "bg-slate-50 border-slate-100 hover:border-indigo-200"}`}>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${preview ? "bg-white shadow-sm" : "bg-slate-200 text-slate-500"}`}>
+                                        {preview ? <img src={preview} className="w-full h-full object-cover" /> : <UploadCloud size={20} />}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
-                                        <p className={`text-xs font-bold truncate ${file ? "text-indigo-700" : "text-slate-400"}`}>
-                                            {file ? file.name : "Select unit icon..."}
+                                        <p className={`text-xs font-bold truncate ${preview ? "text-indigo-700" : "text-slate-400"}`}>
+                                            {file ? file.name : (editingSub ? "Update visual asset..." : "Select unit icon...")}
                                         </p>
                                     </div>
-                                    <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
+                                    <input type="file" className="hidden" onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) {
+                                            setFile(f);
+                                            setPreview(URL.createObjectURL(f));
+                                        }
+                                    }} />
                                 </label>
                             </div>
-                            <button disabled={createMutation.isPending} className="button primary h-14 w-full rounded-2xl mt-4 font-black uppercase tracking-widest text-xs">
-                                {createMutation.isPending ? "Integrating..." : "Finalize Unit Integration"}
+                            <button disabled={submitMutation.isPending} className="button primary h-14 w-full rounded-2xl mt-4 font-black uppercase tracking-widest text-xs">
+                                {submitMutation.isPending ? "Integrating..." : (editingSub ? "Save Clinical Refinements" : "Finalize Unit Integration")}
                             </button>
                         </form>
                     </div>

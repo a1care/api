@@ -255,17 +255,15 @@ export function DoctorStaffManagementPage() {
         <div className="flex-col gap-4">
             {selectedDoctor && <VerificationModal doctor={selectedDoctor} />}
 
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6" style={{ marginBottom: '24px' }}>
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Inventory</span>
-                        <ChevronRight size={10} className="text-slate-300" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Doctors</span>
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left" style={{ marginBottom: '24px' }}>
+                <div className="relative z-10 text-left items-start">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">Doctor Registry</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • User Directory • Doctors</p>
                     </div>
-                    <h1 className="brand-name" style={{ fontSize: '2rem', letterSpacing: '-0.03em' }}>Doctor Registry</h1>
-                    <p className="text-xs muted font-bold uppercase tracking-wider mt-1">Review credentials and verify specialized partner network</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="relative z-10 flex gap-2">
                     <button className="button secondary shadow-sm px-4 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => toast.info("Displaying recent provider audit telemetry.")}>
                         <Clock size={16} />
                         <span>Recent Logs</span>
@@ -275,6 +273,8 @@ export function DoctorStaffManagementPage() {
                         <span>Add Doctor</span>
                     </button>
                 </div>
+                <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
             </header>
 
             <div className="card p-0 overflow-hidden shadow-xl shadow-slate-200/50" style={{ border: 'none', borderRadius: '24px' }}>

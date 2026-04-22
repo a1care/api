@@ -206,24 +206,22 @@ export function TicketsPage() {
                                         </p>
                                     </td>
                                     <td className="px-6 py-5">
-                                        <span className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${
-                                            t.status?.toLowerCase() === 'resolved' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                        <span className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${t.status?.toLowerCase() === 'resolved' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                             t.status?.toLowerCase() === 'in progress' ? 'bg-blue-50 dark:bg-blue-500/10 text-[#1A7FD4]' :
-                                            t.status?.toLowerCase() === 'closed' ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
-                                            'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                        }`}>
-                                            <div className={`w-2 h-2 rounded-full ${
-                                                t.status?.toLowerCase() === 'resolved' ? 'bg-emerald-500' :
+                                                t.status?.toLowerCase() === 'closed' ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
+                                                    'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                            }`}>
+                                            <div className={`w-2 h-2 rounded-full ${t.status?.toLowerCase() === 'resolved' ? 'bg-emerald-500' :
                                                 t.status?.toLowerCase() === 'in progress' ? 'bg-blue-500 animate-pulse' :
-                                                t.status?.toLowerCase() === 'closed' ? 'bg-slate-500' :
-                                                'bg-amber-500 animate-bounce'
-                                            }`}></div>
+                                                    t.status?.toLowerCase() === 'closed' ? 'bg-slate-500' :
+                                                        'bg-amber-500 animate-bounce'
+                                                }`}></div>
                                             {t.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-5 text-center">
                                         <div className="flex items-center justify-center gap-3">
-                                            <button 
+                                            <button
                                                 onClick={() => setSelectedTicket(t)}
                                                 className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
                                                 title="Intervene in Chat"
@@ -264,15 +262,15 @@ export function TicketsPage() {
             {/* Chat Intervention Modal */}
             {selectedTicket && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col h-[80vh]">
+                    <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col h-[80vh]">
                         {/* Modal Header */}
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+                        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
                                     <MessageSquare size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-black text-slate-900 dark:text-white line-clamp-1">{selectedTicket.subject}</h3>
+                                    <h3 className="text-lg font-black text-slate-900 line-clamp-1">{selectedTicket.subject}</h3>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Support Intervention • {selectedTicket.staffId?.name || "Patient"}</p>
                                 </div>
                             </div>
@@ -282,7 +280,7 @@ export function TicketsPage() {
                         </div>
 
                         {/* Chat Messages */}
-                        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/30 dark:bg-slate-950/30">
+                        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/30">
                             {fetchingMessages && messages.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full gap-4">
                                     <Loader2 className="animate-spin text-blue-500" />
@@ -294,7 +292,7 @@ export function TicketsPage() {
                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Original Inquiry</p>
                                         <p className="text-sm font-medium text-slate-600 dark:text-slate-300 italic">" {selectedTicket?.description} "</p>
                                     </div>
-                                    
+
                                     {messages.map((m) => {
                                         const isMe = m.senderType === 'User';
                                         return (
@@ -319,9 +317,9 @@ export function TicketsPage() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+                        <div className="p-8 bg-white border-t border-slate-100">
                             <div className="relative">
-                                <textarea 
+                                <textarea
                                     className="w-full bg-slate-50 dark:bg-slate-950 border-none rounded-3xl p-6 pr-20 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all resize-none min-h-[80px]"
                                     placeholder="Type your intervention response..."
                                     value={replyMsg}
@@ -333,7 +331,7 @@ export function TicketsPage() {
                                         }
                                     }}
                                 />
-                                <button 
+                                <button
                                     disabled={sending || !replyMsg.trim()}
                                     onClick={handleSendMessage}
                                     className="absolute right-3 bottom-3 w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 hover:bg-blue-500 active:scale-95 transition-all disabled:opacity-50"

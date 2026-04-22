@@ -5,5 +5,5 @@ export const subServiceValidation = z.object({
     description: z.string(),
     isActive: z.boolean().default(true),
     serviceId: z.string(),
-    imageUrl: z.string().min(1, "Asset URL is mandatory")
+    imageUrl: z.string().optional()
 })

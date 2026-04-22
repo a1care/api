@@ -358,7 +358,7 @@ export function AppLayout() {
             <div className="w-px h-6 bg-slate-200"></div>
 
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowBell(!showBell)}
                 className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${showBell ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'hover:bg-slate-100 text-[var(--text-muted)]'}`}
               >
@@ -369,13 +369,13 @@ export function AppLayout() {
               {showBell && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowBell(false)}></div>
-                  <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden z-50 animate-in slide-in-from-top-4 duration-300">
-                    <div className="p-6 border-b dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex items-center justify-between">
+                  <div className="absolute right-0 mt-4 w-80 bg-white rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in slide-in-from-top-4 duration-300">
+                    <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">System Alerts</h3>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">System Alerts</h3>
                         <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{alerts.length} Pending Actions</p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => clearAlertsMutation.mutate()}
                         className="text-[9px] font-black text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1.5"
                       >
@@ -387,39 +387,39 @@ export function AppLayout() {
                       {alerts.length > 0 ? (
                         alerts.map((alert) => (
                           <div key={alert._id} className="p-6 border-b dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer group">
-                             <div className="flex gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-110 transition-transform">
-                                   {alert.refType === 'ServiceRequest' ? <Calendar size={18} /> : 
-                                    alert.refType === 'Partner' ? <ShieldCheck size={18} /> : 
+                            <div className="flex gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-110 transition-transform">
+                                {alert.refType === 'ServiceRequest' ? <Calendar size={18} /> :
+                                  alert.refType === 'Partner' ? <ShieldCheck size={18} /> :
                                     <Bell size={18} />}
-                                </div>
-                                <div className="space-y-1">
-                                   <p className="text-xs font-black text-slate-900 dark:text-white leading-tight">{alert.title}</p>
-                                   <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{alert.body}</p>
-                                   <p className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest pt-1">
-                                      {format(new Date(alert.createdAt), 'MMM d, h:mm a')}
-                                   </p>
-                                </div>
-                             </div>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-black text-slate-900 dark:text-white leading-tight">{alert.title}</p>
+                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{alert.body}</p>
+                                <p className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest pt-1">
+                                  {format(new Date(alert.createdAt), 'MMM d, h:mm a')}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         ))
                       ) : (
                         <div className="p-12 text-center space-y-3">
-                           <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-300">
-                             <CheckCircle size={32} />
-                           </div>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Queue Clean</p>
+                          <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                            <CheckCircle size={32} />
+                          </div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Queue Clean</p>
                         </div>
                       )}
                     </div>
 
                     <div className="p-4 bg-slate-50/50 dark:bg-white/5 text-center">
-                       <button 
+                      <button
                         onClick={() => { navigate('/notifications'); setShowBell(false); }}
                         className="w-full py-3 rounded-2xl text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                       >
-                          View Full Intelligence Log
-                       </button>
+                      >
+                        View Full Intelligence Log
+                      </button>
                     </div>
                   </div>
                 </>
@@ -449,8 +449,8 @@ export function AppLayout() {
         {showSearch && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
             <div onClick={() => setShowSearch(false)} className="absolute inset-0"></div>
-            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 flex flex-col max-h-[70vh]">
-              <div className="p-6 border-b dark:border-slate-800 flex items-center gap-4">
+            <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 flex flex-col max-h-[70vh]">
+              <div className="p-6 border-b flex items-center gap-4">
                 <Search size={22} className="text-blue-600" />
                 <input
                   autoFocus
@@ -458,7 +458,7 @@ export function AppLayout() {
                   placeholder="Search anything..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                  className="w-full bg-transparent border-none text-xl font-bold text-slate-900 focus:ring-0 placeholder:text-slate-300"
                 />
                 <button onClick={() => setShowSearch(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-400 transition-all">
                   <X size={20} />

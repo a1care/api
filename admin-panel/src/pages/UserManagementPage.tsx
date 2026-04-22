@@ -171,22 +171,20 @@ export function UserManagementPage({ category }: { category: string }) {
 
     return (
         <div className="flex-col gap-6">
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6" style={{ marginBottom: '8px' }}>
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Users</span>
-                        <ChevronRight size={10} className="text-slate-300" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{title} Registry</span>
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left" style={{ marginBottom: '8px' }}>
+                <div className="relative z-10 text-left items-start">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">{title} Registry</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • User Directory • {title}</p>
                     </div>
-                    <h1 className="brand-name" style={{ fontSize: '2.25rem', letterSpacing: '-0.04em' }}>{title} Registry</h1>
-                    <p className="text-xs muted font-extrabold uppercase tracking-widest" style={{ marginTop: '4px', opacity: 0.8 }}>
-                        Strategic Management and Operational Metrics
-                    </p>
                 </div>
-                <button className="button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all uppercase tracking-widest text-[10px] font-black" onClick={() => setIsAddModalOpen(true)}>
+                <button className="relative z-10 button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all uppercase tracking-widest text-[10px] font-black" onClick={() => setIsAddModalOpen(true)}>
                     <UserPlus size={18} className="group-hover:rotate-12 transition-transform" />
                     <span>Add {title.slice(0, -1)}</span>
                 </button>
+                <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
             </header>
 
             {/* Mini Dashboard */}

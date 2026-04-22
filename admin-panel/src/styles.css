@@ -436,6 +436,7 @@ textarea:focus {
 }
 
 .modal-content {
+  background: white;
   border-radius: 24px;
   padding: 32px;
   animation: modalSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1725,4 +1726,4 @@ textarea:focus {
   background: #f1f5f9;
   color: #475569;
 }
-.full-width { width: 100%; }
+.full-width { width: 100%; }
