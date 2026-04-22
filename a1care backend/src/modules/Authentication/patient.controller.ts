@@ -90,8 +90,18 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       patient = null;
     }
 
+    const isTestAccount = cleanMobile === TEST_MOBILE_NUMBER;
+
     if (!patient) {
-      patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
+      patient = new Patient({ 
+        mobileNumber: `+91${cleanMobile}`,
+        isRegistered: isTestAccount,
+        name: isTestAccount ? "Google Reviewer" : undefined
+      });
+      await patient.save();
+    } else if (isTestAccount && !patient.isRegistered) {
+      patient.isRegistered = true;
+      patient.name = patient.name || "Google Reviewer";
       await patient.save();
     }
 

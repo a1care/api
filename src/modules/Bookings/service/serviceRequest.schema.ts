@@ -7,7 +7,7 @@ const objectId = z
 const scheduledSlotSchema = z.object({
     startTime: z.coerce.date(),
     endTime: z.coerce.date()
-}); 
+});
 
 const locationSchema = z.object({
     lat: z.number().min(-90).max(90),
@@ -17,7 +17,7 @@ const locationSchema = z.object({
 const serviceRequestValiation = z.object({
     childServiceId: objectId,
     userId: objectId,
-    roleId: z.array(objectId).optional() ,
+    roleId: z.array(objectId).optional(),
     status: z.enum(["PENDING", "ACCEPTED", "CANCELLED"]).optional(),
     addressId: objectId.optional(),
     fulfillmentMode: z.enum([
@@ -29,8 +29,8 @@ const serviceRequestValiation = z.object({
     location: locationSchema.optional(),
     assignProviderId: objectId.optional(),
     assignRoleId: objectId.optional(),
-    bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]) , 
-    price:z.number()
+    bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]),
+    price: z.number()
 })
 
 export default serviceRequestValiation

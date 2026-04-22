@@ -168,3 +168,6 @@ test-mongo.js
 /test_easebuzz.js
 /test_token.txt
 /seed_output.txt
+
+# Local temporary scripts directory
+scratch/

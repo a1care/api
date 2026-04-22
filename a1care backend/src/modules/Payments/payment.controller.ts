@@ -3,6 +3,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { Order, OrderStatus, PaymentTransaction, PaymentStatus, PaymentLog } from "./payment.model.js";
 import { EasebuzzService } from "./easebuzz.service.js";
+import { RazorpayService } from "./razorpay.service.js";
 import { getSystemSettings } from "../Admin/admin.controller.js";
 import { Patient } from "../Authentication/patient.model.js";
 import { creditWalletAtomic } from "../Wallet/wallet.controller.js";
@@ -36,6 +37,20 @@ const getEasebuzzService = async (): Promise<EasebuzzService> => {
     });
 };
 
+const getRazorpayService = async (): Promise<RazorpayService> => {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+        throw new ApiError(500, "Razorpay gateway not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env");
+    }
+
+    return new RazorpayService({
+        keyId: keyId.trim(),
+        keySecret: keySecret.trim(),
+    });
+};
+
 // ─── Controller Functions ────────────────────────────────────────────────────
 
 /**
@@ -62,8 +77,13 @@ export const createOrder = asyncHandler(async (req, res) => {
         status: OrderStatus.PENDING,
     });
 
-    const ezService = await getEasebuzzService();
-    await ezService.logEvent(txnId, "ORDER_CREATED", "INFO", "Order created in database", { orderId: (order as any)._id, type, amount });
+    try {
+        const ezService = await getEasebuzzService();
+        await ezService.logEvent(txnId, "ORDER_CREATED", "INFO", "Order created in database", { orderId: (order as any)._id, type, amount });
+    } catch {
+        // Fallback for logging if easebuzz service isn't ready
+        console.log(`[OrderCreated] txnId: ${txnId}, amount: ${amount}`);
+    }
 
     return res.status(201).json(new ApiResponse(201, "Order created", order));
 });
@@ -131,7 +151,7 @@ Params: ${JSON.stringify(params, null, 2)}
 
     // Server-to-Server initiation to get access_key
     const apiResult = await ezService!.initiatePaymentApi(params);
-    
+
     // Log the API Result to file for debugging
     const resultMsg = `
 [${new Date().toISOString()}] GATEWAY_RESPONSE_RAW
@@ -139,7 +159,7 @@ TxnID: ${order.txnId}
 Status: ${apiResult.status}
 Data/Message: ${JSON.stringify(apiResult.data || apiResult.error_desc || apiResult.message || apiResult, null, 2)}
 --------------------------------------------------\n`;
-    await fs.appendFile(path.join(process.cwd(), "payment_debug.log"), resultMsg).catch(() => {});
+    await fs.appendFile(path.join(process.cwd(), "payment_debug.log"), resultMsg).catch(() => { });
 
     console.log("💳 Easebuzz API Response:", JSON.stringify(apiResult, null, 2));
 
@@ -176,22 +196,27 @@ import ServiceRequest from "../Bookings/service/serviceRequest.model.js";
 /**
  * Internal helper to fulfill an order and its associated reference (e.g., Booking).
  */
-const fulfillOrder = async (order: any, response: any, ezService: EasebuzzService) => {
+const fulfillOrder = async (order: any, response: any, service: any) => {
     if (order.status === OrderStatus.SUCCESS) return;
 
     console.log(`🎁 [Fulfillment] Starting for Order: ${order.txnId} (Type: ${order.type})`);
-    
+
     // 1. Mark Order as Success
     order.status = OrderStatus.SUCCESS;
     await order.save();
-    await ezService.logEvent(order.txnId, "PAYMENT_FULFILLED", "INFO", "Order marked as Success", response);
+
+    if (service && typeof service.logEvent === 'function') {
+        await service.logEvent(order.txnId, "PAYMENT_FULFILLED", "INFO", "Order marked as Success", response);
+    }
 
     // 2. Specialized Fulfillment Logic
     if (order.type === "WALLET_TOPUP") {
         const description = `Wallet Top-up (Easebuzz: ${response.easepayid || response.txnid})`;
         await creditWalletAtomic(order.userId.toString(), order.amount, description);
-        await ezService.logEvent(order.txnId, "WALLET_CREDITED", "INFO", `Credited ${order.amount} to wallet`);
-    } 
+        if (service && typeof service.logEvent === 'function') {
+            await service.logEvent(order.txnId, "WALLET_CREDITED", "INFO", `Credited ${order.amount} to wallet`);
+        }
+    }
     else if (order.type === "BOOKING" && order.referenceId) {
         // Try Doctor Appointment
         const appointment = await DoctorAppointment.findById(order.referenceId);
@@ -200,23 +225,120 @@ const fulfillOrder = async (order: any, response: any, ezService: EasebuzzServic
             appointment.status = "Confirmed";
             appointment.isConfirmed = true;
             await appointment.save();
-            await ezService.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Confirmed Doctor Appointment: ${order.referenceId}`);
+            if (service && typeof service.logEvent === 'function') {
+                await service.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Confirmed Doctor Appointment: ${order.referenceId}`);
+            }
         } else {
             const serviceReq = await ServiceRequest.findById(order.referenceId);
             if (serviceReq) {
                 serviceReq.paymentStatus = "COMPLETED";
                 await serviceReq.save();
-                await ezService.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Updated Service Request payment: ${order.referenceId}`);
+                if (service && typeof service.logEvent === 'function') {
+                    await service.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Updated Service Request payment: ${order.referenceId}`);
+                }
             }
         }
     } else if (order.type === "SUBSCRIPTION" && order.referenceId) {
         const PartnerSubscription = (await import("../PartnerSubscription/subscription.model.js")).default;
         const sub = await PartnerSubscription.findByIdAndUpdate(order.referenceId, { status: "Active" }, { new: true });
-        if (sub) {
-            await ezService.logEvent(order.txnId, "SUBSCRIPTION_ACTIVATED", "INFO", `Activated subscription: ${order.referenceId}`);
+        if (sub && service && typeof service.logEvent === 'function') {
+            await service.logEvent(order.txnId, "SUBSCRIPTION_ACTIVATED", "INFO", `Activated subscription: ${order.referenceId}`);
         }
     }
 };
+
+/**
+ * Razorpay: Initiates the payment by creating an order in Razorpay.
+ */
+export const initiateRazorpay = asyncHandler(async (req, res) => {
+    const { orderId } = req.body;
+    const order = await Order.findById(orderId);
+    if (!order) throw new ApiError(404, "Order not found");
+
+    if (order.status !== OrderStatus.PENDING) {
+        throw new ApiError(400, `Order already in ${order.status} state. Cannot re-initiate.`);
+    }
+
+    const patient = await Patient.findById((order as any).userId) || await (await import("../Doctors/doctor.model.js")).default.findById((order as any).userId);
+    if (!patient) throw new ApiError(404, "User not found for payment");
+
+    const razorService = await getRazorpayService();
+
+    // Create Razorpay Order
+    const razorOrder = await razorService.createRazorpayOrder({
+        amount: order.amount,
+        receipt: order.txnId,
+        notes: {
+            appOrderId: (order as any)._id.toString(),
+            type: order.type,
+            referenceId: order.referenceId || ""
+        }
+    });
+
+    // Create initial payment transaction record
+    await PaymentTransaction.create({
+        orderId: (order as any)._id,
+        gatewayTxnId: razorOrder.id,
+        gatewayName: "RAZORPAY",
+        amount: order.amount,
+        status: PaymentStatus.INITIATED,
+    });
+
+    await razorService.logEvent(order.txnId, "RAZOR_INITIATED", "INFO", "Razorpay Order ID generated", razorOrder);
+
+    const responseData = {
+        razorOrder,
+        key: (process.env.RAZORPAY_KEY_ID || "").trim(),
+        customer: {
+            name: (patient.name || "Customer").trim(),
+            email: (patient.email || "").trim(),
+            contact: (patient.mobileNumber?.toString() || "").replace(/[^0-9]/g, "").slice(-10)
+        }
+    };
+    console.log("📤 [Razorpay] Returning to frontend:", JSON.stringify(responseData, null, 2));
+    return res.status(200).json(new ApiResponse(200, "Razorpay initiated", responseData));
+});
+
+/**
+ * Razorpay: Verify signature and fulfill order.
+ */
+export const verifyRazorpay = asyncHandler(async (req, res) => {
+    const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        orderId // Our internal order ID
+    } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) throw new ApiError(404, "Order not found");
+
+    const razorService = await getRazorpayService();
+
+    // 1. Verify Signature
+    const isValid = razorService.verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+
+    if (!isValid) {
+        await razorService.logEvent(order.txnId, "RAZOR_SIGNATURE_INVALID", "ERROR", "Invalid Razorpay signature received", req.body);
+        throw new ApiError(400, "Invalid payment signature");
+    }
+
+    // 2. Update Transaction
+    await PaymentTransaction.findOneAndUpdate(
+        { orderId: (order as any)._id },
+        {
+            gatewayTxnId: razorpay_payment_id,
+            gatewayResponse: req.body,
+            status: PaymentStatus.SUCCESS,
+        },
+        { upsert: true }
+    );
+
+    // 3. Fulfill
+    await fulfillOrder(order, req.body, razorService);
+
+    return res.status(200).json(new ApiResponse(200, "Payment verified successfully", order));
+});
 
 /**
  * Handles Webhook from Easebuzz (Most Reliable).
@@ -272,7 +394,7 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
     console.log(`\n📥 [Easebuzz Gateway Response Entry] Method: ${req.method}`);
     console.log(`Body:`, JSON.stringify(req.body, null, 2));
     console.log(`Query:`, JSON.stringify(req.query, null, 2));
-    
+
     const response = req.method === "POST" ? req.body : req.query;
     const ezService = await getEasebuzzService();
 
@@ -288,12 +410,12 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
 
     // Verify Hash
     const isValid = ezService.verifyResponseHash(response);
-    
+
     // Find Order
     const order = await Order.findOne({ txnId: response.txnid });
-    
+
     const isTrueSuccess = response.status === "success" || response.status === "1";
-    
+
     if (isValid && order && isTrueSuccess) {
         await fulfillOrder(order, response, ezService);
     }
@@ -360,7 +482,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     } else {
         // Handle FAILURE or PENDING messages
         const errorMsg = typeof statusRes.data === 'string' ? statusRes.data : (statusRes.msg || "Inquiry Failed");
-        
+
         // If it's just 'Transaction not found yet', we don't treat it as a hard failure, just return current order
         if (errorMsg.includes("not found yet") || errorMsg.includes("Pending")) {
             return res.status(200).json(new ApiResponse(200, "Transaction still pending at gateway", order));

@@ -10,6 +10,7 @@ import { RoleModel } from "../roles/role.model.js";
 import { sendPartnerWelcomeEmail } from "../../utils/email.js";
 import { enqueueSms } from "../../queues/communicationQueue.js";
 import { notifyAdmin } from "../Notifications/notification.controller.js";
+import mongoose from "mongoose";
 
 const TEST_MOBILE_NUMBER = "8309470360";
 const TEST_OTP = "123456";
@@ -131,12 +132,39 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       staff = null;
     }
 
+    const isTestAccount = cleanMobile === TEST_MOBILE_NUMBER;
+
     if (!staff) {
       staff = await doctorModel.create({
         mobileNumber: `+91${cleanMobile}`,
         roleId: resolvedRoleId || undefined,
-        isRegistered: false,
+        isRegistered: isTestAccount ? true : false,
+        status: isTestAccount ? "Active" : "Pending",
+        name: isTestAccount ? "Test Doctor" : undefined,
       });
+
+      if (isTestAccount) {
+        await PartnerSubscription.create({
+          partnerId: staff._id,
+          status: "Active",
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        });
+      }
+    } else if (isTestAccount && (!staff.isRegistered || staff.status !== "Active")) {
+      staff.isRegistered = true;
+      staff.status = "Active";
+      staff.name = staff.name || "Test Doctor";
+      await staff.save();
+
+      const sub = await PartnerSubscription.findOne({ partnerId: staff._id });
+      if (!sub || sub.status !== "Active") {
+        await PartnerSubscription.findOneAndUpdate(
+          { partnerId: staff._id },
+          { status: "Active", startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) },
+          { upsert: true }
+        );
+      }
     }
 
     const token = jwt.sign({ staffId: staff._id }, process.env.JWT_SECRET!, {

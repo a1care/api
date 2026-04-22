@@ -56,8 +56,8 @@ const ServiceRequestSchema = new Schema(
         max: 180
       }
     },
-    addressId:{
-      type:Schema.Types.ObjectId , 
+    addressId: {
+      type: Schema.Types.ObjectId,
     },
 
     assignedProviderId: {
@@ -81,10 +81,10 @@ const ServiceRequestSchema = new Schema(
         "CANCELLED"
       ],
       default: "PENDING"
-    } , 
-    price:{
-      type:Number , 
-      required:true
+    },
+    price: {
+      type: Number,
+      required: true
     }
   },
   {
@@ -92,5 +92,5 @@ const ServiceRequestSchema = new Schema(
   }
 );
 
-const serviceRequestModel = mongoose.model('serviceRequest' , ServiceRequestSchema)
+const serviceRequestModel = mongoose.model('serviceRequest', ServiceRequestSchema)
 export default serviceRequestModel

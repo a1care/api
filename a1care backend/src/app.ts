@@ -57,25 +57,19 @@ const maintenanceMiddleware = async (req: Request, res: Response, next: NextFunc
 
 app.use(maintenanceMiddleware);
 
-app.use((req, res, next) => {
-    console.log(`\n🔍 [Incoming Request] ${new Date().toISOString()}`);
-    console.log(`📡 ${req.method} ${req.originalUrl || req.url}`);
-    console.log(`📦 Body Size: ${req.body ? JSON.stringify(req.body).length : 0} bytes`);
-    next();
-});
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/api/health", (req, res) => {
-    res.status(200).json({ 
-        status: "ok", 
-        version: "1.0.1", 
+    res.status(200).json({
+        status: "ok",
+        version: "1.0.1",
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
 });
 
 app.get("/api/docs", (req, res) => {
-    res.status(200).json({ 
+    res.status(200).json({
         message: "A1Care API Documentation",
         version: "1.0.0",
         endpoint: "https://api.a1carehospital.in/api",
@@ -86,6 +80,7 @@ app.get("/api/docs", (req, res) => {
 //routes
 //authentication
 app.use('/api/patient/auth', PatientAuth);
+app.use('/api/payments', paymentRoutes);
 
 //services
 app.use('/api/services', ServiceRoute)
@@ -117,8 +112,7 @@ app.use('/api/reviews', reviewRoutes)
 //wallet
 app.use('/api/wallet', walletRoutes)
 
-//payments
-app.use('/api/payments', paymentRoutes)
+// subscriptions (moved down)
 
 //subscriptions
 app.use('/api/subscription', partnerSubscriptionRoutes)

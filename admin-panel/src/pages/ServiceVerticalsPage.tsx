@@ -182,8 +182,8 @@ export function ServiceVerticalsPage() {
         <div className="space-y-8 animate-in text-left items-start relative">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--card-bg)] p-8 rounded-3xl border border-[var(--border-color)] shadow-sm text-left items-start">
                 <div className="space-y-2 text-left items-start">
-                    <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)]">Operational Core Verticals</h1>
-                    <p className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] opacity-60">Architectural Service Definitions</p>
+                    <h1 className="text-5xl font-black tracking-tight text-[var(--text-main)]"> Service Verticals</h1>
+                    {/* <p className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] opacity-60">Architectural Service Definitions</p> */}
                 </div>
                 <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-500/10 px-6 py-3 rounded-2xl border border-blue-100 dark:border-blue-500/20">
                     <ShieldCheck className="text-blue-600" />
