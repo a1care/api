@@ -1489,14 +1489,18 @@ export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
 
 export const getAdminRecentActivity = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
-  const limit = Number(req.query.limit) || 20;
+  const limit = Number(req.query.limit) || 10;
+  const page = Number(req.query.page) || 1;
+  const skip = (page - 1) * limit;
 
-  const [appts, services] = await Promise.all([
+  const [totalAppts, totalServices, appts, services] = await Promise.all([
+    doctorAppointmentModel.countDocuments(),
+    serviceRequestModel.countDocuments(),
     doctorAppointmentModel.find()
       .populate("patientId", "name mobileNumber")
       .populate("doctorId", "name mobileNumber")
       .sort({ createdAt: -1 })
-      .limit(limit),
+      .limit(skip + limit),
     serviceRequestModel.find()
       .populate("userId", "name mobileNumber")
       .populate({
@@ -1504,7 +1508,7 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
         select: "name price"
       })
       .sort({ createdAt: -1 })
-      .limit(limit)
+      .limit(skip + limit)
   ]);
 
   const combined = [
@@ -1534,9 +1538,16 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
         createdAt: (s as any).createdAt
       };
     })
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(skip, skip + limit);
 
-  return res.status(200).json(new ApiResponse(200, "Recent activity fetched", combined));
+  const total = totalAppts + totalServices;
+
+  return res.status(200).json(new ApiResponse(200, "Recent activity fetched", {
+    items: combined,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  }));
 });
 
 export const getAdminPayouts = asyncHandler(async (req, res) => {

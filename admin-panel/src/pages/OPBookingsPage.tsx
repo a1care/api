@@ -20,6 +20,7 @@ interface ServiceBooking {
 
 export function OPBookingsPage() {
     const [searchParams] = useSearchParams();
+    const [page, setPage] = useState(1);
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "All");
@@ -39,21 +40,27 @@ export function OPBookingsPage() {
     // Fetching Bookings
     const deferredSearch = useDeferredValue(searchQuery);
 
-    const { data: serviceBookings, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
-        queryKey: ["admin_service_bookings", deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
+    const { data: serviceData, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
+        queryKey: ["admin_service_bookings", page, deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
         queryFn: async () => {
-            const params = new URLSearchParams();
+            const params = new URLSearchParams({ page: page.toString(), limit: "50" });
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
             if (sourceFilter !== "All") params.append("source", sourceFilter);
             if (departmentFilter !== "All") params.append("department", departmentFilter);
+            params.append("fulfillmentMode", "HOSPITAL_VISIT"); // Essential for OP tokens
 
             const res = await api.get(`/admin/bookings/services?${params.toString()}`);
-            return res.data.data as ServiceBooking[];
-        }
+            return res.data.data;
+        },
+        placeholderData: (prev) => prev
     });
+
+    const serviceBookings = serviceData?.items || [];
+    const stats = serviceData?.stats || { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+    const totalPages = serviceData?.totalPages || 1;
 
     const { data: categories } = useQuery({
         queryKey: ["admin_categories"],
@@ -85,43 +92,7 @@ export function OPBookingsPage() {
         </div>
     );
 
-    // Initial filter for OP Tokens only
-    const allTokens = serviceBookings?.filter(b => b.fulfillmentMode === "HOSPITAL_VISIT") || [];
-
-    // Calculate counts from the UNFILTERED set (allTokens)
-    const allCount = allTokens.length;
-    const pendingCount = allTokens.filter(b => b.status?.toUpperCase() === "PENDING" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN").length;
-    const confirmedCount = allTokens.filter(b => b.status?.toUpperCase() === "CONFIRMED").length;
-    const completedCount = allTokens.filter(b => b.status?.toUpperCase() === "COMPLETED").length;
-    const cancelledCount = allTokens.filter(b => b.status?.toUpperCase() === "CANCELLED").length;
-
-    // Local Filtering Fallback (ensures filters work even if backend params are partial)
-    const processedTokens = allTokens.filter(b => {
-        const query = deferredSearch.toLowerCase();
-        const matchesSearch = !query || 
-            b._id.toLowerCase().includes(query) || 
-            (b.patientId?.name || "").toLowerCase().includes(query) || 
-            (b.patientId?.mobile || "").toLowerCase().includes(query) ||
-            (b.serviceId?.name || "").toLowerCase().includes(query);
-
-        // Date Logic: dateTo should be inclusive of the full day
-        const bDate = new Date(b.date || b.createdAt).getTime();
-        const matchesFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
-        const matchesTo = !dateTo || bDate <= (new Date(dateTo).getTime() + 86399999); // Add 23h 59m 59s
-        
-        const matchesPayment = paymentFilter === "All" || b.paymentStatus === paymentFilter;
-        
-        return matchesSearch && matchesFrom && matchesTo && matchesPayment;
-    });
-
-    // Filter displayed tokens based on selected statusFilter
-    const filteredTokens = statusFilter === "All" 
-        ? processedTokens 
-        : processedTokens.filter(b => {
-            const s = b.status?.toUpperCase();
-            if (statusFilter === "PENDING") return s === "PENDING" || s === "RETURNED_TO_ADMIN";
-            return s === statusFilter;
-        });
+    const filteredTokens = serviceBookings;
 
     const statsCards = [
         { label: "All", count: allCount, value: "All" },
@@ -323,7 +294,7 @@ export function OPBookingsPage() {
                                     return (
                                         <tr key={booking._id} className="hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-colors group">
                                             <td className="py-5 px-6 text-sm font-black text-[var(--text-muted)]">
-                                                {String(index + 1).padStart(2, '0')}
+                                                {String((page - 1) * 50 + index + 1).padStart(2, '0')}
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded inline-block">
@@ -435,6 +406,30 @@ export function OPBookingsPage() {
                         </tbody>
                     </table>
                 </div>
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="p-8 border-t border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]/30 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                        <div className="flex items-center gap-4">
+                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Page <span className="text-[var(--text-main)] ml-2">{page} / {totalPages}</span></span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronDown size={18} className="rotate-90" />
+                            </button>
+                            <button 
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronDown size={18} className="-rotate-90" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal Popup */}
