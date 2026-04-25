@@ -60,7 +60,7 @@ export function BookingOperationsPage() {
         queryKey: ["admin_doctor_bookings", page, statusFilter, deferredSearch, dateFrom, dateTo, paymentFilter, subServiceFilter],
         queryFn: async () => {
             if (activeTab !== "doctors") return null;
-            const params = new URLSearchParams({ page: page.toString(), limit: "50" });
+            const params = new URLSearchParams({ page: page.toString(), limit: "55" });
             if (statusFilter !== "All") params.append("status", statusFilter);
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
@@ -77,7 +77,7 @@ export function BookingOperationsPage() {
         queryKey: ["admin_service_bookings", page, statusFilter, deferredSearch, dateFrom, dateTo, paymentFilter, serviceFilter, departmentFilter],
         queryFn: async () => {
             if (activeTab !== "services") return null;
-            const params = new URLSearchParams({ page: page.toString(), limit: "50" });
+            const params = new URLSearchParams({ page: page.toString(), limit: "55" });
             if (statusFilter !== "All") params.append("status", statusFilter);
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
@@ -95,7 +95,7 @@ export function BookingOperationsPage() {
         queryKey: ["admin_hospital_bookings", page, statusFilter, deferredSearch, dateFrom, dateTo, paymentFilter],
         queryFn: async () => {
             if (activeTab !== "hospital") return null;
-            const params = new URLSearchParams({ page: page.toString(), limit: "50" });
+            const params = new URLSearchParams({ page: page.toString(), limit: "55" });
             if (statusFilter !== "All") params.append("status", statusFilter);
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
@@ -164,13 +164,6 @@ export function BookingOperationsPage() {
         handleUpdateStatus(acceptServiceModal.bookingId, "service", "ACCEPTED", selectedHospitalId);
     };
 
-    if ((activeTab === "doctors" && loadingDocs) || (activeTab === "services" && loadingServices) || (activeTab === "hospital" && loadingHospital)) return (
-        <div className="flex flex-col items-center justify-center p-20 space-y-4">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p className="font-bold text-[var(--text-muted)] animate-pulse">Syncing operations desk...</p>
-        </div>
-    );
-
     const activeDataset = activeTab === "doctors" ? doctorData : activeTab === "services" ? serviceData : hospitalData;
     const paginatedData = activeDataset?.items || [];
     const totalPages = activeDataset?.totalPages || 1;
@@ -183,11 +176,11 @@ export function BookingOperationsPage() {
         { label: "Completed", count: stats.completed || 0, value: "COMPLETED" },
         { label: "Cancelled", count: stats.cancelled || 0, value: "CANCELLED" },
     ];
-    const ITEMS_PER_PAGE = 50;
+    const ITEMS_PER_PAGE = 55;
 
     return (
-        <div className="space-y-8 animate-in text-left items-start">
-            <header className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-8 rounded-3xl shadow-sm border border-[var(--border-color)] text-left items-start">
+        <div className="space-y-6 animate-in text-left items-start">
+            <header className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[var(--card-bg)] p-6 rounded-2xl shadow-sm border border-[var(--border-color)] text-left items-start">
                 <div className="space-y-2 text-left items-start">
                     <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)]">Service Orders</h1>
                     <div className="flex items-center gap-2">
@@ -269,18 +262,18 @@ export function BookingOperationsPage() {
                         <div className="col-span-1 lg:col-span-2 grid grid-cols-2 gap-2">
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">From Date</label>
-                                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
+                                <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">To Date</label>
-                                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
+                                <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
                             </div>
                         </div>
 
                         {/* Payment Status */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Payment</label>
-                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Statuses</option>
                                 <option value="COMPLETED">Paid</option>
                                 <option value="PENDING">Pending</option>
@@ -291,7 +284,7 @@ export function BookingOperationsPage() {
                         {activeTab === "doctors" && (
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Sub-Specialization</label>
-                                <select value={subServiceFilter} onChange={e => setSubServiceFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                                <select value={subServiceFilter} onChange={e => { setSubServiceFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                     <option value="All">All Specializations</option>
                                     {doctorSubServices?.map(sub => (
                                         <option key={sub._id} value={sub.name}>{sub.name}</option>
@@ -303,7 +296,7 @@ export function BookingOperationsPage() {
                         {activeTab === "services" && (
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Service Node</label>
-                                <select value={serviceFilter} onChange={e => setServiceFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                                <select value={serviceFilter} onChange={e => { setServiceFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                     <option value="All">All Services</option>
                                     {categories?.map(c => (
                                         <option key={c._id} value={c.name}>{c.name}</option>
@@ -336,7 +329,7 @@ export function BookingOperationsPage() {
                 ))}
             </div>
 
-            <div className="bg-[var(--card-bg)] rounded-3xl border border-[var(--border-color)] overflow-hidden shadow-sm">
+            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[1000px]">
                         <thead>
@@ -355,7 +348,16 @@ export function BookingOperationsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-color)]">
-                            {paginatedData.length > 0 ? (
+                            {((activeTab === "doctors" && loadingDocs) || (activeTab === "services" && loadingServices) || (activeTab === "hospital" && loadingHospital)) ? (
+                                <tr>
+                                    <td colSpan={9} className="py-24 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronizing Operations Desk...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : paginatedData.length > 0 ? (
                                 paginatedData.map((booking: any, index: number) => {
                                     const isPending = booking.status?.toUpperCase() === "PENDING" || booking.status?.toUpperCase() === "RETURNED_TO_ADMIN";
                                     const isConfirmed = booking.status?.toUpperCase() === "CONFIRMED" || booking.status?.toUpperCase() === "ACCEPTED";

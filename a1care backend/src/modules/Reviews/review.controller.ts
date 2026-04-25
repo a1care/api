@@ -89,11 +89,48 @@ export const getServiceReviews = asyncHandler(async (req, res) => {
 });
 
 export const getAllReviews = asyncHandler(async (req, res) => {
-    const reviews = await ReviewModel.find()
-        .populate("userId", "name mobileNumber")
-        .sort({ createdAt: -1 });
+    const { page = 1, limit = 60, search, status } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const query: any = {};
 
-    return res.status(200).json(new ApiResponse(200, "All reviews fetched", reviews));
+    if (status && status !== "All") {
+        query.status = status;
+    }
+
+    if (search && search !== "") {
+        const s = new RegExp(search as string, 'i');
+        const searchConditions: any[] = [
+            { comment: s }
+        ];
+
+        // Search for matching users to include in the query
+        const matchingUsers = await mongoose.model("Patient").find({
+            $or: [
+                { name: s },
+                { mobileNumber: s }
+            ]
+        }).select("_id");
+
+        if (matchingUsers.length > 0) {
+            searchConditions.push({ userId: { $in: matchingUsers.map(u => u._id) } });
+        }
+
+        query.$or = searchConditions;
+    }
+
+    const total = await ReviewModel.countDocuments(query);
+    const reviews = await ReviewModel.find(query)
+        .populate("userId", "name mobileNumber profileImage")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    return res.status(200).json(new ApiResponse(200, "All reviews fetched", {
+        items: reviews,
+        total,
+        page: Number(page),
+        totalPages: Math.ceil(total / (Number(limit) || 60))
+    }));
 });
 
 export const updateReviewStatus = asyncHandler(async (req, res) => {

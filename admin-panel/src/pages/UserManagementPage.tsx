@@ -24,6 +24,8 @@ export function UserManagementPage({ category }: { category: string }) {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("All");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [viewingDocument, setViewingDocument] = useState<any | null>(null);
@@ -73,13 +75,20 @@ export function UserManagementPage({ category }: { category: string }) {
         }
     });
 
-    const { data: users, isLoading } = useQuery({
-        queryKey: ["category_users", category],
+    const { data: usersData, isLoading } = useQuery({
+        queryKey: ["category_users", category, page, searchTerm, statusFilter],
         queryFn: async () => {
-            const res = await api.get(`/admin/user-list/${category}`);
+            const res = await api.get(`/admin/user-list/${category}?page=${page}&limit=50&search=${searchTerm}&status=${statusFilter}`);
             return res.data.data;
         }
     });
+
+    const users = usersData?.items || [];
+    useEffect(() => {
+        if (usersData?.totalPages) {
+            setTotalPages(usersData.totalPages);
+        }
+    }, [usersData]);
 
     const statusMutation = useMutation({
         mutationFn: async ({ id, status, isRegistered }: { id: string, status?: string, isRegistered?: boolean }) => {
@@ -126,20 +135,12 @@ export function UserManagementPage({ category }: { category: string }) {
         });
     };
 
-    const filteredUsers = useMemo(() => {
-        if (!users) return [];
-        return users.filter((u: any) => {
-            const matchesSearch =
-                (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (u.mobileNumber || "").toString().includes(searchTerm) ||
-                (u._id || "").toLowerCase().includes(searchTerm.toLowerCase());
+    // Backend driven filtering now
+    const filteredUsers = users;
 
-            const userStatus = category === 'patient' ? (u.isRegistered ? "Verified" : "Pending") : u.status;
-            const matchesFilter = statusFilter === "All" || userStatus === statusFilter;
-
-            return matchesSearch && matchesFilter;
-        });
-    }, [users, searchTerm, statusFilter, category]);
+    useEffect(() => {
+        setPage(1);
+    }, [searchTerm, statusFilter, category]);
 
     const getRawTitle = () => {
         if (category === 'patient') return "Patients";
@@ -154,12 +155,12 @@ export function UserManagementPage({ category }: { category: string }) {
 
     const title = getRawTitle();
 
-    if (isLoading) return (
-        <div className="p-4 py-20 text-center">
-            <Activity className="animate-pulse mx-auto text-indigo-500 dark:text-indigo-400 mb-4" size={48} />
-            <p className="muted font-bold tracking-wider uppercase" style={{ fontSize: '0.75rem' }}>Loading {title} Directory...</p>
-        </div>
-    );
+    // if (isLoading) return (
+    //     <div className="p-4 py-20 text-center">
+    //         <Activity className="animate-pulse mx-auto text-indigo-500 dark:text-indigo-400 mb-4" size={48} />
+    //         <p className="muted font-bold tracking-wider uppercase" style={{ fontSize: '0.75rem' }}>Loading {title} Directory...</p>
+    //     </div>
+    // );
 
     const statCards = [
         { label: "Total Registered", value: stats?.total || 0, icon: Users2, color: "#1A7FD4", bg: "#EBF3FD" },
@@ -170,8 +171,8 @@ export function UserManagementPage({ category }: { category: string }) {
     ];
 
     return (
-        <div className="flex-col gap-6">
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left" style={{ marginBottom: '8px' }}>
+        <div className="flex flex-col gap-4">
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[var(--card-bg)] p-6 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left" style={{ marginBottom: '4px' }}>
                 <div className="relative z-10 text-left items-start">
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">{title} Registry</h1>
                     <div className="flex items-center gap-2 mt-1">
@@ -187,11 +188,10 @@ export function UserManagementPage({ category }: { category: string }) {
                 <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
             </header>
 
-            {/* Mini Dashboard */}
-            <div className="flex-col gap-4">
-                <div className="grid-5 gap-4">
+            <div className="flex flex-col gap-4">
+                <div className="grid-5 gap-3">
                     {statCards.map((stat) => (
-                        <div key={stat.label} className="card p-6 flex flex-col gap-4 text-left hover:scale-[1.02] hover:shadow-xl transition-all duration-300" style={{ borderRadius: '24px' }}>
+                        <div key={stat.label} className="card p-5 flex flex-col gap-3 text-left hover:scale-[1.02] hover:shadow-xl transition-all duration-300" style={{ borderRadius: '20px' }}>
                             <div className="icon-box" style={{ background: `${stat.color}10`, color: stat.color, width: '52px', height: '52px', borderRadius: '18px', border: `1px solid ${stat.color}20` }}>
                                 <stat.icon size={26} />
                             </div>
@@ -204,17 +204,17 @@ export function UserManagementPage({ category }: { category: string }) {
                 </div>
             </div>
 
-            <div className="flex-col gap-4" style={{ marginTop: '8px' }}>
-                <div className="card p-0 overflow-hidden shadow-2xl shadow-blue-900/5" style={{ borderRadius: '28px', border: '1px solid var(--border-color)' }}>
-                    <div className="p-6 border-b border-[var(--border-color)] flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
+            <div className="flex flex-col gap-4" style={{ marginTop: '4px' }}>
+                <div className="card p-0 overflow-hidden shadow-2xl shadow-blue-900/5" style={{ borderRadius: '24px', border: '1px solid var(--border-color)' }}>
+                    <div className="p-5 border-b border-[var(--border-color)] flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
                         <div className="relative group w-full md:w-[420px]">
-                            <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
+                            <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '24px', top: '50%', transform: 'translateY(-50%)' }} />
                             <input
                                 placeholder={`Search by name, identity or contact...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-[var(--bg-main)] border-none px-6 text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
-                                style={{ paddingLeft: '56px', height: '56px', borderRadius: '18px' }}
+                                style={{ paddingLeft: '64px', height: '56px', borderRadius: '18px' }}
                             />
                         </div>
                         <div className="flex gap-4 w-full md:w-auto">
@@ -258,77 +258,87 @@ export function UserManagementPage({ category }: { category: string }) {
                                     <th className="text-center !bg-transparent !text-[var(--text-muted)] pr-8">ACTIONS</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {filteredUsers.map((user: any, index: number) => (
-                                    <tr key={user._id} className="cursor-pointer group hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300" onClick={() => setSelectedUser(user)}>
-                                        <td className="p-6 pl-10 font-black text-slate-400 text-xs">
-                                            {(index + 1).toString().padStart(2, '0')}
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform text-xs">
-                                                    {user.name?.charAt(0) || "U"}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{user.name || "Anonymous Member"}</div>
-                                                    <div className="flex items-center gap-2 mt-1.5 ">
-                                                        <div className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">ID: {user._id.slice(-8).toUpperCase()}</div>
-                                                        {category === 'service' && user.specialization?.[0] && (
-                                                            <>
-                                                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{user.specialization[0]}</span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex flex-col gap-1.5">
-                                                <div className="text-xs font-black text-[var(--text-main)] flex items-center gap-2"><Phone size={13} className="text-blue-500/60" /> {user.mobileNumber}</div>
-                                                {user.email && <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-2 font-bold tracking-tight"><Mail size={12} className="opacity-40" /> {user.email}</div>}
-                                            </div>
-                                        </td>
-                                        {category !== 'patient' && (
-                                            <td>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {(user.specialization || []).slice(0, 2).map((s: string) => <span key={s} className="px-2.5 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
-                                                    {(user.specialization || []).length > 2 && <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black">+{user.specialization.length - 2}</span>}
-                                                    {!(user.specialization || []).length && <span className="text-[9px] font-black tracking-widest uppercase opacity-20">CORE ASSET</span>}
-                                                </div>
-                                            </td>
-                                        )}
-                                        <td>
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
-                                                ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' : 
-                                                  user.status === 'Pending' ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10' : 
-                                                  'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'bg-emerald-500' : user.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
-                                                {category === 'patient' ? (user.isRegistered ? 'Verified' : 'Pending') : user.status}
-                                            </span>
-                                        </td>
-                                        <td className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                                            {new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                        </td>
-                                        <td className="pr-8">
-                                            <div className="justify-end flex items-center gap-2">
-                                                {(category !== 'patient' && user.status === 'Pending') && (
-                                                    <button
-                                                        className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all border border-emerald-100"
-                                                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: user._id, status: 'Active', isRegistered: true }); }}
-                                                        title="Approve Member"
-                                                    >
-                                                        <ShieldCheck size={18} />
-                                                    </button>
-                                                )}
-                                                <button className="w-10 h-10 rounded-xl bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all" title="Inspect Protocol"><Eye size={18} /></button>
+                             <tbody>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={7} className="p-20 text-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing Registry...</p>
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                                {!filteredUsers.length && (
+                                ) : Array.isArray(filteredUsers) && filteredUsers.length > 0 ? (
+                                    filteredUsers.map((user: any, index: number) => (
+                                        <tr key={user._id} className="cursor-pointer group hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300" onClick={() => setSelectedUser(user)}>
+                                            <td className="p-6 pl-10 font-black text-slate-400 text-xs">
+                                                {((page - 1) * 50 + index + 1).toString().padStart(2, '0')}
+                                            </td>
+                                            <td className="p-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform text-xs">
+                                                        {user.name?.charAt(0) || "U"}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{user.name || "Anonymous Member"}</div>
+                                                        <div className="flex items-center gap-2 mt-1.5 ">
+                                                            <div className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">ID: {user._id.slice(-8).toUpperCase()}</div>
+                                                            {category === 'service' && user.specialization?.[0] && (
+                                                                <>
+                                                                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                                                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{user.specialization[0]}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="text-xs font-black text-[var(--text-main)] flex items-center gap-2"><Phone size={13} className="text-blue-500/60" /> {user.mobileNumber}</div>
+                                                    {user.email && <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-2 font-bold tracking-tight"><Mail size={12} className="opacity-40" /> {user.email}</div>}
+                                                </div>
+                                            </td>
+                                            {category !== 'patient' && (
+                                                <td>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {(user.specialization || []).slice(0, 2).map((s: string) => <span key={s} className="px-2.5 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
+                                                        {(user.specialization || []).length > 2 && <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black">+{user.specialization.length - 2}</span>}
+                                                        {!(user.specialization || []).length && <span className="text-[9px] font-black tracking-widest uppercase opacity-20">CORE ASSET</span>}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            <td>
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
+                                                    ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' : 
+                                                    user.status === 'Pending' ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10' : 
+                                                    'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'bg-emerald-500' : user.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
+                                                    {category === 'patient' ? (user.isRegistered ? 'Verified' : 'Pending') : user.status}
+                                                </span>
+                                            </td>
+                                            <td className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                                {new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </td>
+                                            <td className="pr-8">
+                                                <div className="justify-end flex items-center gap-2">
+                                                    {(category !== 'patient' && user.status === 'Pending') && (
+                                                        <button
+                                                            className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all border border-emerald-100"
+                                                            onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: user._id, status: 'Active', isRegistered: true }); }}
+                                                            title="Approve Member"
+                                                        >
+                                                            <ShieldCheck size={18} />
+                                                        </button>
+                                                    )}
+                                                    <button className="w-10 h-10 rounded-xl bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all" title="Inspect Protocol"><Eye size={18} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
                                     <tr>
-                                        <td colSpan={6} style={{ padding: '120px 0' }}>
+                                        <td colSpan={category === 'patient' ? 6 : 7} style={{ padding: '120px 0' }}>
                                             <div className="flex flex-col items-center gap-6 text-center">
                                                 <div className="w-20 h-20 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[24px] flex items-center justify-center shadow-inner">
                                                     <Users size={32} className="text-[var(--text-muted)] opacity-30" />
@@ -347,11 +357,24 @@ export function UserManagementPage({ category }: { category: string }) {
 
                     <div className="p-8 border-t border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]/30 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                         <div className="flex items-center gap-4">
-                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Total Entries: <span className="text-[var(--text-main)] ml-2">{filteredUsers.length}</span></span>
+                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Page: <span className="text-[var(--text-main)] ml-2">{page} / {totalPages}</span></span>
+                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Total Entries: <span className="text-[var(--text-main)] ml-2">{usersData?.total || 0}</span></span>
                         </div>
                         <div className="flex gap-2">
-                            <button className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all opacity-50 cursor-not-allowed"><ChevronLeft size={18} /></button>
-                            <button className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all opacity-50 cursor-not-allowed"><ChevronRight size={18} /></button>
+                            <button 
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <button 
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -411,7 +434,7 @@ export function UserManagementPage({ category }: { category: string }) {
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">KYC Documents</h3>
                                         <div className="space-y-3">
                                             {(selectedUser.documents || []).length > 0 ? (
-                                                selectedUser.documents.map((doc: any, i: number) => (
+                                                Array.isArray(selectedUser.documents) && selectedUser.documents.map((doc: any, i: number) => (
                                                     <div key={i} className="p-4 bg-black/40 rounded-2xl flex items-center justify-between border border-white/5">
                                                         <span className="text-[10px] font-bold text-white uppercase truncate">{doc.type}</span>
                                                         <button className="text-[9px] font-black text-indigo-400 hover:text-white uppercase" onClick={() => setViewingDocument(doc)}>View</button>

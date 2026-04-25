@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { RefreshCcw, Search, CheckCircle, XCircle, AlertTriangle, Clock, CreditCard } from "lucide-react";
+import { RefreshCcw, Search, CheckCircle, XCircle, AlertTriangle, Clock, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaymentOrder {
   _id: string;
   txnId: string;
   amount: number;
   status: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED" | "VERIFICATION_PENDING";
-  type: "WALLET_TOPUP" | "BOOKING";
+  type: "WALLET_TOPUP" | "BOOKING" | "SUBSCRIPTION";
   userId: { name?: string; email?: string; mobileNumber?: string } | string;
   createdAt: string;
   updatedAt: string;
@@ -23,6 +23,16 @@ interface PaymentLog {
   metadata?: any;
   createdAt: string;
 }
+
+interface PaymentOrdersResponse {
+  items: PaymentOrder[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+const PAGE_SIZE = 50;
 
 const STATUS_CONFIG = {
   SUCCESS: { color: "#22c55e", bg: "#f0fdf4", icon: CheckCircle, label: "Success" },
@@ -42,14 +52,30 @@ export function PaymentLogsPage() {
   const [search, setSearch] = useState("");
   const [selectedTxn, setSelectedTxn] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
 
-  const { data: orders = [], isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["payment-orders"],
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
+  const { data: ordersResponse, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["payment-orders", page, statusFilter, search],
     queryFn: async () => {
-      const res = await api.get("/admin/payments/orders");
-      return res.data.data as PaymentOrder[];
-    }
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        status: statusFilter,
+      });
+      if (search.trim()) params.set("search", search.trim());
+      const res = await api.get(`/admin/payments/orders?${params.toString()}`);
+      return res.data.data as PaymentOrdersResponse;
+    },
+    placeholderData: (previousData) => previousData,
   });
+
+  const orders = ordersResponse?.items || [];
+  const total = ordersResponse?.total || 0;
+  const totalPages = ordersResponse?.totalPages || 1;
 
   const { data: logs = [], isLoading: logsLoading } = useQuery({
     queryKey: ["payment-logs", selectedTxn],
@@ -61,29 +87,13 @@ export function PaymentLogsPage() {
     enabled: !!selectedTxn,
   });
 
-  const filtered = orders.filter(o => {
-    const s = search.toLowerCase();
-    const idMatches = (o.txnId || "").toLowerCase().includes(s);
-    const userMatches = typeof o.userId === "object" && (
-        (o.userId?.name || "").toLowerCase().includes(s) ||
-        (o.userId?.mobileNumber || "").includes(s)
-    );
-    
-    const matchesSearch = !search || idMatches || userMatches;
-    
-    const statusMatch = statusFilter === "ALL" || 
-                       (o.status || "").toUpperCase() === statusFilter.toUpperCase();
-    
-    return matchesSearch && statusMatch;
-  });
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 className="brand-name" style={{ fontSize: "1.8rem" }}>Payment Logs</h1>
           <p className="text-xs muted font-extrabold uppercase tracking-widest mt-1">
-            Transaction Audit Trail — Easebuzz Gateway
+            Transaction Audit Trail - Easebuzz Gateway
           </p>
         </div>
         <button className="button secondary h-11 px-5 rounded-xl gap-2 text-xs font-black uppercase"
@@ -94,7 +104,6 @@ export function PaymentLogsPage() {
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20, alignItems: "start" }}>
-        {/* Orders List */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="card" style={{ padding: 12, borderRadius: 16 }}>
             <div style={{ position: "relative" }}>
@@ -108,7 +117,6 @@ export function PaymentLogsPage() {
             </div>
           </div>
 
-          {/* Status Filter Tabs */}
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
             {["ALL", "SUCCESS", "FAILED", "PENDING", "VERIFICATION_PENDING"].map(status => (
               <button
@@ -138,16 +146,16 @@ export function PaymentLogsPage() {
             <div style={{ textAlign: "center", padding: 60 }}>
               <RefreshCcw size={32} className="animate-spin" style={{ color: "var(--text-muted)", margin: "0 auto" }} />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : orders.length === 0 ? (
             <div className="card" style={{ padding: 60, textAlign: "center", borderRadius: 24 }}>
               <CreditCard size={40} style={{ color: "var(--text-muted)", margin: "0 auto 12px" }} />
               <p className="muted text-xs font-black uppercase tracking-widest">No payment records found</p>
             </div>
           ) : (
-            filtered.map(order => {
+            orders.map(order => {
               const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
               const StatusIcon = cfg.icon;
-              const userName = typeof order.userId === "object" ? order.userId?.name || "—" : "—";
+              const userName = typeof order.userId === "object" ? order.userId?.name || "-" : "-";
               const userPhone = typeof order.userId === "object" ? order.userId?.mobileNumber || "" : "";
               const isSelected = selectedTxn === order.txnId;
 
@@ -169,7 +177,7 @@ export function PaymentLogsPage() {
                       {userPhone && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{userPhone}</span>}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                      <span style={{ fontWeight: 800, fontSize: 16 }}>₹{Number(order.amount).toFixed(2)}</span>
+                      <span style={{ fontWeight: 800, fontSize: 16 }}>INR {Number(order.amount).toFixed(2)}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, background: cfg.bg, color: cfg.color, borderRadius: 8, padding: "3px 10px" }}>
                         <StatusIcon size={12} />
                         <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>{cfg.label}</span>
@@ -188,12 +196,33 @@ export function PaymentLogsPage() {
               );
             })
           )}
+
+          <div className="card" style={{ padding: 12, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span className="text-[11px] font-black uppercase tracking-wider text-[var(--text-muted)]">
+              Page {page} of {totalPages}  |  Total {total}
+            </span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="button secondary h-10 px-4 rounded-xl gap-2 text-xs font-black uppercase"
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1 || isFetching}
+              >
+                <ChevronLeft size={14} /> Prev
+              </button>
+              <button
+                className="button secondary h-10 px-4 rounded-xl gap-2 text-xs font-black uppercase"
+                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={page >= totalPages || isFetching}
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Event Log Panel */}
         <div className="card" style={{ padding: 20, borderRadius: 24, position: "sticky", top: 20 }}>
           <p style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-muted)", marginBottom: 16 }}>
-            {selectedTxn ? `Event Log — ${selectedTxn}` : "Select a transaction"}
+            {selectedTxn ? `Event Log - ${selectedTxn}` : "Select a transaction"}
           </p>
 
           {!selectedTxn ? (

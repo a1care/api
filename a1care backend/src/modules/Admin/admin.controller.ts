@@ -672,17 +672,48 @@ export const getUserCategoryStats = asyncHandler(async (req, res) => {
 
 export const listUsersByCategory = asyncHandler(async (req, res) => {
   const { category } = req.params;
+  const { page = 1, limit = 50, search, status } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
   if (!category) throw new ApiError(400, "Category param is required");
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
 
-  if (!isDbOnline()) {
-    throw new ApiError(503, "Database unavailable");
+  const query: any = {};
+
+  // Build Search Query
+  if (search && search !== "") {
+    const s = new RegExp(search as string, 'i');
+    const searchConditions = [
+      { name: s },
+      { mobileNumber: s }
+    ];
+    if (mongoose.Types.ObjectId.isValid(search as string)) {
+      searchConditions.push({ _id: search as any });
+    }
+    query.$or = searchConditions;
   }
 
+  // Handle Patients
   if (category === 'patient') {
-    const patients = await Patient.find().sort({ createdAt: -1 });
-    return res.status(200).json(new ApiResponse(200, "Patients fetched", patients));
+    if (status && status !== "All") {
+      query.isRegistered = status === "Verified";
+    }
+
+    const total = await Patient.countDocuments(query);
+    const patients = await Patient.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    return res.status(200).json(new ApiResponse(200, "Patients fetched", {
+      items: patients,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit))
+    }));
   }
 
+  // Handle Staff/Service Providers
   const role = await RoleModel.findOne({
     $or: [
       { code: category.toUpperCase() },
@@ -691,11 +722,31 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
   });
 
   if (!role) {
-    return res.status(200).json(new ApiResponse(200, "No users found for this category", []));
+    return res.status(200).json(new ApiResponse(200, "Category not found", {
+      items: [],
+      total: 0,
+      page: Number(page),
+      totalPages: 0
+    }));
   }
 
-  const staff = await Doctor.find({ roleId: role._id }).sort({ createdAt: -1 });
-  return res.status(200).json(new ApiResponse(200, `${category} list fetched`, staff));
+  query.roleId = role._id;
+  if (status && status !== "All") {
+    query.status = status;
+  }
+
+  const total = await Doctor.countDocuments(query);
+  const staff = await Doctor.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  return res.status(200).json(new ApiResponse(200, `${category} list fetched`, {
+    items: staff,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
 });
 
 export const createUserByCategory = asyncHandler(async (req, res) => {
@@ -757,14 +808,33 @@ export const listPatients = asyncHandler(async (_req, res) => {
   return res.status(200).json(new ApiResponse(200, "Patients fetched", patients));
 });
 
-export const listDoctors = asyncHandler(async (_req, res) => {
-  if (!isDbOnline()) {
-    throw new ApiError(503, "Database unavailable");
+export const listDoctors = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 50, search, status } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const query: any = {};
+  if (status && status !== "All") query.status = status;
+
+  if (search && search !== "") {
+    const s = new RegExp(search as string, 'i');
+    query.$or = [
+      { name: s },
+      { mobileNumber: s },
+      { specialization: s }
+    ];
   }
 
-  // Fetch all providers from the Doctor collection (includes Doctors, Nurses, Physios, etc.)
-  const doctors = await Doctor.find({}).sort({ createdAt: -1 });
-  return res.status(200).json(new ApiResponse(200, "Doctors fetched", doctors));
+  const total = await Doctor.countDocuments(query);
+  const doctors = await Doctor.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  return res.status(200).json(new ApiResponse(200, "Doctors fetched", {
+    items: doctors,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
 });
 
 export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
@@ -987,14 +1057,60 @@ export const deleteUser = asyncHandler(async (req, res) => {
 // Operations Desk Bookings endpoints
 
 export const getDoctorBookings = asyncHandler(async (req, res) => {
-  const bookings = await doctorAppointmentModel.find()
-    .populate("doctorId", "name specialization")
+  const { page = 1, limit = 55, status, search, dateFrom, dateTo, payment, subService } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const query: any = {};
+
+  if (status && status !== "All") query.status = status;
+  if (payment && payment !== "All") query.paymentStatus = payment;
+
+  if (subService && subService !== "All") {
+    // Specialization filter: Find doctors with this specialization first
+    const doctorsWithSpec = await Doctor.find({ specialization: { $in: [subService] } }).select("_id");
+    const docIds = doctorsWithSpec.map(d => d._id);
+    query.doctorId = { $in: docIds };
+  }
+
+  if (dateFrom || dateTo) {
+    query.createdAt = {};
+    if (dateFrom) query.createdAt.$gte = new Date(dateFrom as string);
+    if (dateTo) {
+      const to = new Date(dateTo as string);
+      to.setHours(23, 59, 59, 999);
+      query.createdAt.$lte = to;
+    }
+  }
+
+  // Stats aggregation
+  const [statsData] = await doctorAppointmentModel.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const statsMap = statsData ? (Array.isArray(statsData) ? statsData : [statsData]) : [];
+  const getCount = (s: string) => statsMap.find((x: any) => x._id === s)?.count || 0;
+
+  const stats = {
+    all: await doctorAppointmentModel.countDocuments(),
+    pending: getCount("Pending"),
+    confirmed: getCount("Confirmed"),
+    completed: getCount("Completed"),
+    cancelled: getCount("Cancelled"),
+  };
+
+  let bookingsQuery = doctorAppointmentModel.find(query)
+    .populate("doctorId", "name specialization mobileNumber")
     .populate("patientId", "name mobileNumber")
     .sort({ createdAt: -1 });
 
-  console.log(`[DEBUG] Fetched ${bookings.length} doctor bookings. First patientId:`, bookings[0]?.patientId);
+  const total = await doctorAppointmentModel.countDocuments(query);
+  const bookings = await bookingsQuery.skip(skip).limit(Number(limit));
 
-  const formatted = bookings.map(b => {
+  let formatted = bookings.map(b => {
     const obj = b.toObject() as any;
     return {
       ...obj,
@@ -1011,13 +1127,30 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
     };
   });
 
-  res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", formatted));
+  if (search && search !== "") {
+    const s = (search as string).toLowerCase();
+    formatted = formatted.filter(b =>
+      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
+      (b.patientId?.mobile?.toLowerCase() || "").includes(s) ||
+      (b.doctorId?.name?.toLowerCase() || "").includes(s) ||
+      (b._id || "").toLowerCase().includes(s)
+    );
+  }
+
+  res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", {
+    items: formatted,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    stats
+  }));
 });
 
 export const getServiceBookings = asyncHandler(async (req, res) => {
-  const { status, dateFrom, dateTo, search, source } = req.query;
+  const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
 
-  // Auto-update bookings that have timed out (15 min since broadcast or creation)
+  // Auto-update bookings that have timed out
   const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
   await serviceRequestModel.updateMany({
     status: { $in: ["PENDING", "BROADCASTED"] },
@@ -1027,16 +1160,22 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   });
 
   const query: any = {};
+  if (status && status !== "All") query.status = status;
+  if (payment && payment !== "All") query.paymentStatus = payment;
+  if (fulfillmentMode && fulfillmentMode !== "All") query.fulfillmentMode = fulfillmentMode;
 
-  if (status && status !== "All") {
-    query.status = status;
+  if (doctor && doctor !== "All") {
+    if (doctor === "Unassigned") {
+      query.assignedProviderId = { $exists: false };
+    } else {
+      query.assignedProviderId = doctor;
+    }
   }
 
-  if (source && source !== "All") {
-    // Based on how frontend mock was, this might map to fulfillmentMode
-    if (source === "Walk-in" || source === "Admin" || source === "App") {
-      query.fulfillmentMode = source === "Walk-in" ? "HOSPITAL_VISIT" : source === "App" ? "VIRTUAL" : null;
-    }
+  if (service && service !== "All") {
+    const matchedServices = await mongoose.model('ChildService').find({ name: { $regex: new RegExp(service as string, 'i') } }).select("_id");
+    const serviceIds = matchedServices.map(s => s._id);
+    query.childServiceId = { $in: serviceIds };
   }
 
   if (dateFrom || dateTo) {
@@ -1048,6 +1187,29 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
       query.createdAt.$lte = to;
     }
   }
+
+  // Stats aggregation
+  const [statsData] = await serviceRequestModel.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+  const statsMap = Array.isArray(statsData) ? statsData : [];
+  const getCount = (s: string | string[]) => {
+    if (Array.isArray(s)) return statsMap.filter(x => s.includes(x._id)).reduce((acc, x) => acc + x.count, 0);
+    return statsMap.find(x => x._id === s)?.count || 0;
+  };
+
+  const stats = {
+    all: await serviceRequestModel.countDocuments(),
+    pending: getCount(["PENDING", "BROADCASTED", "RETURNED_TO_ADMIN"]),
+    confirmed: getCount(["ACCEPTED", "CONFIRMED"]),
+    completed: getCount("COMPLETED"),
+    cancelled: getCount("CANCELLED"),
+  };
 
   const bookings = await serviceRequestModel.find(query)
     .populate("childServiceId", "name")
@@ -1067,24 +1229,25 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
         mobile: obj.userId ? obj.userId.toString() : "N/A"
       },
       totalAmount: obj.price || 0,
-      paymentStatus: obj.status === "COMPLETED" ? "COMPLETED" : "PENDING"
+      paymentStatus: obj.paymentStatus || (obj.status === "COMPLETED" ? "COMPLETED" : "PENDING")
     };
   });
 
-  // Since some fields like 'paymentStatus' or 'department' are computed / nested in relations,
-  // we can do a secondary memory filter here for the things that are too complex for a fast basic Mongoose query
-  // For a production system we'd use Aggregate, but this matches the current controller's structure.
-
   if (search && search !== "") {
     const s = (search as string).toLowerCase();
+    // Broad search across fields
     formatted = formatted.filter(b =>
       (b.patientId?.name?.toLowerCase() || "").includes(s) ||
+      (b.patientId?.mobile?.toLowerCase() || "").includes(s) ||
       (b.serviceId?.name?.toLowerCase() || "").includes(s) ||
-      (b._id || "").toLowerCase().includes(s)
+      (b.doctorId?.name?.toLowerCase() || "").includes(s) ||
+      (b._id || "").toLowerCase().includes(s) ||
+      (b.status || "").toLowerCase().includes(s) ||
+      (b.paymentStatus || "").toLowerCase().includes(s) ||
+      (String(b.totalAmount || "")).includes(s)
     );
   }
 
-  const { payment, department } = req.query;
   if (payment && payment !== "All") {
     formatted = formatted.filter(b => b.paymentStatus === payment);
   }
@@ -1092,7 +1255,16 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     formatted = formatted.filter(b => (b.serviceId?.name || "").toLowerCase().includes((department as string).toLowerCase()));
   }
 
-  res.status(200).json(new ApiResponse(200, "Service bookings fetched successfully", formatted));
+  const total = formatted.length;
+  const paginated = formatted.slice(skip, skip + Number(limit));
+
+  res.status(200).json(new ApiResponse(200, "Service bookings fetched successfully", {
+    items: paginated,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    stats
+  }));
 });
 
 export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
@@ -1236,11 +1408,35 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
 });
 
 export const getHospitalBookings = asyncHandler(async (req, res) => {
-  const bookings = await HospitalBooking.find()
-    .populate("patientId", "name mobileNumber")
-    .sort({ acceptedAt: -1 });
+  const { page = 1, limit = 55, status, search } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const query: any = {};
 
-  const formatted = bookings.map(b => {
+  if (status && status !== "All") query.status = status;
+
+  // Stats aggregation for Hospital Bookings
+  const [statsData] = await HospitalBooking.aggregate([
+    {
+      $group: {
+        _id: null,
+        all: { $sum: 1 },
+        pending: { $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] } },
+        confirmed: { $sum: { $cond: [{ $in: ["$status", ["ACCEPTED", "CONFIRMED"]] }, 1, 0] } },
+        completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] } },
+      }
+    }
+  ]);
+  const stats = statsData || { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+
+  const total = await HospitalBooking.countDocuments(query);
+  const bookings = await HospitalBooking.find(query)
+    .populate("patientId", "name mobileNumber")
+    .sort({ acceptedAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  let formatted = bookings.map(b => {
     const obj = b.toObject() as any;
     return {
       ...obj,
@@ -1254,7 +1450,22 @@ export const getHospitalBookings = asyncHandler(async (req, res) => {
     };
   });
 
-  res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", formatted));
+  if (search && search !== "") {
+    const s = (search as string).toLowerCase();
+    formatted = formatted.filter(b =>
+      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
+      (b.serviceName?.toLowerCase() || "").includes(s) ||
+      (b._id || "").toLowerCase().includes(s)
+    );
+  }
+
+  res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", {
+    items: formatted,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    stats
+  }));
 });
 
 // ─── System Config Endpoints ────────────────────────────────────────────────
@@ -1551,14 +1762,40 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
 });
 
 export const getAdminPayouts = asyncHandler(async (req, res) => {
-  const { status } = req.query;
+  const { page = 1, limit = 60, status, search } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
   const filter: any = {};
   if (status && status !== "All") filter.status = status;
 
+  // Since staffId is a reference, we might need to filter after population or use aggregation
+  // For simplicity and speed in this context, we fetch all matching status, then filter/slice
   const payouts = await Payout.find(filter)
-    .populate("staffId", "name mobileNumber bankDetails")
+    .populate("staffId", "name mobileNumber")
     .sort({ createdAt: -1 });
-  return res.status(200).json(new ApiResponse(200, "Payout requests fetched", payouts));
+
+  let formatted = payouts.map(p => p.toObject() as any);
+
+  if (search && search !== "") {
+    const s = (search as string).toLowerCase();
+    formatted = formatted.filter(p =>
+      (p.staffId?.name?.toLowerCase() || "").includes(s) ||
+      (p.staffId?.mobileNumber?.toLowerCase() || "").includes(s) ||
+      (p.bankDetails?.bankName?.toLowerCase() || "").includes(s) ||
+      (p.bankDetails?.accountNumber?.toLowerCase() || "").includes(s) ||
+      (p._id || "").toLowerCase().includes(s) ||
+      (String(p.amount || "")).includes(s)
+    );
+  }
+
+  const total = formatted.length;
+  const paginated = formatted.slice(skip, skip + Number(limit));
+
+  return res.status(200).json(new ApiResponse(200, "Payout requests fetched", {
+    items: paginated,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
 });
 
 export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {

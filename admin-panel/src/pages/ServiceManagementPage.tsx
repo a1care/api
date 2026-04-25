@@ -266,7 +266,7 @@ export function ServiceManagementPage() {
             </div>
 
             <div className="grid-4">
-                {categories?.map((cat) => (
+                {Array.isArray(categories) && categories.map((cat) => (
                     <article
                         key={cat._id}
                         className={`card flex-col gap-3 group cursor-pointer ${selectedCatId === cat._id ? "card-primary" : ""}`}
@@ -332,7 +332,7 @@ export function ServiceManagementPage() {
                 </div>
             ) : (
                 <div className="grid-3">
-                    {subServices?.map((sub) => (
+                    {Array.isArray(subServices) && subServices.map((sub) => (
                         <article
                             key={sub._id}
                             className={`card flex-col gap-3 group cursor-pointer ${selectedSubId === sub._id ? "card-primary" : ""}`}
@@ -394,7 +394,7 @@ export function ServiceManagementPage() {
                 </div>
             ) : (
                 <div className="flex-col gap-2">
-                    {childServices?.map((child) => (
+                    {Array.isArray(childServices) && childServices.map((child) => (
                         <article key={child._id} className="card flex justify-between items-center group" style={{ padding: '16px 24px' }}>
                             <div className="flex items-center gap-4">
                                 <div className="icon-box" style={{ width: '40px', height: '40px' }}>

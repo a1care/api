@@ -8,12 +8,18 @@ import { toast } from "sonner";
 
 interface Ticket {
     _id: string;
-    staffId: {
+    staffId?: {
         _id: string;
         name: string;
         mobileNumber: string;
         roleId: string;
         status: string;
+    };
+    userId?: {
+        _id: string;
+        name: string;
+        mobileNumber: string;
+        profileImage?: string;
     };
     subject: string;
     description: string;
@@ -33,6 +39,10 @@ export function TicketsPage() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshQueue, setRefreshQueue] = useState(0);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
 
     // Chat State
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -42,16 +52,19 @@ export function TicketsPage() {
     const [fetchingMessages, setFetchingMessages] = useState(false);
 
     useEffect(() => {
-        api.get("/tickets/all")
+        setLoading(true);
+        api.get(`/tickets/all?page=${page}&limit=50&search=${searchQuery}&status=${statusFilter}`)
             .then(res => {
-                setTickets(res.data.data || []);
+                const rawData = res.data.data;
+                setTickets(Array.isArray(rawData.items) ? rawData.items : []);
+                setTotalPages(rawData.totalPages || 1);
                 setLoading(false);
             })
             .catch(err => {
                 console.error("Failed to load tickets", err);
                 setLoading(false);
             });
-    }, [refreshQueue]);
+    }, [refreshQueue, page, searchQuery, statusFilter]);
 
 
     const updateStatus = async (id: string, newStatus: string) => {
@@ -80,7 +93,8 @@ export function TicketsPage() {
         setFetchingMessages(true);
         try {
             const res = await api.get(`/tickets/messages/${ticketId}`);
-            setMessages(res.data.data || []);
+            const rawMessages = res.data.data;
+            setMessages(Array.isArray(rawMessages) ? rawMessages : []);
         } catch (err) {
             toast.error("Failed to fetch messages");
         } finally {
@@ -113,9 +127,10 @@ export function TicketsPage() {
         }
     }, [selectedTicket]);
 
-    if (loading) {
-        return <div className="page-container p-6">Loading tickets...</div>;
-    }
+    // Remove early return to prevent page blinking
+    // if (loading) {
+    //     return <div className="page-container p-6">Loading tickets...</div>;
+    // }
 
     const stats = {
         total: tickets.length,
@@ -147,12 +162,42 @@ export function TicketsPage() {
                 </div>
             </div>
 
+            {/* Search and Filters */}
+            <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="relative group flex-1 max-w-2xl">
+                    <div className="absolute left-6 top-1/2 -translate-y-1/2 z-10">
+                        <Search className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder="Search by ID, Subject, Description or Node Details..."
+                        className="w-full h-16 pl-16 pr-6 bg-white border border-slate-100 rounded-[28px] text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-50 transition-all shadow-sm"
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                    />
+                </div>
+                
+                <div className="flex items-center bg-white p-2 rounded-[24px] border border-slate-100 shadow-sm">
+                    {['All', 'Pending', 'In Progress', 'Resolved'].map((s) => (
+                        <button
+                            key={s}
+                            onClick={() => { setStatusFilter(s); setPage(1); }}
+                            className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${
+                                statusFilter === s ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                        >
+                            {s}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Operational Intelligence Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                    { label: 'TOTAL TRAFFIC', val: stats.total, icon: <Ticket size={24} />, color: '#3b82f6', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-                    { label: 'ACTIVE QUEUE', val: stats.active, icon: <AlertCircle size={24} />, color: '#f59e0b', bg: 'bg-amber-50 dark:bg-amber-500/10' },
-                    { label: 'SUCCESS RESOLVED', val: stats.resolved, icon: <CheckCircle2 size={24} />, color: '#10b981', bg: 'bg-emerald-50 dark:bg-emerald-500/10' }
+                    { label: 'TOTAL TRAFFIC', val: tickets.length, icon: <Ticket size={24} />, color: '#3b82f6', bg: 'bg-blue-50 dark:bg-blue-500/10' },
+                    { label: 'ACTIVE QUEUE', val: tickets.filter(t => t.status?.toLowerCase() !== 'resolved' && t.status?.toLowerCase() !== 'closed').length, icon: <AlertCircle size={24} />, color: '#f59e0b', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+                    { label: 'SUCCESS RESOLVED', val: tickets.filter(t => t.status?.toLowerCase() === 'resolved').length, icon: <CheckCircle2 size={24} />, color: '#10b981', bg: 'bg-emerald-50 dark:bg-emerald-500/10' }
                 ].map((s, i) => (
                     <div key={i} className="card p-7 border-none shadow-blue-100/50 flex items-center justify-between hover:translate-y-[-4px] transition-all">
                         <div className="flex items-center gap-5">
@@ -183,7 +228,16 @@ export function TicketsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                            {tickets.map((t, index) => (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={5} className="p-20 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing HUB Data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : tickets.map((t, index) => (
                                 <tr key={t._id} className="hover:bg-[var(--bg-main)] dark:hover:bg-slate-900/40 transition-all duration-300">
                                     <td className="px-6 py-5 font-black text-slate-400 text-xs">
                                         {(index + 1).toString().padStart(2, '0')}
@@ -191,11 +245,15 @@ export function TicketsPage() {
                                     <td className="px-6 py-5">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-2xl bg-[var(--bg-main)] dark:bg-white/5 flex items-center justify-center font-black text-[#1A7FD4] shadow-sm">
-                                                {t.staffId?.name?.charAt(0) || "U"}
+                                                {t.staffId?.name?.charAt(0) || t.userId?.name?.charAt(0) || "U"}
                                             </div>
                                             <div>
-                                                <p className="font-black text-[var(--text-main)] dark:text-white text-sm">{t.staffId?.name || "Unknown Partner"}</p>
-                                                <p className="text-[10px] font-bold text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-widest mt-0.5">{t.staffId?.mobileNumber || "REF: INTERNAL"}</p>
+                                                <p className="font-black text-[var(--text-main)] dark:text-white text-sm">
+                                                    {t.staffId?.name || t.userId?.name || "Unknown Sender"}
+                                                </p>
+                                                <p className="text-[10px] font-bold text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-widest mt-0.5">
+                                                    {t.staffId?.mobileNumber || t.userId?.mobileNumber || "REF: INTERNAL"}
+                                                </p>
                                             </div>
                                         </div>
                                     </td>
@@ -259,6 +317,29 @@ export function TicketsPage() {
                 </div>
             </div>
 
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-100/50">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page {page} of {totalPages}</p>
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="px-6 py-3 rounded-2xl bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-30 hover:bg-slate-200 transition-colors"
+                        >
+                            Prev
+                        </button>
+                        <button 
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="px-6 py-3 rounded-2xl bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-30 hover:bg-black transition-colors"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Chat Intervention Modal */}
             {selectedTicket && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -271,7 +352,7 @@ export function TicketsPage() {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-black text-slate-900 line-clamp-1">{selectedTicket.subject}</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Support Intervention • {selectedTicket.staffId?.name || "Patient"}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Support Intervention • {selectedTicket.staffId?.name || selectedTicket.userId?.name || "Patient"}</p>
                                 </div>
                             </div>
                             <button onClick={() => setSelectedTicket(null)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors">
@@ -293,7 +374,7 @@ export function TicketsPage() {
                                         <p className="text-sm font-medium text-slate-600 dark:text-slate-300 italic">" {selectedTicket?.description} "</p>
                                     </div>
 
-                                    {messages.map((m) => {
+                                    {Array.isArray(messages) && messages.map((m) => {
                                         const isMe = m.senderType === 'User';
                                         return (
                                             <div key={m._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>

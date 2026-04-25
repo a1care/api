@@ -1,9 +1,6 @@
 import axios from "axios";
 
-const isProd = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-const baseURL = isProd 
-  ? "https://api.a1carehospital.in/api" 
-  : (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api");
+const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 export const api = axios.create({
   baseURL,

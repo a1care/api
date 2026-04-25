@@ -59,6 +59,8 @@ export function DoctorStaffManagementPage() {
     
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [searchQuery, setSearchQuery] = useState(initialSearch);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Add Provider Form
@@ -72,22 +74,25 @@ export function DoctorStaffManagementPage() {
         }
     }, [initialSearch]);
 
-    const { data: staff, isLoading } = useQuery({
-        queryKey: ["admin_staff"],
+    const { data: staffData, isLoading } = useQuery({
+        queryKey: ["admin_staff", page, searchQuery],
         queryFn: async () => {
-            const res = await api.get("/admin/doctors");
-            return res.data.data as Doctor[];
+            const res = await api.get(`/admin/doctors?page=${page}&limit=50&search=${searchQuery}`);
+            return res.data.data;
         }
     });
 
-    const filteredStaff = staff?.filter(doc => {
-        const query = searchQuery.toLowerCase();
-        return (
-            (doc.name || "").toLowerCase().includes(query) ||
-            (doc.mobileNumber || "").toLowerCase().includes(query) ||
-            (doc.specialization || []).some(s => s.toLowerCase().includes(query))
-        );
-    });
+    const staff = staffData?.items || [];
+    useEffect(() => {
+        if (staffData?.totalPages) setTotalPages(staffData.totalPages);
+    }, [staffData]);
+
+    // Backend-driven search now
+    const filteredStaff = staff;
+
+    useEffect(() => {
+        setPage(1);
+    }, [searchQuery]);
 
     const updateStatusMutation = useMutation({
         mutationFn: async ({ id, status }: { id: string, status: string }) => {
@@ -124,12 +129,13 @@ export function DoctorStaffManagementPage() {
         createMutation.mutate({ name: newName, mobileNumber: newMobile, email: newEmail });
     };
 
-    if (isLoading) return (
-        <div className="p-4 py-20 text-center flex-col items-center gap-4">
-            <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={48} />
-            <p className="text-[var(--text-muted)] font-black uppercase tracking-[0.2em] text-sm">Accessing Provider Network...</p>
-        </div>
-    );
+    // Removed early return to prevent blinking
+    // if (isLoading) return (
+    //     <div className="p-4 py-20 text-center flex-col items-center gap-4">
+    //         <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={48} />
+    //         <p className="text-[var(--text-muted)] font-black uppercase tracking-[0.2em] text-sm">Accessing Provider Network...</p>
+    //     </div>
+    // );
 
     const VerificationModal = ({ doctor }: { doctor: Doctor }) => (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
@@ -296,7 +302,7 @@ export function DoctorStaffManagementPage() {
                         </button>
                         <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/10 rounded-xl">
                             <Users size={14} className="text-blue-600" />
-                            <span className="text-xs font-black text-blue-600">{filteredStaff?.length || 0} Network Slots</span>
+                            <span className="text-xs font-black text-blue-600">{staffData?.total || 0} Network Slots</span>
                         </div>
                     </div>
                 </div>
@@ -315,10 +321,20 @@ export function DoctorStaffManagementPage() {
                             </tr>
                         </thead>
                         <tbody>
-                             {filteredStaff?.map((doc, index) => (
+                             {isLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="p-20 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronizing Grid...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                             ) : Array.isArray(filteredStaff) && filteredStaff.length > 0 ? (
+                                filteredStaff.map((doc, index) => (
                                 <tr key={doc._id} className="hover:bg-slate-50/80 dark:hover:bg-blue-500/5 transition-all border-b border-[var(--border-color)]">
                                     <td className="p-4 pl-10 font-black text-slate-400 text-[10px]">
-                                        {(index + 1).toString().padStart(2, '0')}
+                                        {((page - 1) * 50 + index + 1).toString().padStart(2, '0')}
                                     </td>
                                     <td style={{ paddingBlock: '20px' }}>
                                         <div className="flex items-center gap-4">
@@ -375,10 +391,10 @@ export function DoctorStaffManagementPage() {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
-                            {(!filteredStaff || filteredStaff.length === 0) && (
-                                <tr>
-                                    <td colSpan={6} className="py-24 text-center">
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={7} className="py-24 text-center">
                                         <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-color)]">
                                             <Search size={28} className="text-slate-300" />
                                         </div>
@@ -389,6 +405,29 @@ export function DoctorStaffManagementPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="p-8 border-t border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]/30 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                    <div className="flex items-center gap-4">
+                        <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Page: <span className="text-[var(--text-main)] ml-2">{page} / {totalPages}</span></span>
+                        <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Total Entries: <span className="text-[var(--text-main)] ml-2">{staffData?.total || 0}</span></span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button 
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
                 </div>
             </div>
             {/* Add Provider Modal */}

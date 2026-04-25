@@ -66,8 +66,60 @@ export const getMyPatientTickets = asyncHandler(async (req, res) => {
 });
 
 export const getAllTickets = asyncHandler(async (req, res) => {
-    const tickets = await TicketModel.find().populate("staffId", "name mobileNumber status roleId").sort({ createdAt: -1 });
-    return res.status(200).json(new ApiResponse(200, "All tickets", tickets));
+    const { page = 1, limit = 50, search, status } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const query: any = {};
+
+    if (status && status !== "All") {
+        query.status = status;
+    }
+
+    if (search && search !== "") {
+        const s = new RegExp(search as string, 'i');
+        const searchConditions: any[] = [
+            { subject: s },
+            { description: s }
+        ];
+
+        // Search for matching staff/users to include in the query
+        const matchingStaff = await mongoose.model("Doctor").find({
+            $or: [
+                { name: s },
+                { mobileNumber: s }
+            ]
+        }).select("_id");
+
+        const matchingPatients = await mongoose.model("Patient").find({
+            $or: [
+                { name: s },
+                { mobileNumber: s }
+            ]
+        }).select("_id");
+
+        if (matchingStaff.length > 0) {
+            searchConditions.push({ staffId: { $in: matchingStaff.map(s => s._id) } });
+        }
+        if (matchingPatients.length > 0) {
+            searchConditions.push({ userId: { $in: matchingPatients.map(p => p._id) } });
+        }
+
+        query.$or = searchConditions;
+    }
+
+    const total = await TicketModel.countDocuments(query);
+    const tickets = await TicketModel.find(query)
+        .populate("staffId", "name mobileNumber status roleId")
+        .populate("userId", "name mobileNumber profileImage")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    return res.status(200).json(new ApiResponse(200, "All tickets fetched", {
+        items: tickets,
+        total,
+        page: Number(page),
+        totalPages: Math.ceil(total / (Number(limit) || 50))
+    }));
 });
 
 export const updateTicketStatus = asyncHandler(async (req, res) => {

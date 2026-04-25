@@ -176,34 +176,31 @@ export function AppLayout() {
 
   return (
     <div className="shell min-h-screen">
-      <aside className="sidebar border-r border-[var(--border-color)] dark:border-slate-800 relative z-[60]">
-        <div className="sidebar-brand py-8 px-6 flex justify-center border-b border-[var(--border-color)]/50">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-10 group-hover:opacity-30 transition-opacity"></div>
-            <div className="w-28 h-28 flex items-center justify-center relative z-10 transition-all group-hover:scale-105 duration-500">
-              <img src="/a1care_logo1.png" alt="A1Care Logo" className="w-full h-full object-contain rounded-[1.5rem] shadow-xl border border-[var(--border-color)]/20" />
-            </div>
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="logo-box large">
+            <img src="/a1care_logo1.png" alt="A1Care Logo" className="w-full h-full object-contain" />
+          </div>
+          <div className="text-center">
+            <h2 className="brand-name">A1Care Admin</h2>
+            <p className="role-label">System Controller</p>
           </div>
         </div>
 
-        <nav className="px-4 py-6 space-y-2">
-          <div className="px-4 pb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] opacity-60">Control Center</span>
-          </div>
+        <nav>
+          <div className="nav-section">Control Center</div>
 
           {mainNav(user?.role || "admin").map((item) => (
-            <NavLink key={item.label} to={item.to} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)]"}`}>
+            <NavLink key={item.label} to={item.to} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
               <item.icon size={18} />
               <span>{item.label}</span>
             </NavLink>
           ))}
 
-          <div className="pt-6 px-4 pb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] opacity-60">Inventory & Users</span>
-          </div>
+          <div className="nav-section">Inventory & Users</div>
 
           <button
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${usersActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
+            className={`submenu-trigger ${usersActive ? "active" : ""}`}
             onClick={() => setUsersOpen((prev) => !prev)}
           >
             <div className="flex items-center gap-3">
@@ -214,7 +211,7 @@ export function AppLayout() {
           </button>
 
           {usersOpen && (
-            <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
+            <div className="submenu-list">
               {[
                 { to: "/manage-patients", label: "Patients" },
                 { to: "/manage-doctors", label: "Doctors" },
@@ -224,7 +221,7 @@ export function AppLayout() {
                 { to: "/manage-labs", label: "Lab Registry" },
                 { to: "/manage-services", label: "Extra Services" }
               ].map(link => (
-                <NavLink key={link.to} to={link.to} className={({ isActive }) => `block py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
+                <NavLink key={link.to} to={link.to} className={({ isActive }) => `sub-link ${isActive ? "active text-primary font-bold" : ""}`}>
                   {link.label}
                 </NavLink>
               ))}
@@ -234,7 +231,7 @@ export function AppLayout() {
           {user?.role === "super_admin" && (
             <>
               <button
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${servicesActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
+                className={`submenu-trigger ${servicesActive ? "active" : ""}`}
                 onClick={() => setServicesOpen((prev) => !prev)}
               >
                 <div className="flex items-center gap-3">
@@ -245,7 +242,7 @@ export function AppLayout() {
               </button>
 
               {servicesOpen && (
-                <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
+                <div className="submenu-list">
                   {[
                     { to: "/service-portfolio", label: "Portfolios Hub", icon: Briefcase },
                     { to: "/service-categories", label: "Master Categories", icon: LayoutGrid },
@@ -253,7 +250,7 @@ export function AppLayout() {
                     { to: "/service-child-services", label: "Catalog Offerings", icon: Tag },
                     { to: "/health-packages", label: "Service Bundles", icon: Package }
                   ].map(link => (
-                    <NavLink key={link.to} to={link.to} className={({ isActive }) => `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-blue-600 font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}>
+                    <NavLink key={link.to} to={link.to} className={({ isActive }) => `sub-link flex items-center gap-2 ${isActive ? "active text-primary font-bold" : ""}`}>
                       <link.icon size={13} /> {link.label}
                     </NavLink>
                   ))}
@@ -264,12 +261,10 @@ export function AppLayout() {
 
           {user?.role === "super_admin" && (
             <>
-              <div className="pt-6 px-4 pb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] opacity-60">System Configuration</span>
-              </div>
+              <div className="nav-section">System Configuration</div>
 
               <button
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${appsActive ? "text-blue-600 bg-blue-50" : "text-[var(--text-muted)] hover:bg-[var(--bg-main)]"}`}
+                className={`submenu-trigger ${appsActive ? "active" : ""}`}
                 onClick={() => setAppsOpen((prev) => !prev)}
               >
                 <div className="flex items-center gap-3">
@@ -280,32 +275,26 @@ export function AppLayout() {
               </button>
 
               {appsOpen && (
-                <div className="ml-4 pl-4 border-l border-[var(--border-color)] space-y-1 mt-1">
-                  <NavLink to="/manage-customer-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">User Apps</NavLink>
-                  <NavLink to="/manage-provider-app" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Provider Apps</NavLink>
-                  <NavLink to="/audit-health-vault" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Health Vault Audit</NavLink>
-                  <NavLink to="/payment-logs" className="flex items-center gap-2 py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                <div className="submenu-list">
+                  <NavLink to="/manage-customer-app" className={({ isActive }) => `sub-link ${isActive ? "active" : ""}`}>User Apps</NavLink>
+                  <NavLink to="/manage-provider-app" className={({ isActive }) => `sub-link ${isActive ? "active" : ""}`}>Provider Apps</NavLink>
+                  <NavLink to="/audit-health-vault" className={({ isActive }) => `sub-link ${isActive ? "active" : ""}`}>Health Vault Audit</NavLink>
+                  <NavLink to="/payment-logs" className={({ isActive }) => `sub-link flex items-center gap-2 ${isActive ? "active" : ""}`}>
                     <Receipt size={13} />
                     Payment Logs
                   </NavLink>
-                  <NavLink
-                    to="/manage-system-config"
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 py-2 text-[13px] font-medium transition-colors ${isActive ? "text-orange-500 font-bold" : "text-[var(--text-muted)] hover:text-orange-500"
-                      }`
-                    }
-                  >
-                    <ShieldCheck size={13} className="text-orange-400" />
+                  <NavLink to="/manage-system-config" className={({ isActive }) => `sub-link flex items-center gap-2 ${isActive ? "active" : ""}`}>
+                    <ShieldCheck size={13} />
                     System Credentials
                   </NavLink>
-                  <NavLink to="/audit-logs" className="block py-2 text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Audit Logs</NavLink>
-                  <NavLink to="/deletion-requests" className="block py-2 text-[13px] font-medium text-rose-500 hover:text-rose-600 font-black">Deletion Requests</NavLink>
+                  <NavLink to="/audit-logs" className={({ isActive }) => `sub-link ${isActive ? "active" : ""}`}>Audit Logs</NavLink>
+                  <NavLink to="/deletion-requests" className={({ isActive }) => `sub-link text-rose-500 font-bold ${isActive ? "active" : ""}`}>Deletion Requests</NavLink>
                 </div>
               )}
             </>
           )}
 
-          <NavLink to="/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)] transition-all">
+          <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
             <Settings size={18} />
             <span>Core Settings</span>
           </NavLink>
@@ -336,7 +325,7 @@ export function AppLayout() {
       </aside>
 
       <main className="content">
-        <header className="content-header h-20 backdrop-blur-xl border-b px-8 flex items-center justify-between sticky top-0 z-50">
+        <header className="content-header h-16 backdrop-blur-xl border-b px-8 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-6">
               <div
@@ -441,7 +430,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <div className="page-body p-8 lg:p-12">
+        <div className="page-body p-6 lg:p-8">
           <Outlet />
         </div>
 

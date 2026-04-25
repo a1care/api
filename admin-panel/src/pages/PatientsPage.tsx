@@ -77,39 +77,40 @@ export function PatientsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {patients?.map((patient) => (
-                                <tr key={patient._id}>
-                                    <td style={{ paddingLeft: '24px' }}>
-                                        <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.9rem' }}>{patient.name || "Anonymous User"}</div>
-                                        <div className="text-xs muted flex items-center gap-1 mt-1">ID: {patient._id.slice(-6).toUpperCase()}</div>
-                                    </td>
-                                    <td>
-                                        <div className="flex-col">
-                                            <div className="text-sm font-medium text-[var(--text-main)] flex items-center gap-1"><Phone size={12} className="text-[var(--text-muted)]" /> {patient.mobileNumber}</div>
-                                            {patient.email && <div className="text-xs muted flex items-center gap-1"><Mail size={12} /> {patient.email}</div>}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className="badge secondary text-xs uppercase">{patient.gender || 'Not Specified'}</span>
-                                    </td>
-                                    <td>
-                                        <div className="text-sm text-[var(--text-muted)] font-medium">
-                                            {new Date(patient.createdAt).toLocaleDateString()}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="flex justify-center">
-                                            <span className="badge success text-xs">Active</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="justify-center flex">
-                                            <button className="icon-button"><MoreVertical size={16} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {!patients?.length && (
+                            {Array.isArray(patients) && patients.length > 0 ? (
+                                patients.map((patient) => (
+                                    <tr key={patient._id}>
+                                        <td style={{ paddingLeft: '24px' }}>
+                                            <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.9rem' }}>{patient.name || "Anonymous User"}</div>
+                                            <div className="text-xs muted flex items-center gap-1 mt-1">ID: {patient._id.slice(-6).toUpperCase()}</div>
+                                        </td>
+                                        <td>
+                                            <div className="flex-col">
+                                                <div className="text-sm font-medium text-[var(--text-main)] flex items-center gap-1"><Phone size={12} className="text-[var(--text-muted)]" /> {patient.mobileNumber}</div>
+                                                {patient.email && <div className="text-xs muted flex items-center gap-1"><Mail size={12} /> {patient.email}</div>}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className="badge secondary text-xs uppercase">{patient.gender || 'Not Specified'}</span>
+                                        </td>
+                                        <td>
+                                            <div className="text-sm text-[var(--text-muted)] font-medium">
+                                                {new Date(patient.createdAt).toLocaleDateString()}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="flex justify-center">
+                                                <span className="badge success text-xs">Active</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="justify-center flex">
+                                                <button className="icon-button"><MoreVertical size={16} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr>
                                     <td colSpan={6} className="py-20 text-center">
                                         <div className="flex-col items-center gap-2">

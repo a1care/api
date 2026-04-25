@@ -43,13 +43,16 @@ export function OPBookingsPage() {
     const { data: serviceData, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
         queryKey: ["admin_service_bookings", page, deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
         queryFn: async () => {
-            const params = new URLSearchParams({ page: page.toString(), limit: "50" });
+            const params = new URLSearchParams({ page: page.toString(), limit: "60" });
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
             if (sourceFilter !== "All") params.append("source", sourceFilter);
             if (departmentFilter !== "All") params.append("department", departmentFilter);
+            if (doctorFilter !== "All") params.append("doctor", doctorFilter);
+            if (slotFilter !== "All") params.append("slot", slotFilter);
+            if (patientTypeFilter !== "All") params.append("patientType", patientTypeFilter);
             params.append("fulfillmentMode", "HOSPITAL_VISIT"); // Essential for OP tokens
 
             const res = await api.get(`/admin/bookings/services?${params.toString()}`);
@@ -85,21 +88,22 @@ export function OPBookingsPage() {
         updateStatusMutation.mutate({ id, status });
     };
 
-    if (loadingServices && !serviceBookings) return (
-        <div className="flex flex-col items-center justify-center p-20 space-y-4">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p className="font-bold text-[var(--text-muted)] animate-pulse">Syncing operations desk...</p>
-        </div>
-    );
+    // Removed early return to prevent flickering
+    // if (loadingServices && !serviceBookings) return (
+    //     <div className="flex flex-col items-center justify-center p-20 space-y-4">
+    //         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+    //         <p className="font-bold text-[var(--text-muted)] animate-pulse">Syncing operations desk...</p>
+    //     </div>
+    // );
 
     const filteredTokens = serviceBookings;
 
     const statsCards = [
-        { label: "All", count: allCount, value: "All" },
-        { label: "Pending", count: pendingCount, value: "PENDING" },
-        { label: "Confirmed", count: confirmedCount, value: "CONFIRMED" },
-        { label: "Completed", count: completedCount, value: "COMPLETED" },
-        { label: "Cancelled", count: cancelledCount, value: "CANCELLED" },
+        { label: "All", count: stats.all, value: "All" },
+        { label: "Pending", count: stats.pending, value: "PENDING" },
+        { label: "Confirmed", count: stats.confirmed, value: "CONFIRMED" },
+        { label: "Completed", count: stats.completed, value: "COMPLETED" },
+        { label: "Cancelled", count: stats.cancelled, value: "CANCELLED" },
     ];
 
     return (
@@ -141,23 +145,23 @@ export function OPBookingsPage() {
             {/* Filters Row */}
             <div className="flex flex-row items-center gap-4">
                 <div className="relative flex-1">
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 z-10">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
                         {fetchingServices ? <Loader2 size={18} className="text-blue-500 animate-spin" /> : <Search size={18} className="text-[var(--text-muted)]" />}
                     </div>
                     <input
                         type="text"
-                        placeholder="Search by Order ID, Service..."
+                        placeholder="Search by Order ID, Patient name..."
                         className="w-full pr-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl h-12 text-sm focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none text-[var(--text-main)] transition-shadow shadow-sm"
-                        style={{ paddingLeft: '2.75rem' }}
+                        style={{ paddingLeft: '3rem' }}
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                     />
                 </div>
 
                 <div className="relative w-[180px] shrink-0">
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="w-full h-12 pl-4 pr-10 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl text-sm font-semibold text-[var(--text-main)] outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 appearance-none shadow-sm cursor-pointer"
                     >
                         {statsCards.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -183,7 +187,7 @@ export function OPBookingsPage() {
                             onClick={() => {
                                 setDateFrom(""); setDateTo(""); setPaymentFilter("All");
                                 setSourceFilter("All"); setDoctorFilter("All"); setDepartmentFilter("All");
-                                setPatientTypeFilter("All"); setSlotFilter("All");
+                                setPatientTypeFilter("All"); setSlotFilter("All"); setPage(1);
                             }}
                             className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                         >
@@ -196,18 +200,18 @@ export function OPBookingsPage() {
                         <div className="col-span-1 lg:col-span-2 grid grid-cols-2 gap-2">
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">From Date</label>
-                                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
+                                <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">To Date</label>
-                                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
+                                <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
                             </div>
                         </div>
 
                         {/* Payment Status */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Payment</label>
-                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Statuses</option>
                                 <option value="COMPLETED">Paid</option>
                                 <option value="PENDING">Pending</option>
@@ -218,7 +222,7 @@ export function OPBookingsPage() {
                         {/* Doctor */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Doctor Assigned</label>
-                            <select value={doctorFilter} onChange={e => setDoctorFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={doctorFilter} onChange={e => { setDoctorFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Doctors</option>
                                 <option value="Unassigned">Unassigned</option>
                             </select>
@@ -227,9 +231,9 @@ export function OPBookingsPage() {
                         {/* Department */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Department Specialization</label>
-                            <select value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={departmentFilter} onChange={e => { setDepartmentFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Departments</option>
-                                {categories?.filter(c => c.type === 'doctor' || c.name.toLowerCase().includes('doctor')).map(c => (
+                                {Array.isArray(categories) && categories.filter(c => c.type === 'doctor' || c.name.toLowerCase().includes('doctor')).map(c => (
                                     <option key={c._id} value={c.name}>{c.name}</option>
                                 ))}
                             </select>
@@ -238,7 +242,7 @@ export function OPBookingsPage() {
                         {/* Slot Time */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Slot Time</label>
-                            <select value={slotFilter} onChange={e => setSlotFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={slotFilter} onChange={e => { setSlotFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Slots</option>
                                 <option value="Morning">Morning (8AM - 12PM)</option>
                                 <option value="Afternoon">Afternoon (12PM - 4PM)</option>
@@ -249,7 +253,7 @@ export function OPBookingsPage() {
                         {/* Booking Source */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Source</label>
-                            <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Sources</option>
                                 <option value="App">Mobile App</option>
                                 <option value="Walk-in">Walk-in</option>
@@ -260,7 +264,7 @@ export function OPBookingsPage() {
                         {/* Patient Type */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Patient Type</label>
-                            <select value={patientTypeFilter} onChange={e => setPatientTypeFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={patientTypeFilter} onChange={e => { setPatientTypeFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Types</option>
                                 <option value="New">New Patient</option>
                                 <option value="Returning">Returning Patient</option>
@@ -287,14 +291,23 @@ export function OPBookingsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-color)]">
-                            {filteredTokens.length > 0 ? (
+                            {loadingServices ? (
+                                <tr>
+                                    <td colSpan={8} className="py-24 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronizing Appointments...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : Array.isArray(filteredTokens) && filteredTokens.length > 0 ? (
                                 filteredTokens.map((booking, index) => {
                                     const isPending = booking.status?.toUpperCase() === "PENDING" || booking.status?.toUpperCase() === "RETURNED_TO_ADMIN";
                                     const isConfirmed = booking.status?.toUpperCase() === "CONFIRMED";
                                     return (
                                         <tr key={booking._id} className="hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-colors group">
                                             <td className="py-5 px-6 text-sm font-black text-[var(--text-muted)]">
-                                                {String((page - 1) * 50 + index + 1).padStart(2, '0')}
+                                                {String((page - 1) * 60 + index + 1).padStart(2, '0')}
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded inline-block">

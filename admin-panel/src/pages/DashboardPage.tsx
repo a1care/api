@@ -38,7 +38,14 @@ export function DashboardPage() {
     queryFn: async () => {
       const res = await api.get("/admin/dashboard/overview");
       return res.data.data as DashboardOverview;
-    }
+    },
+    select: (data: any) => ({
+      ...data,
+      bookings: {
+        appointments: Array.isArray(data?.bookings?.appointments) ? data.bookings.appointments : [],
+        services: Array.isArray(data?.bookings?.services) ? data.bookings.services : []
+      }
+    })
   });
 
   const { data: performanceData, isLoading: isPerformanceLoading } = useQuery({
@@ -110,7 +117,7 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-16 px-4 md:px-6 max-w-[1600px] mx-auto">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12 px-4 md:px-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-2 pb-2">
         <div className="space-y-2">
@@ -146,7 +153,7 @@ export function DashboardPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column: Bookings Overview & Activity */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
 
           {/* Booking Overview */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -171,7 +178,7 @@ export function DashboardPage() {
               </div>
             </div>
             <div className="p-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {(activeTab === "appointments" ? bookings?.appointments : bookings?.services)?.map((status: any) => (
+              {((activeTab === "appointments" ? bookings?.appointments : bookings?.services) || [])?.map((status: any) => (
                 <div
                   key={status._id}
                   onClick={() => navigate(activeTab === "appointments" ? `/op-bookings?status=${status._id}` : `/bookings?status=${status._id}`)}
@@ -224,7 +231,7 @@ export function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {activity?.map((act: any) => (
+                  {Array.isArray(activity) && activity.map((act: any) => (
                     <tr key={act.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-slate-900">
@@ -286,7 +293,7 @@ export function DashboardPage() {
         </div>
 
         {/* Right Column: Alerts & Quick Insights */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
             <div className="flex items-center gap-2 mb-6">
               <AlertCircle size={20} className="text-slate-900" />
