@@ -5,7 +5,12 @@ const ServiceRequestSchema = new Schema(
     childServiceId: {
       type: Schema.Types.ObjectId,
       ref: "ChildService",
-      required: true
+      required: false
+    },
+    healthPackageId: {
+      type: Schema.Types.ObjectId,
+      ref: "HealthPackage",
+      required: false
     },
 
     userId: {
@@ -31,13 +36,13 @@ const ServiceRequestSchema = new Schema(
     scheduledSlot: {
       startTime: {
         type: Date,
-        required: function () {
+        required: function (this: any) {
           return this.bookingType === "SCHEDULED";
         }
       },
       endTime: {
         type: Date,
-        required: function () {
+        required: function (this: any) {
           return this.bookingType === "SCHEDULED";
         }
       }
@@ -76,6 +81,7 @@ const ServiceRequestSchema = new Schema(
         "PENDING",
         "BROADCASTED",
         "ACCEPTED",
+        "RETURNED_TO_ADMIN",
         "IN_PROGRESS",
         "COMPLETED",
         "CANCELLED"

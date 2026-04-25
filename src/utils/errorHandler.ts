@@ -15,6 +15,22 @@ export const errorHandler = (
     });
   }
 
+  // Map Mongoose/Mongo connectivity errors to 503
+  const isMongoError =
+    err.name === "MongoNetworkError" ||
+    err.name === "MongoServerSelectionError" ||
+    err.message?.includes("buffering timed out") ||
+    err.message?.includes("initial connection is complete") ||
+    err.message?.includes("topology was destroyed");
+
+  if (isMongoError) {
+    console.error("Database Connectivity Error:", err.message);
+    return res.status(503).json({
+      success: false,
+      message: "Database unavailable (503). Please check connection.",
+    });
+  }
+
   const message =
     err instanceof Error ? err.message : "Internal Server Error";
 

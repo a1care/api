@@ -15,7 +15,8 @@ const locationSchema = z.object({
 })
 
 const serviceRequestValiation = z.object({
-    childServiceId: objectId,
+    childServiceId: objectId.optional(),
+    healthPackageId: objectId.optional(),
     userId: objectId,
     roleId: z.array(objectId).optional(),
     status: z.enum(["PENDING", "ACCEPTED", "CANCELLED"]).optional(),
@@ -27,7 +28,7 @@ const serviceRequestValiation = z.object({
     ]),
     scheduledSlot: scheduledSlotSchema.optional(),
     location: locationSchema.optional(),
-    assignProviderId: objectId.optional(),
+    assignedProviderId: objectId.optional(),
     assignRoleId: objectId.optional(),
     bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]),
     price: z.number()

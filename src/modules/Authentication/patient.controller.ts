@@ -5,47 +5,62 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import { Patient } from "./patient.model.js";
 import { patientValidation } from "./patient.schema.js";
 import mongoose from 'mongoose';
-import RedisClient from '../../configs/redisConnect.js';
-import generateOtp from '../../utils/generateOtp.js';
+import { enqueueEmail } from "../../queues/communicationQueue.js";
+import { formatZodError } from "../../utils/formatZodError.js";
+import sendAlotsSms from "../../utils/alotsSms.js";
+import RedisClient from "../../configs/redisConnect.js";
 
-export const getPatientDetailsById = asyncHandler(async(req ,res)=>{
-    const patientId = req.user?.id
-    const userDetails = await Patient.findById(patientId).populate('primaryAddressId')
+// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
+// const DEV_BYPASS_OTP = "123456";
+// ─────────────────────────────────────────────────────────────────────────────
 
-   
-    if(userDetails)return res.status(200).json(new ApiResponse(200, "data fetched" , userDetails))
-    else{
-        throw new ApiError(404 , "No user found")    
-    }
+export const getPatientDetailsById = asyncHandler(async (req, res) => {
+  const patientId = req.user?.id
+
+  if (mongoose.connection.readyState !== 1) {
+    throw new ApiError(503, "Database unavailable");
+  }
+
+  const userDetails = await Patient.findById(patientId).populate('primaryAddressId')
+
+  if (userDetails) return res.status(200).json(new ApiResponse(200, "data fetched", userDetails))
+  else {
+    throw new ApiError(404, "No user found")
+  }
 })
 
-export const sentOtpForPatient = asyncHandler(async (req , res)=>{
-    const {mobileNumber} = req.body
-    if(!mobileNumber){
-        throw new ApiError(401 , "validation failed!")
-    }
+export const sentOtpForPatient = asyncHandler(async (req, res) => {
+  const { mobileNumber } = req.body;
+  if (!mobileNumber) {
+    throw new ApiError(400, "Mobile number is required");
+  }
 
-    // rate limiting and otp logic
-    //random otp
-    const otp = generateOtp()
-    RedisClient.setEx(`otp:${mobileNumber}` , 300 , JSON.stringify(otp))
+  const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+  
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    return res.json(new ApiResponse(201 , "OTP sent successfully" , {mobileNumber}))
+  // Store in Redis with 10-minute expiry
+  await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, otp);
+
+  // Send via Alots
+  const result = await sendAlotsSms(cleanMobile, otp);
+
+  if (!result.success) {
+    console.error("[Patient OTP Send Failed]", result.message);
+  }
+
+  console.log(`[Patient OTP] Sent ${otp} to ${cleanMobile}`);
+
+  return res.status(200).json(
+    new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
+  );
 })
 
 // verify otp 
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
   const { idToken, mobileNumber, otp } = req.body
-
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
-
-  // ─── DEV BYPASS CHECK REMOVED FOR REALTIME OTP ──────────────────────────
-  /*
-  if (String(otp) === DEV_BYPASS_OTP) {
-    ... bypass logic ...
-  }
-  */
-  // ─────────────────────────────────────────────────────────────────────────────
 
   // Check Redis for manual OTP if provided
   if (otp && cleanMobile) {
@@ -65,25 +80,15 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       }
 
       const token = jwt.sign(
-        {
-          mobileNumber: patient.mobileNumber,
-          userId: patient._id,
-          role: "Patient",
-          appType: "user",
-          userType: "patient"
-        },
+        { mobileNumber: patient.mobileNumber, userId: patient._id },
         process.env.JWT_SECRET as string,
         { expiresIn: "7d" }
       );
 
-      return res.status(200).json(
-        new ApiResponse(200, "Verification successful", buildPatientAuthResponse(patient, token))
-      );
+      return res.status(200).json(new ApiResponse(200, "Verification successful", { token }));
     } else if (storedOtp) {
        throw new ApiError(400, "Invalid OTP provided.");
     }
-    // If otp was provided but no storedOtp found, it's either expired or never sent.
-    throw new ApiError(400, "OTP expired or invalid. Please request a new one.");
   }
 
   if (!idToken) {
@@ -135,20 +140,12 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
     // 4. Generate your own custom JWT Token
     const token = jwt.sign(
-      {
-        mobileNumber: patient.mobileNumber,
-        userId: patient._id,
-        role: "Patient",
-        appType: "user",
-        userType: "patient"
-      },
+      { mobileNumber: patient.mobileNumber, userId: patient._id },
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }
     )
 
-    return res.status(200).json(
-      new ApiResponse(200, "Firebase Verification successful", buildPatientAuthResponse(patient, token))
-    )
+    return res.status(200).json(new ApiResponse(200, "Firebase Verification successful", { token }))
 
   } catch (error: any) {
     console.error("Firebase Token Error:", error);
@@ -158,27 +155,26 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
 export const updateProfile = asyncHandler(async (req, res) => {
   // 1. Validate input
-  console.log("this is the body we are getting.." , req.body)
+  console.log("this is the body we are getting..", req.body)
   const parsed = patientValidation.safeParse(req.body);
   if (!parsed.success) {
     throw new ApiError(
       400,
-      `validation failed! ${parsed.error}`
+      formatZodError(parsed.error)
     );
   }
 
   // 2. Get patient id from auth middleware
-  const patientId = req.user?.id 
+  const patientId = req.user?.id
 
   // 3. Update profile
   const updatedPatient = await Patient.findByIdAndUpdate(
-    {_id:patientId},
+    { _id: patientId },
     {
       $set: {
         name: parsed.data.name,
         email: parsed.data.email,
         profileImage: req.fileUrl,
-        // location: parsed.data.location,
         gender: parsed.data.gender,
         dateOfBirth: parsed.data.dateOfBirth,
         fcmToken: parsed.data.fcmToken || null,
@@ -196,7 +192,22 @@ export const updateProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Patient not found");
   }
 
-  // 5. Respond
+  // 5. Send Welcome Email if registering for first time
+  if (updatedPatient.email && !parsed.data.isRegistered) {
+    try {
+      await enqueueEmail({
+        kind: "welcome",
+        data: {
+          email: updatedPatient.email,
+          fullName: updatedPatient.name || "Customer",
+        },
+      });
+    } catch (e) {
+      console.error("[Email] Welcome email error:", e);
+    }
+  }
+
+  // 6. Respond
   res.status(200).json({
     success: true,
     data: updatedPatient

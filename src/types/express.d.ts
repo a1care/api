@@ -6,6 +6,7 @@ declare global {
     interface Request {
       user?: {
         id: string;
+        role: "Patient" | "Staff" | "admin" | "super_admin";
       };
       fileUrl:string
     }

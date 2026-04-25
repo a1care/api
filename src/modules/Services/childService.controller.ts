@@ -32,6 +32,7 @@ export const createChildService = asyncHandler(async (req, res) => {
 export const getChildServiceBySubserviceId = asyncHandler(async (req, res) => {
     const { subServiceId } = req.params
     if (!subServiceId) throw new ApiError(404, "Subservice id is missing")
+
     const childServiceDetails = await ChildServiceModel.find({ subServiceId: subServiceId as any })
     return res.json(new ApiResponse(200, "child service is created", childServiceDetails))
 })
@@ -42,7 +43,7 @@ export const addRolesToChildService = asyncHandler(async (req, res) => {
     const { roles } = req.query
     const { childServiceId } = req.params
 
-    if(!childServiceId) throw new ApiError(401 , "child service id not found")
+    if (!childServiceId) throw new ApiError(401, "child service id not found")
     const roleIds = (roles as string).split(",")
     console.log(roleIds)
     const updatedChildService = await ChildServiceModel.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(childServiceId) }, {
@@ -51,7 +52,50 @@ export const addRolesToChildService = asyncHandler(async (req, res) => {
         new: true
     })
 
-    return res.status(200).json(new ApiResponse(200 , "Child service updated" , updatedChildService))
-
-
+    return res.status(200).json(new ApiResponse(200, "Child service updated", updatedChildService))
 })
+
+export const getChildServiceById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id) throw new ApiError(400, "Child service id is missing");
+
+    const childService = await ChildServiceModel.findById(id);
+    if (!childService) throw new ApiError(404, "Child service not found");
+
+    return res.json(new ApiResponse(200, "Child service fetched", childService));
+});
+
+export const deleteChildService = asyncHandler(async (req, res) => {
+    const { id } = req.params
+    const deleted = await ChildServiceModel.findByIdAndDelete(id)
+    return res.status(200).json(new ApiResponse(200, "Deleted Successfully", deleted))
+})
+
+export const getFeaturedChildServices = asyncHandler(async (req, res) => {
+    // Step 1: Try to find admin-marked popular services
+    let featured = await ChildServiceModel.find({ isActive: true, isFeatured: true })
+        .sort({ rating: -1, completed: -1 })
+        .limit(6);
+
+    // Step 2: Fallback — if no services are admin-marked, use top-rated
+    if (featured.length === 0) {
+        featured = await ChildServiceModel.find({ isActive: true })
+            .sort({ rating: -1, completed: -1 })
+            .limit(6);
+    }
+        
+    return res.json(new ApiResponse(200, "Featured child services fetched", featured));
+});
+
+export const toggleFeaturedChildService = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id) throw new ApiError(400, "Child service id is missing");
+
+    const service = await ChildServiceModel.findById(id);
+    if (!service) throw new ApiError(404, "Child service not found");
+
+    service.isFeatured = !service.isFeatured;
+    await service.save();
+
+    return res.json(new ApiResponse(200, `Service marked as ${service.isFeatured ? 'popular' : 'not popular'}`, service));
+});

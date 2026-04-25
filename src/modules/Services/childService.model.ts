@@ -6,10 +6,15 @@ export interface ChildServiceDocument extends Document {
   serviceId: Schema.Types.ObjectId;
   subServiceId: Schema.Types.ObjectId;
   price: number;
-  bookingType: "SELECT" | "ASSIGN";
+  selectionType: "SELECT" | "ASSIGN";
   isActive: boolean;
+  isFeatured: boolean;
   allowedRoleIds: string[];
   imageUrl: string;
+  /** Optional hospital/partner who gets first notification (10s window) before broadcast to all */
+  hospitalProviderId?: Schema.Types.ObjectId;
+  rating: number;
+  completed: number;
 }
 
 const childServiceSchema = new Schema<ChildServiceDocument>(
@@ -44,7 +49,7 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
       min: 0,
     },
 
-    bookingType: {
+    selectionType: {
       type: String,
       enum: ["SELECT", "ASSIGN"],
       required: true,
@@ -55,12 +60,34 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
       default: false,
     },
 
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     allowedRoleIds: {
       type: [String],
     },
 
     imageUrl: {
       type: String,
+    },
+    hospitalProviderId: {
+      type: Schema.Types.ObjectId,
+      ref: "staff",
+      default: null,
+    },
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    completed: {
+      type: Number,
+      default: 0,
+      min: 0
     },
   },
   {

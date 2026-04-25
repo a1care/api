@@ -9,11 +9,11 @@ export interface PatientDocument extends Document {
     latitude: number;
     longitude: number;
   };
-  gender: "Male" | "Gender" | "Other";
+  gender: "Male" | "Female" | "Other";
   dateOfBirth: Date;
   fcmToken: string;
   isRegistered: boolean;
-  primaryAddressId: mongoose.Types.ObjectId
+  primaryAddressId: mongoose.Schema.Types.ObjectId
 }
 
 const PatientSchema = new Schema<PatientDocument>(
@@ -26,7 +26,8 @@ const PatientSchema = new Schema<PatientDocument>(
 
     name: {
       type: String,
-      trim: true
+      trim: true,
+      maxLength: 50
     },
 
     email: {
@@ -50,7 +51,7 @@ const PatientSchema = new Schema<PatientDocument>(
 
     gender: {
       type: String,
-      enum: ["Male", "Gender", "Other"],
+      enum: ["Male", "Female", "Other"],
     },
 
     dateOfBirth: {

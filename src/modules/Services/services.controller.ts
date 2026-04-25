@@ -3,6 +3,7 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { Service } from "./service.model.js";
 import serviceValidation from "./service.schema.js";
+import mongoose from "mongoose";
 
 //create service 
 export const createService = asyncHandler(async (req, res) => {
