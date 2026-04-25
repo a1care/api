@@ -349,7 +349,7 @@ export function DoctorStaffManagementPage() {
                                     </td>
                                     <td>
                                         <div className="flex flex-wrap gap-1.5">
-                                            {doc.specialization?.slice(0, 2).map(s => <span key={s} className="px-2 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
+                                            {doc.specialization?.slice(0, 2).map((s: string) => <span key={s} className="px-2 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
                                             {doc.specialization?.length > 2 && <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black">+{doc.specialization.length - 2}</span>}
                                         </div>
                                     </td>

@@ -56,8 +56,8 @@ export function PayoutsPage() {
         refetchOnWindowFocus: false
     });
 
-    const payouts = payoutData?.items || [];
-    const totalPages = payoutData?.totalPages || 1;
+    const payouts: Payout[] = payoutData?.items || [];
+    const totalPages: number = payoutData?.totalPages || 1;
 
     const updateStatusMutation = useMutation({
         mutationFn: async ({ id, status, note }: { id: string, status: string, note?: string }) => {

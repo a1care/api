@@ -95,7 +95,7 @@ export default function KYCVerificationPage() {
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Awaiting Review</p>
-                      <p className="text-xl font-black text-amber-900 leading-none mt-0.5">{staff?.filter(s => s.status === 'Pending').length || 0}</p>
+                      <p className="text-xl font-black text-amber-900 leading-none mt-0.5">{staff?.filter((s: Doctor) => s.status === 'Pending').length || 0}</p>
                     </div>
                 </div>
             </header>
@@ -161,7 +161,7 @@ export default function KYCVerificationPage() {
                                   <FileText size={14} /> Submitted Documents
                                 </h4>
                                 <div className="max-h-32 overflow-y-auto pr-1 space-y-2">
-                                    {Array.isArray(doctor.documents) && doctor.documents.map((doc, idx) => (
+                                    {Array.isArray(doctor.documents) && doctor.documents.map((doc: { type: string; url: string }, idx: number) => (
                                         <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl hover:border-blue-200 transition-colors">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <FileText size={16} className="text-slate-400" />

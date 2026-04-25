@@ -79,7 +79,21 @@ export function UserManagementPage({ category }: { category: string }) {
         queryKey: ["category_users", category, page, searchTerm, statusFilter],
         queryFn: async () => {
             const res = await api.get(`/admin/user-list/${category}?page=${page}&limit=50&search=${searchTerm}&status=${statusFilter}`);
-            return res.data.data;
+            const payload = res.data?.data;
+
+            // Support both response shapes:
+            // 1) { items, total, totalPages, page }
+            // 2) [] (plain array)
+            if (Array.isArray(payload)) {
+                return {
+                    items: payload,
+                    total: payload.length,
+                    totalPages: 1,
+                    page: 1,
+                };
+            }
+
+            return payload;
         }
     });
 

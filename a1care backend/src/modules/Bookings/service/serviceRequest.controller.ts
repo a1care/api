@@ -184,10 +184,12 @@ export const getServiceRequestByUser = asyncHandler(async (req, res) => {
     if (!userId) throw new ApiError(401, "Unauthorized");
     if (!mongoose.Types.ObjectId.isValid(userId)) throw new ApiError(400, "Invalid userId format");
 
+    const userObjectId = new mongoose.Types.ObjectId(userId);
     const serviceRequests = await serviceRequestModel
-        .find({ userId })
+        .find({ userId: userObjectId })
         .populate("userId")
         .populate("childServiceId")
+        .populate("healthPackageId")
         .populate("addressId");
     return res.status(200).json(new ApiResponse(200, "Got service", serviceRequests));
 });
