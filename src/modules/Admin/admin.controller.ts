@@ -672,17 +672,48 @@ export const getUserCategoryStats = asyncHandler(async (req, res) => {
 
 export const listUsersByCategory = asyncHandler(async (req, res) => {
   const { category } = req.params;
+  const { page = 1, limit = 50, search, status } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
   if (!category) throw new ApiError(400, "Category param is required");
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
 
-  if (!isDbOnline()) {
-    throw new ApiError(503, "Database unavailable");
+  const query: any = {};
+
+  // Build Search Query
+  if (search && search !== "") {
+    const s = new RegExp(search as string, 'i');
+    const searchConditions = [
+      { name: s },
+      { mobileNumber: s }
+    ];
+    if (mongoose.Types.ObjectId.isValid(search as string)) {
+      searchConditions.push({ _id: search as any });
+    }
+    query.$or = searchConditions;
   }
 
+  // Handle Patients
   if (category === 'patient') {
-    const patients = await Patient.find().sort({ createdAt: -1 });
-    return res.status(200).json(new ApiResponse(200, "Patients fetched", patients));
+    if (status && status !== "All") {
+      query.isRegistered = status === "Verified";
+    }
+
+    const total = await Patient.countDocuments(query);
+    const patients = await Patient.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    return res.status(200).json(new ApiResponse(200, "Patients fetched", {
+      items: patients,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit))
+    }));
   }
 
+  // Handle Staff/Service Providers
   const role = await RoleModel.findOne({
     $or: [
       { code: category.toUpperCase() },
@@ -691,11 +722,82 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
   });
 
   if (!role) {
-    return res.status(200).json(new ApiResponse(200, "No users found for this category", []));
+    return res.status(200).json(new ApiResponse(200, "Category not found", {
+      items: [],
+      total: 0,
+      page: Number(page),
+      totalPages: 0
+    }));
   }
 
-  const staff = await Doctor.find({ roleId: role._id }).sort({ createdAt: -1 });
-  return res.status(200).json(new ApiResponse(200, `${category} list fetched`, staff));
+  query.roleId = role._id;
+  if (status && status !== "All") {
+    query.status = status;
+  }
+
+  const total = await Doctor.countDocuments(query);
+  const staff = await Doctor.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  return res.status(200).json(new ApiResponse(200, `${category} list fetched`, {
+    items: staff,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
+});
+
+export const createUserByCategory = asyncHandler(async (req, res) => {
+  const { category } = req.params;
+  const { name, mobileNumber, email } = req.body;
+
+  if (!category || !name || !mobileNumber) {
+    throw new ApiError(400, "Category, name and mobile number are required");
+  }
+
+  if (!isDbOnline()) {
+    throw new ApiError(503, "Database unavailable");
+  }
+
+  if (category === 'patient') {
+    const existing = await Patient.findOne({ mobileNumber });
+    if (existing) throw new ApiError(409, "Patient with this mobile number already exists");
+
+    const patient = await Patient.create({ name, mobileNumber, email, isRegistered: true });
+    return res.status(201).json(new ApiResponse(201, "Patient created successfully", patient));
+  }
+
+  // Handle Staff/Service Providers
+  const role = await RoleModel.findOne({
+    $or: [
+      { code: category.toUpperCase() },
+      { name: new RegExp(`^${category}$`, 'i') }
+    ]
+  });
+
+  if (!role) {
+    throw new ApiError(404, `Role category '${category}' not found in system configuration`);
+  }
+
+  const existing = await Doctor.findOne({ mobileNumber, roleId: role._id });
+  if (existing) {
+    throw new ApiError(409, `A provider with this number is already registered under the ${category} role`);
+  }
+
+  const staff = await Doctor.create({
+    name,
+    mobileNumber,
+    email,
+    roleId: role._id,
+    status: "Pending",
+    isRegistered: false,
+    startExperience: new Date(),
+    specialization: []
+  });
+
+  return res.status(201).json(new ApiResponse(201, `${category} created successfully`, staff));
 });
 
 export const listPatients = asyncHandler(async (_req, res) => {
@@ -706,12 +808,33 @@ export const listPatients = asyncHandler(async (_req, res) => {
   return res.status(200).json(new ApiResponse(200, "Patients fetched", patients));
 });
 
-export const listDoctors = asyncHandler(async (_req, res) => {
-  if (!isDbOnline()) {
-    throw new ApiError(503, "Database unavailable");
+export const listDoctors = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 50, search, status } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const query: any = {};
+  if (status && status !== "All") query.status = status;
+
+  if (search && search !== "") {
+    const s = new RegExp(search as string, 'i');
+    query.$or = [
+      { name: s },
+      { mobileNumber: s },
+      { specialization: s }
+    ];
   }
-  const doctors = await Doctor.find().sort({ createdAt: -1 });
-  return res.status(200).json(new ApiResponse(200, "Doctors fetched", doctors));
+
+  const total = await Doctor.countDocuments(query);
+  const doctors = await Doctor.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  return res.status(200).json(new ApiResponse(200, "Doctors fetched", {
+    items: doctors,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
 });
 
 export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
@@ -751,17 +874,17 @@ export const getAdminDashboardSummary = asyncHandler(async (_req, res) => {
       { $group: { _id: null, total: { $sum: "$price" } } }
     ]),
     Patient.countDocuments({ createdAt: { $gte: startOfMonth } }),
-    Patient.countDocuments({ 
-      createdAt: { 
-        $gte: startOfPreviousMonth, 
-        $lt: startOfMonth 
-      } 
+    Patient.countDocuments({
+      createdAt: {
+        $gte: startOfPreviousMonth,
+        $lt: startOfMonth
+      }
     }),
     Payout.countDocuments({ status: "PENDING" })
   ]);
 
   const totalRevenue = (completedAppts[0]?.total || 0) + (completedServices[0]?.total || 0);
-  
+
   // Calculate onboarding trend percentage
   let onboardingTrend = 0;
   if (newPatientsPrevMonth > 0) {
@@ -934,43 +1057,18 @@ export const deleteUser = asyncHandler(async (req, res) => {
 // Operations Desk Bookings endpoints
 
 export const getDoctorBookings = asyncHandler(async (req, res) => {
-  const bookings = await doctorAppointmentModel.find()
-    .populate("doctorId", "name specialization")
-    .populate("patientId", "name mobileNumber")
-    .sort({ createdAt: -1 });
-
-  const formatted = bookings.map(b => ({
-    ...b.toObject(),
-    totalAmount: b.totalAmount || 0,
-    paymentStatus: b.paymentStatus || "PENDING"
-  }));
-
-  res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", formatted));
-});
-
-export const getServiceBookings = asyncHandler(async (req, res) => {
-  const { status, dateFrom, dateTo, search, source } = req.query;
-
-  // Auto-update bookings that have timed out (15 min since broadcast or creation)
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-  await serviceRequestModel.updateMany({
-    status: { $in: ["PENDING", "BROADCASTED"] },
-    $expr: { $lt: [{ $ifNull: ["$broadcastedAt", "$createdAt"] }, fifteenMinutesAgo] }
-  }, {
-    status: "RETURNED_TO_ADMIN"
-  });
-
+  const { page = 1, limit = 55, status, search, dateFrom, dateTo, payment, subService } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
   const query: any = {};
 
-  if (status && status !== "All") {
-    query.status = status;
-  }
+  if (status && status !== "All") query.status = status;
+  if (payment && payment !== "All") query.paymentStatus = payment;
 
-  if (source && source !== "All") {
-    // Based on how frontend mock was, this might map to fulfillmentMode
-    if (source === "Walk-in" || source === "Admin" || source === "App") {
-      query.fulfillmentMode = source === "Walk-in" ? "HOSPITAL_VISIT" : source === "App" ? "VIRTUAL" : null;
-    }
+  if (subService && subService !== "All") {
+    // Specialization filter: Find doctors with this specialization first
+    const doctorsWithSpec = await Doctor.find({ specialization: { $in: [subService] } }).select("_id");
+    const docIds = doctorsWithSpec.map(d => d._id);
+    query.doctorId = { $in: docIds };
   }
 
   if (dateFrom || dateTo) {
@@ -983,6 +1081,136 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     }
   }
 
+  // Stats aggregation
+  const [statsData] = await doctorAppointmentModel.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const statsMap = statsData ? (Array.isArray(statsData) ? statsData : [statsData]) : [];
+  const getCount = (s: string) => statsMap.find((x: any) => x._id === s)?.count || 0;
+
+  const stats = {
+    all: await doctorAppointmentModel.countDocuments(),
+    pending: getCount("Pending"),
+    confirmed: getCount("Confirmed"),
+    completed: getCount("Completed"),
+    cancelled: getCount("Cancelled"),
+  };
+
+  let bookingsQuery = doctorAppointmentModel.find(query)
+    .populate("doctorId", "name specialization mobileNumber")
+    .populate("patientId", "name mobileNumber")
+    .sort({ createdAt: -1 });
+
+  const total = await doctorAppointmentModel.countDocuments(query);
+  const bookings = await bookingsQuery.skip(skip).limit(Number(limit));
+
+  let formatted = bookings.map(b => {
+    const obj = b.toObject() as any;
+    return {
+      ...obj,
+      doctorId: obj.doctorId || { name: "Awaiting Doctor", specialization: [] },
+      patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
+        name: obj.patientId.name || "",
+        mobile: obj.patientId.mobileNumber || "No Profile"
+      } : {
+        name: "Missing Profile",
+        mobile: obj.patientId ? obj.patientId.toString() : "N/A"
+      },
+      totalAmount: obj.totalAmount || 0,
+      paymentStatus: obj.paymentStatus || "PENDING"
+    };
+  });
+
+  if (search && search !== "") {
+    const s = (search as string).toLowerCase();
+    formatted = formatted.filter(b =>
+      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
+      (b.patientId?.mobile?.toLowerCase() || "").includes(s) ||
+      (b.doctorId?.name?.toLowerCase() || "").includes(s) ||
+      (b._id || "").toLowerCase().includes(s)
+    );
+  }
+
+  res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", {
+    items: formatted,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    stats
+  }));
+});
+
+export const getServiceBookings = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  // Auto-update bookings that have timed out
+  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+  await serviceRequestModel.updateMany({
+    status: { $in: ["PENDING", "BROADCASTED"] },
+    $expr: { $lt: [{ $ifNull: ["$broadcastedAt", "$createdAt"] }, fifteenMinutesAgo] }
+  }, {
+    status: "RETURNED_TO_ADMIN"
+  });
+
+  const query: any = {};
+  if (status && status !== "All") query.status = status;
+  if (payment && payment !== "All") query.paymentStatus = payment;
+  if (fulfillmentMode && fulfillmentMode !== "All") query.fulfillmentMode = fulfillmentMode;
+
+  if (doctor && doctor !== "All") {
+    if (doctor === "Unassigned") {
+      query.assignedProviderId = { $exists: false };
+    } else {
+      query.assignedProviderId = doctor;
+    }
+  }
+
+  if (service && service !== "All") {
+    const matchedServices = await mongoose.model('ChildService').find({ name: { $regex: new RegExp(service as string, 'i') } }).select("_id");
+    const serviceIds = matchedServices.map(s => s._id);
+    query.childServiceId = { $in: serviceIds };
+  }
+
+  if (dateFrom || dateTo) {
+    query.createdAt = {};
+    if (dateFrom) query.createdAt.$gte = new Date(dateFrom as string);
+    if (dateTo) {
+      const to = new Date(dateTo as string);
+      to.setHours(23, 59, 59, 999);
+      query.createdAt.$lte = to;
+    }
+  }
+
+  // Stats aggregation
+  const [statsData] = await serviceRequestModel.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+  const statsMap = Array.isArray(statsData) ? statsData : [];
+  const getCount = (s: string | string[]) => {
+    if (Array.isArray(s)) return statsMap.filter(x => s.includes(x._id)).reduce((acc, x) => acc + x.count, 0);
+    return statsMap.find(x => x._id === s)?.count || 0;
+  };
+
+  const stats = {
+    all: await serviceRequestModel.countDocuments(),
+    pending: getCount(["PENDING", "BROADCASTED", "RETURNED_TO_ADMIN"]),
+    confirmed: getCount(["ACCEPTED", "CONFIRMED"]),
+    completed: getCount("COMPLETED"),
+    cancelled: getCount("CANCELLED"),
+  };
+
   const bookings = await serviceRequestModel.find(query)
     .populate("childServiceId", "name")
     .populate("userId", "name mobileNumber")
@@ -993,26 +1221,33 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     return {
       ...obj,
       serviceId: obj.childServiceId || { name: "Unknown Service" },
-      patientId: obj.userId ? { name: obj.userId.name || "Guest User", mobile: obj.userId.mobileNumber || "N/A" } : { name: "Guest User", mobile: "N/A" },
+      patientId: (obj.userId && typeof obj.userId === 'object' && obj.userId._id) ? {
+        name: obj.userId.name || "",
+        mobile: obj.userId.mobileNumber || "No Profile"
+      } : {
+        name: "Missing Profile",
+        mobile: obj.userId ? obj.userId.toString() : "N/A"
+      },
       totalAmount: obj.price || 0,
-      paymentStatus: obj.status === "COMPLETED" ? "COMPLETED" : "PENDING"
+      paymentStatus: obj.paymentStatus || (obj.status === "COMPLETED" ? "COMPLETED" : "PENDING")
     };
   });
 
-  // Since some fields like 'paymentStatus' or 'department' are computed / nested in relations,
-  // we can do a secondary memory filter here for the things that are too complex for a fast basic Mongoose query
-  // For a production system we'd use Aggregate, but this matches the current controller's structure.
-
   if (search && search !== "") {
     const s = (search as string).toLowerCase();
+    // Broad search across fields
     formatted = formatted.filter(b =>
       (b.patientId?.name?.toLowerCase() || "").includes(s) ||
+      (b.patientId?.mobile?.toLowerCase() || "").includes(s) ||
       (b.serviceId?.name?.toLowerCase() || "").includes(s) ||
-      (b._id || "").toLowerCase().includes(s)
+      (b.doctorId?.name?.toLowerCase() || "").includes(s) ||
+      (b._id || "").toLowerCase().includes(s) ||
+      (b.status || "").toLowerCase().includes(s) ||
+      (b.paymentStatus || "").toLowerCase().includes(s) ||
+      (String(b.totalAmount || "")).includes(s)
     );
   }
 
-  const { payment, department } = req.query;
   if (payment && payment !== "All") {
     formatted = formatted.filter(b => b.paymentStatus === payment);
   }
@@ -1020,7 +1255,16 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     formatted = formatted.filter(b => (b.serviceId?.name || "").toLowerCase().includes((department as string).toLowerCase()));
   }
 
-  res.status(200).json(new ApiResponse(200, "Service bookings fetched successfully", formatted));
+  const total = formatted.length;
+  const paginated = formatted.slice(skip, skip + Number(limit));
+
+  res.status(200).json(new ApiResponse(200, "Service bookings fetched successfully", {
+    items: paginated,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    stats
+  }));
 });
 
 export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
@@ -1155,7 +1399,7 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
   const formatted = list.map((b: any) => ({
     ...b,
     serviceId: b.childServiceId || { name: "Unknown Service" },
-    patientId: b.userId ? { name: b.userId.name || "Guest", mobile: b.userId.mobileNumber || "N/A" } : { name: "Guest", mobile: "N/A" },
+    patientId: b.userId ? { name: b.userId.name || "Anonymous Member", mobile: b.userId.mobileNumber || "N/A" } : { name: "Anonymous Member", mobile: "N/A" },
     totalAmount: b.price || 0,
     urgency: b.urgency || "NORMAL",
   }));
@@ -1164,8 +1408,64 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
 });
 
 export const getHospitalBookings = asyncHandler(async (req, res) => {
-  const bookings = await HospitalBooking.find().populate("patientId", "name mobileNumber").sort({ acceptedAt: -1 });
-  res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", bookings));
+  const { page = 1, limit = 55, status, search } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const query: any = {};
+
+  if (status && status !== "All") query.status = status;
+
+  // Stats aggregation for Hospital Bookings
+  const [statsData] = await HospitalBooking.aggregate([
+    {
+      $group: {
+        _id: null,
+        all: { $sum: 1 },
+        pending: { $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] } },
+        confirmed: { $sum: { $cond: [{ $in: ["$status", ["ACCEPTED", "CONFIRMED"]] }, 1, 0] } },
+        completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] } },
+      }
+    }
+  ]);
+  const stats = statsData || { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+
+  const total = await HospitalBooking.countDocuments(query);
+  const bookings = await HospitalBooking.find(query)
+    .populate("patientId", "name mobileNumber")
+    .sort({ acceptedAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  let formatted = bookings.map(b => {
+    const obj = b.toObject() as any;
+    return {
+      ...obj,
+      patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
+        name: obj.patientId.name || "",
+        mobile: obj.patientId.mobileNumber || "No Profile"
+      } : {
+        name: "Missing Profile",
+        mobile: obj.patientId ? obj.patientId.toString() : "N/A"
+      }
+    };
+  });
+
+  if (search && search !== "") {
+    const s = (search as string).toLowerCase();
+    formatted = formatted.filter(b =>
+      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
+      (b.serviceName?.toLowerCase() || "").includes(s) ||
+      (b._id || "").toLowerCase().includes(s)
+    );
+  }
+
+  res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", {
+    items: formatted,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    stats
+  }));
 });
 
 // ─── System Config Endpoints ────────────────────────────────────────────────
@@ -1309,10 +1609,10 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
 
   const totalRevenue = (revenueData[0][0]?.total || 0) + (revenueData[1][0]?.total || 0);
   const monthRevenue = (revenueData[2][0]?.total || 0) + (monthlyServiceRev[0]?.total || 0);
-  
+
   const todayRevData = await Promise.all([
-     doctorAppointmentModel.aggregate([{ $match: { status: "Completed", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$totalAmount" } } }]),
-     serviceRequestModel.aggregate([{ $match: { status: "COMPLETED", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$price" } } }])
+    doctorAppointmentModel.aggregate([{ $match: { status: "Completed", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$totalAmount" } } }]),
+    serviceRequestModel.aggregate([{ $match: { status: "COMPLETED", paymentStatus: "COMPLETED", createdAt: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: "$price" } } }])
   ]);
   const todayRevenue = (todayRevData[0][0]?.total || 0) + (todayRevData[1][0]?.total || 0);
 
@@ -1350,7 +1650,7 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
 
 export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
-  
+
   const { from, to, search = "" } = req.query;
   const match: any = {};
   if (from && to) {
@@ -1400,14 +1700,18 @@ export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
 
 export const getAdminRecentActivity = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
-  const limit = Number(req.query.limit) || 20;
+  const limit = Number(req.query.limit) || 10;
+  const page = Number(req.query.page) || 1;
+  const skip = (page - 1) * limit;
 
-  const [appts, services] = await Promise.all([
+  const [totalAppts, totalServices, appts, services] = await Promise.all([
+    doctorAppointmentModel.countDocuments(),
+    serviceRequestModel.countDocuments(),
     doctorAppointmentModel.find()
       .populate("patientId", "name mobileNumber")
       .populate("doctorId", "name mobileNumber")
       .sort({ createdAt: -1 })
-      .limit(limit),
+      .limit(skip + limit),
     serviceRequestModel.find()
       .populate("userId", "name mobileNumber")
       .populate({
@@ -1415,48 +1719,89 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
         select: "name price"
       })
       .sort({ createdAt: -1 })
-      .limit(limit)
+      .limit(skip + limit)
   ]);
 
   const combined = [
-    ...appts.map(a => ({
-      id: a._id,
-      type: "Appointment",
-      patient: (a.patientId as any)?.name || "Unknown",
-      provider: (a.doctorId as any)?.name || "Doctor",
-      status: a.status,
-      amount: a.totalAmount,
-      createdAt: (a as any).createdAt
-    })),
-    ...services.map(s => ({
-      id: s._id,
-      type: "Service",
-      patient: (s.userId as any)?.name || "Unknown",
-      provider: (s.childServiceId as any)?.name || "Service",
-      status: s.status,
-      amount: s.price,
-      createdAt: (s as any).createdAt
-    }))
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
+    ...appts.map(a => {
+      const p = a.patientId as any;
+      const d = a.doctorId as any;
+      return {
+        id: a._id,
+        type: "Appointment",
+        patient: p?.name || (p?.mobileNumber ? `Patient (${p.mobileNumber})` : "Missing Patient"),
+        provider: d?.name || (d?.mobileNumber ? `Dr. (${d.mobileNumber})` : "Doctor"),
+        status: a.status,
+        amount: a.totalAmount,
+        createdAt: (a as any).createdAt
+      };
+    }),
+    ...services.map(s => {
+      const u = s.userId as any;
+      const cs = s.childServiceId as any;
+      return {
+        id: s._id,
+        type: "Service",
+        patient: u?.name || (u?.mobileNumber ? `User (${u.mobileNumber})` : "Missing User"),
+        provider: cs?.name || "Service",
+        status: s.status,
+        amount: s.price,
+        createdAt: (s as any).createdAt
+      };
+    })
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(skip, skip + limit);
 
-  return res.status(200).json(new ApiResponse(200, "Recent activity fetched", combined));
+  const total = totalAppts + totalServices;
+
+  return res.status(200).json(new ApiResponse(200, "Recent activity fetched", {
+    items: combined,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  }));
 });
 
 export const getAdminPayouts = asyncHandler(async (req, res) => {
-  const { status } = req.query;
+  const { page = 1, limit = 60, status, search } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
   const filter: any = {};
   if (status && status !== "All") filter.status = status;
 
+  // Since staffId is a reference, we might need to filter after population or use aggregation
+  // For simplicity and speed in this context, we fetch all matching status, then filter/slice
   const payouts = await Payout.find(filter)
-    .populate("staffId", "name mobileNumber bankDetails")
+    .populate("staffId", "name mobileNumber")
     .sort({ createdAt: -1 });
-  return res.status(200).json(new ApiResponse(200, "Payout requests fetched", payouts));
+
+  let formatted = payouts.map(p => p.toObject() as any);
+
+  if (search && search !== "") {
+    const s = (search as string).toLowerCase();
+    formatted = formatted.filter(p =>
+      (p.staffId?.name?.toLowerCase() || "").includes(s) ||
+      (p.staffId?.mobileNumber?.toLowerCase() || "").includes(s) ||
+      (p.bankDetails?.bankName?.toLowerCase() || "").includes(s) ||
+      (p.bankDetails?.accountNumber?.toLowerCase() || "").includes(s) ||
+      (p._id || "").toLowerCase().includes(s) ||
+      (String(p.amount || "")).includes(s)
+    );
+  }
+
+  const total = formatted.length;
+  const paginated = formatted.slice(skip, skip + Number(limit));
+
+  return res.status(200).json(new ApiResponse(200, "Payout requests fetched", {
+    items: paginated,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
 });
 
 export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, adminNote } = req.body;
-  
+
   if (!status) throw new ApiError(400, "Status is required");
 
   const payout = await Payout.findByIdAndUpdate(id, { status, adminNote }, { new: true });
@@ -1466,7 +1811,7 @@ export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
   const partner = await Doctor.findById(payout.staffId);
   if (partner?.fcmToken) {
     const title = status === "COMPLETED" ? "Payment Settled! 💰" : "Payout Update";
-    const body = status === "COMPLETED" 
+    const body = status === "COMPLETED"
       ? `₹${payout.amount} has been transferred to your bank account.`
       : `Your payout request of ₹${payout.amount} was ${status.toLowerCase()}. ${adminNote || ""}`;
 
@@ -1522,7 +1867,7 @@ export const getHealthVaultAudit = asyncHandler(async (req, res) => {
 export const getUserWalletBalance = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const wallet = await WalletModel.findOne({ userId });
-  return res.status(200).json(new ApiResponse(200, "Wallet balance fetched", { 
+  return res.status(200).json(new ApiResponse(200, "Wallet balance fetched", {
     balance: wallet?.balance || 0,
     transactions: wallet?.transactions || []
   }));
@@ -1535,8 +1880,8 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
   if (!amount || isNaN(amount)) throw new ApiError(400, "Invalid amount");
 
   const onModel: "Patient" | "Staff" = category === 'patient' ? "Patient" : "Staff";
-  const user = onModel === 'Patient' 
-    ? await Patient.findById(userId) 
+  const user = onModel === 'Patient'
+    ? await Patient.findById(userId)
     : await Doctor.findById(userId);
 
   if (!user) throw new ApiError(404, "User not found");
@@ -1550,7 +1895,7 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
     wallet.balance += Number(amount);
   } else {
     if (wallet.balance < Number(amount)) {
-        throw new ApiError(400, "Insufficient wallet balance");
+      throw new ApiError(400, "Insufficient wallet balance");
     }
     wallet.balance -= Number(amount);
   }
@@ -1576,4 +1921,75 @@ export const adjustUserWallet = asyncHandler(async (req, res) => {
   });
 
   return res.status(200).json(new ApiResponse(200, "Wallet adjusted successfully", wallet));
+});
+
+export const getDeletionRequests = asyncHandler(async (req, res) => {
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  const deletionQuery = { deletionRequested: { $in: [true, "true", 1] } };
+  const [patients, staff] = await Promise.all([
+    Patient.find(deletionQuery),
+    Doctor.find(deletionQuery)
+  ]);
+
+  console.log(`[DEBUG] Doctor Model Collection: ${Doctor.collection.name}`);
+  const db = mongoose.connection.db;
+  if (!db) throw new ApiError(500, "Database connection lost");
+  const rawStaffCount = await db.collection('staffs').countDocuments({ deletionRequested: true });
+  console.log(`[DEBUG] Raw 'staffs' count: ${rawStaffCount}`);
+  console.log(`[DEBUG] Model 'Doctor' count: ${staff.length}`);
+
+  const shapedPatients = patients.map(p => ({
+    id: p._id,
+    type: 'patient',
+    name: p.name,
+    mobileNumber: p.mobileNumber,
+    requestedAt: p.deletionRequestedAt || (p as any).updatedAt || (p as any).createdAt
+  }));
+
+  const shapedStaff = staff.map(s => ({
+    id: s._id,
+    type: 'staff',
+    name: s.name,
+    mobileNumber: s.mobileNumber,
+    requestedAt: s.deletionRequestedAt || (s as any).updatedAt || (s as any).createdAt
+  }));
+
+  const allRequests = [...shapedPatients, ...shapedStaff].sort(
+    (a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
+  );
+
+  return res.status(200).json(new ApiResponse(200, "Deletion requests fetched", allRequests));
+});
+
+export const approveDeletion = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { type } = req.body; // 'patient' or 'staff'
+
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  let user;
+  if (type === 'patient') {
+    user = await Patient.findById(id);
+  } else {
+    user = await Doctor.findById(id);
+  }
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  user.isDeleted = true;
+  user.deletedAt = new Date();
+  user.deletionRequested = false;
+  user.fcmToken = "";
+  await user.save();
+
+  await AuditLog.create({
+    actorAdminId: (req as any).user?.id,
+    actorRole: (req as any).user?.role,
+    action: "ACCOUNT_DELETED_BY_ADMIN",
+    targetType: type === 'patient' ? "Patient" : "Doctor",
+    targetId: String(user._id),
+  });
+
+  return res.status(200).json(new ApiResponse(200, "Account successfully marked as deleted"));
 });

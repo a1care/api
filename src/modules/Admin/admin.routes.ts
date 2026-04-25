@@ -12,6 +12,7 @@ import {
   listPatients,
   listDoctors,
   listUsersByCategory,
+  createUserByCategory,
   getUserCategoryStats,
   loginAdmin,
   logoutAdmin,
@@ -36,9 +37,11 @@ import {
   updateAdminPayoutStatus,
   getHealthVaultAudit,
   getUserWalletBalance,
-  adjustUserWallet
+  adjustUserWallet,
+  getDeletionRequests,
+  approveDeletion
 } from "./admin.controller.js";
-import { adminListNotifications, adminBroadcastNotification } from "../Notifications/notification.controller.js";
+import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
 import { adminListOrders, adminGetLogsForTxn } from "../Payments/payment.controller.js";
@@ -82,6 +85,7 @@ adminRoutes.get("/patients", protectAdmin, requireAdminRole(["admin", "super_adm
 adminRoutes.get("/doctors", protectAdmin, requireAdminRole(["admin", "super_admin"]), listDoctors);
 adminRoutes.get("/user-stats/:category", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserCategoryStats);
 adminRoutes.get("/user-list/:category", protectAdmin, requireAdminRole(["admin", "super_admin"]), listUsersByCategory);
+adminRoutes.post("/users/:category/create", protectAdmin, requireAdminRole(["admin", "super_admin"]), createUserByCategory);
 adminRoutes.get("/users/:category/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserDetails);
 adminRoutes.put("/users/:category/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateUserStatus);
 adminRoutes.get("/users/:category/:userId/wallet-balance", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserWalletBalance);
@@ -115,6 +119,7 @@ adminRoutes.put("/system-config", protectAdmin, updateSystemConfig);
 // Notification Management
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
 adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);
+adminRoutes.delete("/notifications/clear", protectAdmin, adminClearNotifications);
 
 // Payout Management
 adminRoutes.get("/payouts", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminPayouts);
@@ -127,5 +132,9 @@ adminRoutes.put("/reviews/:id/status", protectAdmin, requireAdminRole(["admin", 
 // Payment / Transaction Audit
 adminRoutes.get("/payments/orders", protectAdmin, requireAdminRole(["admin", "super_admin"]), adminListOrders);
 adminRoutes.get("/payments/logs/:txnId", protectAdmin, requireAdminRole(["admin", "super_admin"]), adminGetLogsForTxn);
+
+// Account Deletion Requests
+adminRoutes.get("/deletion-requests", protectAdmin, requireAdminRole(["super_admin"]), getDeletionRequests);
+adminRoutes.post("/deletion-approve/:id", protectAdmin, requireAdminRole(["super_admin"]), approveDeletion);
 
 export default adminRoutes;

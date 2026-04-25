@@ -59,6 +59,8 @@ export function DoctorStaffManagementPage() {
     
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [searchQuery, setSearchQuery] = useState(initialSearch);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Add Provider Form
@@ -72,22 +74,25 @@ export function DoctorStaffManagementPage() {
         }
     }, [initialSearch]);
 
-    const { data: staff, isLoading } = useQuery({
-        queryKey: ["admin_staff"],
+    const { data: staffData, isLoading } = useQuery({
+        queryKey: ["admin_staff", page, searchQuery],
         queryFn: async () => {
-            const res = await api.get("/admin/doctors");
-            return res.data.data as Doctor[];
+            const res = await api.get(`/admin/doctors?page=${page}&limit=50&search=${searchQuery}`);
+            return res.data.data;
         }
     });
 
-    const filteredStaff = staff?.filter(doc => {
-        const query = searchQuery.toLowerCase();
-        return (
-            (doc.name || "").toLowerCase().includes(query) ||
-            (doc.mobileNumber || "").toLowerCase().includes(query) ||
-            (doc.specialization || []).some(s => s.toLowerCase().includes(query))
-        );
-    });
+    const staff = staffData?.items || [];
+    useEffect(() => {
+        if (staffData?.totalPages) setTotalPages(staffData.totalPages);
+    }, [staffData]);
+
+    // Backend-driven search now
+    const filteredStaff = staff;
+
+    useEffect(() => {
+        setPage(1);
+    }, [searchQuery]);
 
     const updateStatusMutation = useMutation({
         mutationFn: async ({ id, status }: { id: string, status: string }) => {
@@ -124,12 +129,13 @@ export function DoctorStaffManagementPage() {
         createMutation.mutate({ name: newName, mobileNumber: newMobile, email: newEmail });
     };
 
-    if (isLoading) return (
-        <div className="p-4 py-20 text-center flex-col items-center gap-4">
-            <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={48} />
-            <p className="text-[var(--text-muted)] font-black uppercase tracking-[0.2em] text-sm">Accessing Provider Network...</p>
-        </div>
-    );
+    // Removed early return to prevent blinking
+    // if (isLoading) return (
+    //     <div className="p-4 py-20 text-center flex-col items-center gap-4">
+    //         <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={48} />
+    //         <p className="text-[var(--text-muted)] font-black uppercase tracking-[0.2em] text-sm">Accessing Provider Network...</p>
+    //     </div>
+    // );
 
     const VerificationModal = ({ doctor }: { doctor: Doctor }) => (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
@@ -255,36 +261,36 @@ export function DoctorStaffManagementPage() {
         <div className="flex-col gap-4">
             {selectedDoctor && <VerificationModal doctor={selectedDoctor} />}
 
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6" style={{ marginBottom: '24px' }}>
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Inventory</span>
-                        <ChevronRight size={10} className="text-slate-300" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Providers</span>
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left" style={{ marginBottom: '24px' }}>
+                <div className="relative z-10 text-left items-start">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">Doctor Registry</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • User Directory • Doctors</p>
                     </div>
-                    <h1 className="brand-name" style={{ fontSize: '2rem', letterSpacing: '-0.03em' }}>Service Providers</h1>
-                    <p className="text-xs muted font-bold uppercase tracking-wider mt-1">Review credentials and verify partner network</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="relative z-10 flex gap-2">
                     <button className="button secondary shadow-sm px-4 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => toast.info("Displaying recent provider audit telemetry.")}>
                         <Clock size={16} />
                         <span>Recent Logs</span>
                     </button>
                     <button className="button primary shadow-lg h-11 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => setIsAddModalOpen(true)}>
                         <Plus size={16} />
-                        <span>Add Provider</span>
+                        <span>Add Doctor</span>
                     </button>
                 </div>
+                <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
             </header>
 
             <div className="card p-0 overflow-hidden shadow-xl shadow-slate-200/50" style={{ border: 'none', borderRadius: '24px' }}>
                 <div className="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
-                    <div className="relative group w-full md:w-[380px]">
-                        <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={16} style={{ left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <div className="relative flex-1 group">
+                        <Search className="absolute text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
                         <input
-                            placeholder="Search by name, phone or specialty..."
-                            className="w-full bg-[var(--bg-main)] border-none px-4 text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
-                            style={{ paddingLeft: '44px', height: '48px', borderRadius: '14px' }}
+                            placeholder="Search doctor registry by name, mobile or city..."
+                            className="w-full bg-[var(--bg-main)] border-none font-semibold text-slate-700"
+                            style={{ paddingLeft: '60px', height: '56px', borderRadius: '16px' }}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -296,7 +302,7 @@ export function DoctorStaffManagementPage() {
                         </button>
                         <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/10 rounded-xl">
                             <Users size={14} className="text-blue-600" />
-                            <span className="text-xs font-black text-blue-600">{filteredStaff?.length || 0} Network Slots</span>
+                            <span className="text-xs font-black text-blue-600">{staffData?.total || 0} Network Slots</span>
                         </div>
                     </div>
                 </div>
@@ -315,10 +321,20 @@ export function DoctorStaffManagementPage() {
                             </tr>
                         </thead>
                         <tbody>
-                             {filteredStaff?.map((doc, index) => (
+                             {isLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="p-20 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronizing Grid...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                             ) : Array.isArray(filteredStaff) && filteredStaff.length > 0 ? (
+                                filteredStaff.map((doc, index) => (
                                 <tr key={doc._id} className="hover:bg-slate-50/80 dark:hover:bg-blue-500/5 transition-all border-b border-[var(--border-color)]">
                                     <td className="p-4 pl-10 font-black text-slate-400 text-[10px]">
-                                        {(index + 1).toString().padStart(2, '0')}
+                                        {((page - 1) * 50 + index + 1).toString().padStart(2, '0')}
                                     </td>
                                     <td style={{ paddingBlock: '20px' }}>
                                         <div className="flex items-center gap-4">
@@ -375,10 +391,10 @@ export function DoctorStaffManagementPage() {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
-                            {(!filteredStaff || filteredStaff.length === 0) && (
-                                <tr>
-                                    <td colSpan={6} className="py-24 text-center">
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={7} className="py-24 text-center">
                                         <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-color)]">
                                             <Search size={28} className="text-slate-300" />
                                         </div>
@@ -389,6 +405,29 @@ export function DoctorStaffManagementPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="p-8 border-t border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]/30 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                    <div className="flex items-center gap-4">
+                        <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Page: <span className="text-[var(--text-main)] ml-2">{page} / {totalPages}</span></span>
+                        <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Total Entries: <span className="text-[var(--text-main)] ml-2">{staffData?.total || 0}</span></span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button 
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
                 </div>
             </div>
             {/* Add Provider Modal */}
@@ -405,15 +444,32 @@ export function DoctorStaffManagementPage() {
                         <form className="w-full space-y-5" onSubmit={handleAddProvider}>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Full Legal Identity</label>
-                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newName} onChange={e => setNewName(e.target.value)} required />
+                                <input 
+                                    className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                                    value={newName} 
+                                    onChange={e => setNewName(e.target.value)} 
+                                    placeholder="e.g. Dr. Sarah Jenkins"
+                                    required 
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Primary Phone Network</label>
-                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newMobile} onChange={e => setNewMobile(e.target.value)} required />
+                                <input 
+                                    className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                                    value={newMobile} 
+                                    onChange={e => setNewMobile(e.target.value)} 
+                                    placeholder="e.g. +91 98765 43210"
+                                    required 
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] ml-2">Digital Communication (Mail)</label>
-                                <input className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                                <input 
+                                    className="w-full h-14 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[20px] px-6 text-[var(--text-main)] font-black placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                                    value={newEmail} 
+                                    onChange={e => setNewEmail(e.target.value)} 
+                                    placeholder="sarah.j@a1care.com"
+                                />
                             </div>
                             <div className="pt-4 flex gap-4">
                                 <button type="button" className="flex-1 h-14 rounded-[20px] bg-[var(--bg-main)] text-[var(--text-muted)] font-black uppercase text-[10px]" onClick={() => setIsAddModalOpen(false)}>Abort</button>

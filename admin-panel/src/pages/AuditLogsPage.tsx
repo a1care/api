@@ -42,7 +42,7 @@ export function AuditLogsPage() {
     <div className="flex-col gap-8">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="brand-name" style={{ fontSize: '2rem' }}>Audit Command Center</h1>
+          <h1 className="brand-name" style={{ fontSize: '2rem' }}>System Audit Logs</h1>
           <p className="text-xs muted font-extrabold uppercase tracking-widest mt-1">Immutable Trace of System Operations & Security Events</p>
         </div>
         <div className="flex gap-3">

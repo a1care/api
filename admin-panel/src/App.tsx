@@ -9,7 +9,9 @@ import { AdminManagementPage } from "@/pages/AdminManagementPage";
 import { AuditLogsPage } from "@/pages/AuditLogsPage";
 import { AppManagementPage } from "@/pages/AppManagementPage";
 import { SystemSettingsPage } from "@/pages/SystemSettingsPage";
-import { ServiceManagementPage } from "@/pages/ServiceManagementPage";
+import { ServiceCategoriesPage } from "@/pages/ServiceCategoriesPage";
+import { ServiceSubServicesPage } from "@/pages/ServiceSubServicesPage";
+import { ServiceChildServicesPage } from "@/pages/ServiceChildServicesPage";
 import { UserManagementPage } from "@/pages/UserManagementPage";
 import { BookingOperationsPage } from "@/pages/BookingOperationsPage";
 import { OPBookingsPage } from "@/pages/OPBookingsPage";
@@ -23,6 +25,8 @@ import KYCVerificationPage from "./pages/KYCVerificationPage";
 import { HealthVaultAuditPage } from "./pages/HealthVaultAuditPage";
 import { PaymentLogsPage } from "./pages/PaymentLogsPage";
 import { HealthPackagesPage } from "./pages/HealthPackagesPage";
+import { ServiceVerticalsPage } from "./pages/ServiceVerticalsPage";
+import DeletionRequestsPage from "./pages/DeletionRequestsPage";
 
 export default function App() {
   return (
@@ -35,11 +39,11 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
 
-            {/* Service Management Hierarchy */}
-            <Route path="/service-management" element={<ServiceManagementPage />} />
-            <Route path="/service-categories" element={<ServiceManagementPage />} />
-            <Route path="/service-subcategories" element={<ServiceManagementPage />} />
-            <Route path="/service-child-services" element={<ServiceManagementPage />} />
+            <Route path="/service-management" element={<Navigate to="/service-portfolio" replace />} />
+            <Route path="/service-portfolio" element={<ServiceVerticalsPage />} />
+            <Route path="/service-categories" element={<ServiceCategoriesPage />} />
+            <Route path="/service-subcategories" element={<ServiceSubServicesPage />} />
+            <Route path="/service-child-services" element={<ServiceChildServicesPage />} />
             <Route path="/health-packages" element={<HealthPackagesPage />} />
 
             {/* Revenue & Subscriptions */}
@@ -55,6 +59,8 @@ export default function App() {
             <Route path="/manage-nurses" element={<UserManagementPage category="nurse" />} />
             <Route path="/manage-ambulances" element={<UserManagementPage category="ambulance" />} />
             <Route path="/manage-rentals" element={<UserManagementPage category="rental" />} />
+            <Route path="/manage-labs" element={<UserManagementPage category="lab" />} />
+            <Route path="/manage-services" element={<UserManagementPage category="service" />} />
 
             {/* Compatibility Redirects */}
             <Route path="/patients" element={<Navigate to="/manage-patients" replace />} />
@@ -77,6 +83,7 @@ export default function App() {
               <Route path="/manage-provider-app" element={<AppManagementPage appKey="provider_app" />} />
               <Route path="/manage-system-config" element={<SystemSettingsPage />} />
               <Route path="/payment-logs" element={<PaymentLogsPage />} />
+              <Route path="/deletion-requests" element={<DeletionRequestsPage />} />
             </Route>
           </Route>
         </Route>

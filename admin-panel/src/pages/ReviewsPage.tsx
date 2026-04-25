@@ -18,16 +18,20 @@ import { toast } from "sonner";
 
 export default function ReviewsPage() {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: reviews, isLoading } = useQuery({
-    queryKey: ["admin-reviews"],
+  const { data: reviewsData, isLoading } = useQuery({
+    queryKey: ["admin-reviews", page, filterStatus, searchTerm],
     queryFn: async () => {
-      const res = await api.get("/admin/reviews");
+      const res = await api.get(`/admin/reviews?page=${page}&limit=60&status=${filterStatus}&search=${searchTerm}`);
       return res.data.data;
     }
   });
+
+  const reviews = reviewsData?.items || [];
+  const totalPages = reviewsData?.totalPages || 1;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -42,34 +46,29 @@ export default function ReviewsPage() {
     }
   });
 
-  const filteredReviews = reviews?.filter((r: any) => {
-    const matchesStatus = filterStatus === "All" || r.status === filterStatus;
-    const matchesSearch = 
-      r.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  // No frontend filtering needed now as it's handled by the backend
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-20">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  // Remove early return to prevent page blinking
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex items-center justify-center p-20">
+  //       <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            User Feedback
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-          </h1>
-          <p className="text-slate-500 font-medium">Moderate and monitor platform reviews across all services.</p>
+      <header className="flex flex-col gap-4 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left items-start">
+        <div className="relative z-10 text-left items-start">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">User Reviews</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Engagement • User Reviews</p>
+          </div>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-4">
+
+        <div className="relative z-10 flex flex-wrap items-center gap-4">
           <div className="relative group w-full md:w-80">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
                 <Search className="text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
@@ -79,14 +78,14 @@ export default function ReviewsPage() {
               placeholder="Filter by comment or user..."
               className="w-full pl-12 pr-4 h-12 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-100/50 focus:border-blue-300 transition-all shadow-sm font-medium"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             />
           </div>
           <div className="relative">
             <select 
               className="appearance-none bg-white border border-slate-200 rounded-2xl pl-5 pr-12 h-12 text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:ring-4 focus:ring-blue-100/50 transition-all shadow-sm cursor-pointer"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
             >
               <option value="All">All Feedback</option>
               <option value="Active">Published Only</option>
@@ -97,10 +96,19 @@ export default function ReviewsPage() {
             </div>
           </div>
         </div>
+        <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredReviews?.map((review: any) => (
+        {isLoading ? (
+            <div className="col-span-full py-20 text-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Moderating Feedback...</p>
+                </div>
+            </div>
+        ) : reviews?.map((review: any) => (
           <div key={review._id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
             <div className="p-6 space-y-4">
               <div className="flex items-start justify-between">
@@ -167,11 +175,34 @@ export default function ReviewsPage() {
         ))}
       </div>
 
-      {!filteredReviews?.length && (
+      {reviews?.length === 0 && (
         <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
           <MessageSquare size={48} className="mx-auto text-slate-200 mb-4" />
           <p className="text-slate-500 font-bold">No reviews match your filter.</p>
         </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+          <div className="flex justify-between items-center bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-100/50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page {page} of {totalPages}</p>
+              <div className="flex gap-4">
+                  <button 
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-6 py-3 rounded-2xl bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-30 hover:bg-slate-200 transition-colors"
+                  >
+                      Prev
+                  </button>
+                  <button 
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="px-6 py-3 rounded-2xl bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-30 hover:bg-black transition-colors"
+                  >
+                      Next
+                  </button>
+              </div>
+          </div>
       )}
     </div>
   );

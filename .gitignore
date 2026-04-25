@@ -152,3 +152,12 @@ data/firebase-service-account.json
 # Local scripts and diagnostics
 *.cjs
 test-mongo.js
+
+# Local accidental nested repo / temp copies
+a1care backend/
+
+# Local debug artifacts
+*_error_utf8.txt
+build_log*.txt
+screen*.png
+

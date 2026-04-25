@@ -63,7 +63,6 @@ const ServiceRequestSchema = new Schema(
     },
     addressId: {
       type: Schema.Types.ObjectId,
-      ref: "patient_addresses",
     },
 
     assignedProviderId: {
@@ -89,48 +88,9 @@ const ServiceRequestSchema = new Schema(
       ],
       default: "PENDING"
     },
-    broadcastedAt: {
-      type: Date,
-      default: null
-    },
-    /** When set, hospital was notified first; broadcast to all happens after 10s */
-    notifiedHospitalAt: {
-      type: Date,
-      default: null
-    },
-    notes: {
-      type: String,
-    },
-    urgency: {
-      type: String,
-      enum: ["LOW", "NORMAL", "HIGH"],
-      default: "NORMAL"
-    },
     price: {
       type: Number,
       required: true
-    },
-    paymentMode: {
-      type: String,
-      enum: ['ONLINE', 'OFFLINE'],
-      default: 'OFFLINE'
-    },
-    paymentStatus: {
-      type: String,
-      enum: ['PENDING', 'COMPLETED', 'FAILED'],
-      default: 'PENDING'
-    },
-    commissionPercentage: {
-      type: Number,
-      default: 0
-    },
-    commissionAmount: {
-      type: Number,
-      default: 0
-    },
-    partnerEarning: {
-      type: Number,
-      default: 0
     }
   },
   {

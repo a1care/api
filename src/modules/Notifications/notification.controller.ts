@@ -7,6 +7,26 @@ import { Patient } from "../Authentication/patient.model.js";
 import DoctorModel from "../Doctors/doctor.model.js";
 import { enqueuePush, enqueuePushToMany } from "../../queues/communicationQueue.js";
 
+/**
+ * Utility to notify all admins (super_admin and admin roles)
+ * via the in-app notification bell.
+ */
+export const notifyAdmin = async (title: string, body: string, refType?: string, refId?: string) => {
+    try {
+        await NotificationModel.create({
+            recipientId: new mongoose.Types.ObjectId("000000000000000000000000"), // Virtual systemic ID for global admin pool
+            recipientType: "admin",
+            title,
+            body,
+            refType: refType as any,
+            refId: refId ? new mongoose.Types.ObjectId(refId) : undefined,
+            fcmStatus: "skipped"
+        });
+    } catch (e) {
+        console.error("[NotifyAdmin] Failed to create system alert:", e);
+    }
+};
+
 // ─── FCM Token Registration ───────────────────────────────────────────────────
 
 /**
@@ -20,6 +40,7 @@ export const updatePatientFcmToken = asyncHandler(async (req, res) => {
     const { fcmToken } = req.body;
     if (!fcmToken) throw new ApiError(400, "fcmToken is required");
 
+    console.log(`[FCM-Patient] FULL TOKEN for ID ${patientId}: ${fcmToken}`);
     await Patient.findByIdAndUpdate(patientId, { fcmToken });
     return res.json(new ApiResponse(200, "FCM token updated", null));
 });
@@ -35,6 +56,7 @@ export const updatePartnerFcmToken = asyncHandler(async (req, res) => {
     const { fcmToken } = req.body;
     if (!fcmToken) throw new ApiError(400, "fcmToken is required");
 
+    console.log(`[FCM-Partner] FULL TOKEN for ID ${doctorId}: ${fcmToken}`);
     await DoctorModel.findByIdAndUpdate(doctorId, { fcmToken });
     return res.json(new ApiResponse(200, "FCM token updated", null));
 });
@@ -108,6 +130,16 @@ export const markAllNotificationsRead = asyncHandler(async (req, res) => {
         { isRead: true }
     );
     return res.json(new ApiResponse(200, "All notifications marked as read", null));
+});
+
+/**
+ * DELETE /api/notifications/clear-all
+ * Deletes all notifications for the user.
+ */
+export const clearAllNotifications = asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    await NotificationModel.deleteMany({ recipientId: new mongoose.Types.ObjectId(userId!) });
+    return res.json(new ApiResponse(200, "All notifications cleared", null));
 });
 
 // ─── Admin: Notification Management ──────────────────────────────────────────
@@ -237,4 +269,13 @@ export const adminBroadcastNotification = asyncHandler(async (req, res) => {
     return res.json(
         new ApiResponse(200, `Broadcast sent to ${sent} recipient(s)`, { sent, audience })
     );
+});
+
+/**
+ * DELETE /api/admin/notifications/clear
+ * Admin clicks "Clear All" on their bell notification list.
+ */
+export const adminClearNotifications = asyncHandler(async (req, res) => {
+    await NotificationModel.deleteMany({ recipientType: "admin" });
+    return res.json(new ApiResponse(200, "All system alerts cleared", null));
 });

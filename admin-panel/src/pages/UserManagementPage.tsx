@@ -24,14 +24,29 @@ export function UserManagementPage({ category }: { category: string }) {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("All");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [viewingDocument, setViewingDocument] = useState<any | null>(null);
+    const [deleteConfig, setDeleteConfig] = useState<{ id: string, type: 'patient' | 'doctor' | 'nurse' | 'ambulance' | 'rental' } | null>(null);
+
+    const confirmGenericDelete = () => {
+        if (!deleteConfig) return;
+        const { id, type } = deleteConfig;
+        api.delete(`/admin/users/${type}/${id}`).then(() => {
+            queryClient.invalidateQueries({ queryKey: ["category_users", category] });
+            setSelectedUser(null);
+            setDeleteConfig(null);
+            toast.success("Member record deleted.");
+        });
+    };
 
     // Add User Form State
     const [newName, setNewName] = useState("");
     const [newMobile, setNewMobile] = useState("");
     const [newEmail, setNewEmail] = useState("");
+    const [newSpecialization, setNewSpecialization] = useState("");
 
     const isAnyModalOpen = !!selectedUser || isAddModalOpen || !!viewingDocument;
 
@@ -44,6 +59,14 @@ export function UserManagementPage({ category }: { category: string }) {
         };
     }, [isAnyModalOpen]);
 
+    const { data: categories } = useQuery({
+        queryKey: ["admin_categories_list"],
+        queryFn: async () => {
+            const res = await api.get("/services");
+            return res.data.data as any[];
+        }
+    });
+
     const { data: stats } = useQuery({
         queryKey: ["category_stats", category],
         queryFn: async () => {
@@ -52,13 +75,20 @@ export function UserManagementPage({ category }: { category: string }) {
         }
     });
 
-    const { data: users, isLoading } = useQuery({
-        queryKey: ["category_users", category],
+    const { data: usersData, isLoading } = useQuery({
+        queryKey: ["category_users", category, page, searchTerm, statusFilter],
         queryFn: async () => {
-            const res = await api.get(`/admin/user-list/${category}`);
+            const res = await api.get(`/admin/user-list/${category}?page=${page}&limit=50&search=${searchTerm}&status=${statusFilter}`);
             return res.data.data;
         }
     });
+
+    const users = usersData?.items || [];
+    useEffect(() => {
+        if (usersData?.totalPages) {
+            setTotalPages(usersData.totalPages);
+        }
+    }, [usersData]);
 
     const statusMutation = useMutation({
         mutationFn: async ({ id, status, isRegistered }: { id: string, status?: string, isRegistered?: boolean }) => {
@@ -97,41 +127,40 @@ export function UserManagementPage({ category }: { category: string }) {
     const handleAddUser = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newName || !newMobile) return toast.error("Required fields missing.");
-        createMutation.mutate({ name: newName, mobileNumber: newMobile, email: newEmail });
+        createMutation.mutate({ 
+            name: newName, 
+            mobileNumber: newMobile, 
+            email: newEmail,
+            specialization: newSpecialization ? [newSpecialization] : []
+        });
     };
 
-    const filteredUsers = useMemo(() => {
-        if (!users) return [];
-        return users.filter((u: any) => {
-            const matchesSearch =
-                (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (u.mobileNumber || "").toString().includes(searchTerm) ||
-                (u._id || "").toLowerCase().includes(searchTerm.toLowerCase());
+    // Backend driven filtering now
+    const filteredUsers = users;
 
-            const userStatus = category === 'patient' ? (u.isRegistered ? "Verified" : "Pending") : u.status;
-            const matchesFilter = statusFilter === "All" || userStatus === statusFilter;
-
-            return matchesSearch && matchesFilter;
-        });
-    }, [users, searchTerm, statusFilter, category]);
+    useEffect(() => {
+        setPage(1);
+    }, [searchTerm, statusFilter, category]);
 
     const getRawTitle = () => {
         if (category === 'patient') return "Patients";
         if (category === 'doctor') return "Doctors";
         if (category === 'nurse') return "Nurses";
         if (category === 'ambulance') return "Ambulances";
-        if (category === 'rental') return "Medical Rental Providers";
+        if (category === 'rental') return "Medical Rentals";
+        if (category === 'lab') return "Diagnostic Labs";
+        if (category === 'service') return "Extra Services";
         return category;
     };
 
     const title = getRawTitle();
 
-    if (isLoading) return (
-        <div className="p-4 py-20 text-center">
-            <Activity className="animate-pulse mx-auto text-indigo-500 dark:text-indigo-400 mb-4" size={48} />
-            <p className="muted font-bold tracking-wider uppercase" style={{ fontSize: '0.75rem' }}>Loading {title} Database...</p>
-        </div>
-    );
+    // if (isLoading) return (
+    //     <div className="p-4 py-20 text-center">
+    //         <Activity className="animate-pulse mx-auto text-indigo-500 dark:text-indigo-400 mb-4" size={48} />
+    //         <p className="muted font-bold tracking-wider uppercase" style={{ fontSize: '0.75rem' }}>Loading {title} Directory...</p>
+    //     </div>
+    // );
 
     const statCards = [
         { label: "Total Registered", value: stats?.total || 0, icon: Users2, color: "#1A7FD4", bg: "#EBF3FD" },
@@ -142,31 +171,28 @@ export function UserManagementPage({ category }: { category: string }) {
     ];
 
     return (
-        <div className="flex-col gap-6">
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6" style={{ marginBottom: '8px' }}>
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">Users</span>
-                        <ChevronRight size={10} className="text-slate-300" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{title} Registry</span>
+        <div className="flex flex-col gap-4">
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[var(--card-bg)] p-6 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left" style={{ marginBottom: '4px' }}>
+                <div className="relative z-10 text-left items-start">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">{title} Registry</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • User Directory • {title}</p>
                     </div>
-                    <h1 className="brand-name" style={{ fontSize: '2.25rem', letterSpacing: '-0.04em' }}>{title}</h1>
-                    <p className="text-xs muted font-extrabold uppercase tracking-widest" style={{ marginTop: '4px', opacity: 0.8 }}>
-                        Strategic Management and Operational Metrics for {category}s
-                    </p>
                 </div>
-                <button className="button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all uppercase tracking-widest text-[10px] font-black" onClick={() => setIsAddModalOpen(true)}>
+                <button className="relative z-10 button primary shadow-2xl h-12 px-8 rounded-2xl group active:scale-95 transition-all uppercase tracking-widest text-[10px] font-black" onClick={() => setIsAddModalOpen(true)}>
                     <UserPlus size={18} className="group-hover:rotate-12 transition-transform" />
-                    <span>Inject {title.slice(0, -1)}</span>
+                    <span>Add {title.slice(0, -1)}</span>
                 </button>
+                <div className="absolute -bottom-24 -right-12 w-64 h-64 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-12 right-32 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
             </header>
 
-            {/* Mini Dashboard */}
-            <div className="flex-col gap-4">
-                <div className="grid-5 gap-4">
+            <div className="flex flex-col gap-4">
+                <div className="grid-5 gap-3">
                     {statCards.map((stat) => (
-                        <div key={stat.label} className="card p-6 flex flex-col gap-4 text-center hover:scale-[1.02] hover:shadow-xl transition-all duration-300" style={{ borderRadius: '24px' }}>
-                            <div className="icon-box" style={{ background: `${stat.color}10`, color: stat.color, width: '52px', height: '52px', margin: '0 auto', borderRadius: '18px', border: `1px solid ${stat.color}20` }}>
+                        <div key={stat.label} className="card p-5 flex flex-col gap-3 text-left hover:scale-[1.02] hover:shadow-xl transition-all duration-300" style={{ borderRadius: '20px' }}>
+                            <div className="icon-box" style={{ background: `${stat.color}10`, color: stat.color, width: '52px', height: '52px', borderRadius: '18px', border: `1px solid ${stat.color}20` }}>
                                 <stat.icon size={26} />
                             </div>
                             <div>
@@ -178,17 +204,17 @@ export function UserManagementPage({ category }: { category: string }) {
                 </div>
             </div>
 
-            <div className="flex-col gap-4" style={{ marginTop: '8px' }}>
-                <div className="card p-0 overflow-hidden shadow-2xl shadow-blue-900/5" style={{ borderRadius: '28px', border: '1px solid var(--border-color)' }}>
-                    <div className="p-6 border-b border-[var(--border-color)] flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
+            <div className="flex flex-col gap-4" style={{ marginTop: '4px' }}>
+                <div className="card p-0 overflow-hidden shadow-2xl shadow-blue-900/5" style={{ borderRadius: '24px', border: '1px solid var(--border-color)' }}>
+                    <div className="p-5 border-b border-[var(--border-color)] flex flex-col md:flex-row justify-between items-center bg-[var(--card-bg)] gap-4">
                         <div className="relative group w-full md:w-[420px]">
-                            <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
+                            <Search className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" size={20} style={{ left: '24px', top: '50%', transform: 'translateY(-50%)' }} />
                             <input
                                 placeholder={`Search by name, identity or contact...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-[var(--bg-main)] border-none px-6 text-sm font-semibold text-[var(--text-main)] placeholder:text-slate-400"
-                                style={{ paddingLeft: '56px', height: '56px', borderRadius: '18px' }}
+                                style={{ paddingLeft: '64px', height: '56px', borderRadius: '18px' }}
                             />
                         </div>
                         <div className="flex gap-4 w-full md:w-auto">
@@ -212,9 +238,9 @@ export function UserManagementPage({ category }: { category: string }) {
                                     </>
                                 )}
                             </select>
-                             <button className="button secondary h-14 px-6 text-[10px] font-black uppercase tracking-[0.2em] gap-2 border border-[var(--border-color)] group hover:border-blue-500/50" style={{ borderRadius: '18px' }} onClick={() => toast.info("Parametric filters are enabled automatically based on search telemetry.")}>
+                             <button className="button secondary h-14 px-6 text-[10px] font-black uppercase tracking-[0.2em] gap-2 border border-[var(--border-color)] group hover:border-blue-500/50" style={{ borderRadius: '18px' }} onClick={() => toast.info("Advanced filters are enabled automatically based on search criteria.")}>
                                 <Filter size={18} className="group-hover:text-blue-500 transition-colors" />
-                                <span>Parametric Filters</span>
+                                <span>Advanced Filters</span>
                             </button>
                         </div>
                     </div>
@@ -223,85 +249,103 @@ export function UserManagementPage({ category }: { category: string }) {
                         <table className="management-table">
                             <thead>
                                 <tr className="bg-[var(--bg-main)]/50">
-                                    <th className="!bg-transparent !text-[var(--text-muted)] p-6 pl-8">SL NO</th>
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">MEMBER IDENTITY</th>
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">COMMUNICATION DNA</th>
-                                    {category !== 'patient' && <th className="!bg-transparent !text-[var(--text-muted)]">SECTOR FOCUS</th>}
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">GRID STATUS</th>
-                                    <th className="!bg-transparent !text-[var(--text-muted)]">ENTRY DATE</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)] p-6 pl-8">#</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">MEMBER NAME</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">CONTACT INFO</th>
+                                    {category !== 'patient' && <th className="!bg-transparent !text-[var(--text-muted)]">SPECIALIZATION</th>}
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">STATUS</th>
+                                    <th className="!bg-transparent !text-[var(--text-muted)]">REG. DATE</th>
                                     <th className="text-center !bg-transparent !text-[var(--text-muted)] pr-8">ACTIONS</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {filteredUsers.map((user: any, index: number) => (
-                                    <tr key={user._id} className="cursor-pointer group hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300" onClick={() => setSelectedUser(user)}>
-                                        <td className="p-6 pl-10 font-black text-slate-400 text-xs">
-                                            {(index + 1).toString().padStart(2, '0')}
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform text-xs">
-                                                    {user.name?.charAt(0) || "U"}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{user.name || "Anonymous Member"}</div>
-                                                    <div className="text-[10px] text-[var(--text-muted)] mt-1.5 uppercase font-black tracking-widest">ID: {user._id.slice(-8).toUpperCase()}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex flex-col gap-1.5">
-                                                <div className="text-xs font-black text-[var(--text-main)] flex items-center gap-2"><Phone size={13} className="text-blue-500/60" /> {user.mobileNumber}</div>
-                                                {user.email && <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-2 font-bold tracking-tight"><Mail size={12} className="opacity-40" /> {user.email}</div>}
-                                            </div>
-                                        </td>
-                                        {category !== 'patient' && (
-                                            <td>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {(user.specialization || []).slice(0, 2).map((s: string) => <span key={s} className="px-2.5 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
-                                                    {(user.specialization || []).length > 2 && <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black">+{user.specialization.length - 2}</span>}
-                                                    {!(user.specialization || []).length && <span className="text-[9px] font-black tracking-widest uppercase opacity-20">CORE ASSET</span>}
-                                                </div>
-                                            </td>
-                                        )}
-                                        <td>
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
-                                                ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' : 
-                                                  user.status === 'Pending' ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10' : 
-                                                  'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'bg-emerald-500' : user.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
-                                                {category === 'patient' ? (user.isRegistered ? 'Verified' : 'Pending') : user.status}
-                                            </span>
-                                        </td>
-                                        <td className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                                            {new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                        </td>
-                                        <td className="pr-8">
-                                            <div className="justify-end flex items-center gap-2">
-                                                {(category !== 'patient' && user.status === 'Pending') && (
-                                                    <button
-                                                        className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all border border-emerald-100"
-                                                        onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: user._id, status: 'Active', isRegistered: true }); }}
-                                                        title="Approve Member"
-                                                    >
-                                                        <ShieldCheck size={18} />
-                                                    </button>
-                                                )}
-                                                <button className="w-10 h-10 rounded-xl bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all" title="Inspect Protocol"><Eye size={18} /></button>
+                             <tbody>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={7} className="p-20 text-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing Registry...</p>
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                                {!filteredUsers.length && (
+                                ) : Array.isArray(filteredUsers) && filteredUsers.length > 0 ? (
+                                    filteredUsers.map((user: any, index: number) => (
+                                        <tr key={user._id} className="cursor-pointer group hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300" onClick={() => setSelectedUser(user)}>
+                                            <td className="p-6 pl-10 font-black text-slate-400 text-xs">
+                                                {((page - 1) * 50 + index + 1).toString().padStart(2, '0')}
+                                            </td>
+                                            <td className="p-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform text-xs">
+                                                        {user.name?.charAt(0) || "U"}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-[var(--text-main)]" style={{ fontSize: '0.95rem' }}>{user.name || "Anonymous Member"}</div>
+                                                        <div className="flex items-center gap-2 mt-1.5 ">
+                                                            <div className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">ID: {user._id.slice(-8).toUpperCase()}</div>
+                                                            {category === 'service' && user.specialization?.[0] && (
+                                                                <>
+                                                                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                                                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{user.specialization[0]}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="text-xs font-black text-[var(--text-main)] flex items-center gap-2"><Phone size={13} className="text-blue-500/60" /> {user.mobileNumber}</div>
+                                                    {user.email && <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-2 font-bold tracking-tight"><Mail size={12} className="opacity-40" /> {user.email}</div>}
+                                                </div>
+                                            </td>
+                                            {category !== 'patient' && (
+                                                <td>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {(user.specialization || []).slice(0, 2).map((s: string) => <span key={s} className="px-2.5 py-1 rounded-lg bg-[var(--bg-main)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider border border-[var(--border-color)]">{s}</span>)}
+                                                        {(user.specialization || []).length > 2 && <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black">+{user.specialization.length - 2}</span>}
+                                                        {!(user.specialization || []).length && <span className="text-[9px] font-black tracking-widest uppercase opacity-20">CORE ASSET</span>}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            <td>
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
+                                                    ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' : 
+                                                    user.status === 'Pending' ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10' : 
+                                                    'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${(category === 'patient' ? user.isRegistered : user.status === 'Active') ? 'bg-emerald-500' : user.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
+                                                    {category === 'patient' ? (user.isRegistered ? 'Verified' : 'Pending') : user.status}
+                                                </span>
+                                            </td>
+                                            <td className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                                {new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </td>
+                                            <td className="pr-8">
+                                                <div className="justify-end flex items-center gap-2">
+                                                    {(category !== 'patient' && user.status === 'Pending') && (
+                                                        <button
+                                                            className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all border border-emerald-100"
+                                                            onClick={(e) => { e.stopPropagation(); statusMutation.mutate({ id: user._id, status: 'Active', isRegistered: true }); }}
+                                                            title="Approve Member"
+                                                        >
+                                                            <ShieldCheck size={18} />
+                                                        </button>
+                                                    )}
+                                                    <button className="w-10 h-10 rounded-xl bg-[var(--bg-main)] text-[var(--text-muted)] hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all" title="Inspect Protocol"><Eye size={18} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
                                     <tr>
-                                        <td colSpan={6} style={{ padding: '120px 0' }}>
+                                        <td colSpan={category === 'patient' ? 6 : 7} style={{ padding: '120px 0' }}>
                                             <div className="flex flex-col items-center gap-6 text-center">
                                                 <div className="w-20 h-20 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-[24px] flex items-center justify-center shadow-inner">
                                                     <Users size={32} className="text-[var(--text-muted)] opacity-30" />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <p className="font-black text-[var(--text-main)] uppercase tracking-[0.3em] text-sm">Registry Void</p>
-                                                    <p className="text-xs muted font-bold max-w-[280px]">No member signatures detected matching your current telemetry filter.</p>
+                                                    <p className="font-black text-[var(--text-main)] uppercase tracking-[0.3em] text-sm">NO MEMBERS FOUND</p>
+                                                    <p className="text-xs muted font-bold max-w-[280px]">No member records detected matching your current search criteria.</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -313,11 +357,24 @@ export function UserManagementPage({ category }: { category: string }) {
 
                     <div className="p-8 border-t border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]/30 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                         <div className="flex items-center gap-4">
-                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Total Entries: <span className="text-[var(--text-main)] ml-2">{filteredUsers.length}</span></span>
+                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Page: <span className="text-[var(--text-main)] ml-2">{page} / {totalPages}</span></span>
+                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Total Entries: <span className="text-[var(--text-main)] ml-2">{usersData?.total || 0}</span></span>
                         </div>
                         <div className="flex gap-2">
-                            <button className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all opacity-50 cursor-not-allowed"><ChevronLeft size={18} /></button>
-                            <button className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all opacity-50 cursor-not-allowed"><ChevronRight size={18} /></button>
+                            <button 
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <button 
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -341,7 +398,7 @@ export function UserManagementPage({ category }: { category: string }) {
                                 <div className="min-w-0">
                                     <h2 className="text-white text-2xl md:text-3xl font-black tracking-tight truncate">{selectedUser.name || "Member Profile"}</h2>
                                     <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] mt-2">
-                                        <div className="flex items-center gap-2 font-mono text-[9px] bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-white/60">NODE_ID: {selectedUser._id}</div>
+                                        <div className="flex items-center gap-2 font-mono text-[9px] bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-white/60">USER_ID: {selectedUser._id}</div>
                                     </div>
                                 </div>
                             </div>
@@ -353,14 +410,14 @@ export function UserManagementPage({ category }: { category: string }) {
                                 <div className="lg:col-span-8 space-y-12">
                                     <section>
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 mb-6 flex items-center gap-4">
-                                            <span className="w-10 h-[2px] bg-indigo-500/30"></span> Basic Discovery
+                                            <span className="w-10 h-[2px] bg-indigo-500/30"></span> Personal Details
                                         </h3>
                                         <div className="bg-white/5 backdrop-blur-3xl p-7 rounded-[32px] border border-white/5 grid grid-cols-2 gap-6">
                                             {[
-                                                { label: "Phone Identity", value: selectedUser.mobileNumber },
-                                                { label: "Email Protocol", value: selectedUser.email || "No Email" },
-                                                { label: "Gender Orientation", value: selectedUser.gender || "Undefined" },
-                                                { label: "Registry Status", value: category === 'patient' ? (selectedUser.isRegistered ? "Verified" : "Unverified") : selectedUser.status }
+                                                { label: "Mobile Number", value: selectedUser.mobileNumber },
+                                                { label: "Email Address", value: selectedUser.email || "No Email" },
+                                                { label: "Gender", value: selectedUser.gender || "Unspecified" },
+                                                { label: "Verification Status", value: category === 'patient' ? (selectedUser.isRegistered ? "Verified" : "Unverified") : selectedUser.status }
                                             ].map(item => (
                                                 <div key={item.label}>
                                                     <dt className="text-[9px] font-black text-white/20 uppercase tracking-widest">{item.label}</dt>
@@ -374,33 +431,33 @@ export function UserManagementPage({ category }: { category: string }) {
 
                                 <div className="lg:col-span-4 space-y-8">
                                     <div className="bg-white/5 rounded-[32px] p-7 border border-white/10">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">Sector Documents</h3>
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">KYC Documents</h3>
                                         <div className="space-y-3">
                                             {(selectedUser.documents || []).length > 0 ? (
-                                                selectedUser.documents.map((doc: any, i: number) => (
+                                                Array.isArray(selectedUser.documents) && selectedUser.documents.map((doc: any, i: number) => (
                                                     <div key={i} className="p-4 bg-black/40 rounded-2xl flex items-center justify-between border border-white/5">
                                                         <span className="text-[10px] font-bold text-white uppercase truncate">{doc.type}</span>
-                                                        <button className="text-[9px] font-black text-indigo-400 hover:text-white uppercase" onClick={() => setViewingDocument(doc)}>Watch</button>
+                                                        <button className="text-[9px] font-black text-indigo-400 hover:text-white uppercase" onClick={() => setViewingDocument(doc)}>View</button>
                                                     </div>
                                                 ))
-                                            ) : <p className="text-[10px] text-white/20 font-black">No artifacts available.</p>}
+                                            ) : <p className="text-[10px] text-white/20 font-black">No documents uploaded.</p>}
                                         </div>
                                     </div>
                                     <div className="bg-white/5 rounded-[32px] p-7 border border-white/10">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-6">Danger Zone</h3>
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-6">Account Management</h3>
                                         <button 
                                             className="w-full h-12 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest border border-rose-500/20 transition-all"
                                             onClick={() => {
-                                                if(confirm("Confirm full wipe of this member signature?")) {
-                                                    api.delete(`/admin/users/${category}/${selectedUser._id}`).then(() => {
-                                                        queryClient.invalidateQueries({ queryKey: ["category_users", category] });
-                                                        setSelectedUser(null);
-                                                        toast.success("Signature purged.");
-                                                    });
-                                                }
+                                                toast.error("Confirm Account Deletion", {
+                                                    description: "Are you sure you want to permanently remove this user record? This action cannot be undone.",
+                                                    action: {
+                                                        label: "Delete",
+                                                        onClick: () => confirmGenericDelete()
+                                                    }
+                                                });
                                             }}
                                         >
-                                            Purge Record
+                                            Delete Account
                                         </button>
                                     </div>
                                 </div>
@@ -418,33 +475,70 @@ export function UserManagementPage({ category }: { category: string }) {
                             <UserPlus size={40} />
                         </div>
                         <div className="text-center space-y-2">
-                            <h2 className="text-white text-2xl font-black tracking-tight">Create New {title.slice(0, -1)}</h2>
-                            <p className="text-white/30 text-sm font-medium">Injecting a new {title.slice(0, -1).toLowerCase()} into the production registry.</p>
+                            <h2 className="text-white text-2xl font-black tracking-tight">Add New {title.slice(0, -1)}</h2>
+                            <p className="text-white/30 text-sm font-medium">Adding a new {title.slice(0, -1).toLowerCase()} to the A1Care directory.</p>
                         </div>
                         <form className="w-full space-y-5" onSubmit={handleAddUser}>
                             {[
-                                { label: "Legal Name", value: newName, set: setNewName, type: "text" },
-                                { label: "Mobile Identity", value: newMobile, set: setNewMobile, type: "tel" },
-                                { label: "Email Node", value: newEmail, set: setNewEmail, type: "email" }
+                                { label: "Full Name", value: newName, set: setNewName, type: "text", placeholder: "e.g. John Doe" },
+                                { label: "Mobile Number", value: newMobile, set: setNewMobile, type: "tel", placeholder: "+91 XXXXX XXXXX" },
+                                { label: "Email Address", value: newEmail, set: setNewEmail, type: "email", placeholder: "john@example.com" }
                             ].map(field => (
                                 <div className="space-y-2" key={field.label}>
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">{field.label}</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-200/50 ml-2">{field.label}</label>
                                     <input 
                                         type={field.type}
-                                        className="w-full h-14 bg-white/5 border border-white/5 rounded-[20px] px-6 text-white font-bold placeholder:text-white/10 focus:ring-2 focus:ring-indigo-500/50"
+                                        className="w-full h-14 bg-white border-none rounded-[20px] px-6 text-slate-900 font-bold placeholder:text-indigo-900/40 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all shadow-inner"
                                         value={field.value}
                                         onChange={e => field.set(e.target.value)}
-                                        required={field.label !== "Email Node"}
+                                        placeholder={field.placeholder}
+                                        required={field.label !== "Email Address"}
                                     />
                                 </div>
                             ))}
+
+                            {category === 'service' && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-200/50 ml-2">Service Specialization</label>
+                                    <select 
+                                        className="w-full h-14 bg-white border-none rounded-[20px] px-6 text-slate-900 font-bold focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all shadow-inner"
+                                        value={newSpecialization}
+                                        onChange={e => setNewSpecialization(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Select Service...</option>
+                                        {categories?.filter(c => c.type === 'service').map(c => (
+                                            <option key={c._id} value={c.name.replace(/SELECT|ASSIGN/g, "").trim()}>{c.name.replace(/SELECT|ASSIGN/g, "").trim()}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="pt-4 flex gap-4">
                                 <button type="button" className="flex-1 h-14 rounded-[20px] bg-white/5 text-white/40 font-black uppercase tracking-widest text-[10px]" onClick={() => setIsAddModalOpen(false)}>Abort</button>
                                 <button type="submit" disabled={createMutation.isPending} className="flex-1 h-14 rounded-[20px] bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20">
-                                    {createMutation.isPending ? "Syncing..." : "Finalize Entry"}
+                                    {createMutation.isPending ? "Saving..." : "Create Record"}
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfig && (
+                <div className="modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-xl">
+                    <div className="modal-content !bg-slate-900 border border-white/10 w-full max-w-md p-10 rounded-[40px] shadow-3xl flex flex-col items-center text-center gap-6">
+                        <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                            <Trash2 size={40} />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-white text-2xl font-black tracking-tight">Purge Member Signature?</h2>
+                            <p className="text-white/40 text-sm font-medium">This operation will permanently wipe this record from the grid. This action is irreversible.</p>
+                        </div>
+                        <div className="flex gap-4 w-full">
+                            <button className="flex-1 h-14 rounded-2xl bg-white/5 text-white/40 font-black uppercase tracking-widest text-[10px]" onClick={() => setDeleteConfig(null)}>Abort</button>
+                            <button className="flex-1 h-14 rounded-2xl bg-rose-600 text-white font-black uppercase tracking-widest text-[10px]" onClick={confirmGenericDelete}>Purge Record</button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -515,17 +609,17 @@ function WalletSection({ user, category }: { user: any, category: string }) {
     return (
         <section className="space-y-6">
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400/60 flex items-center gap-4">
-                <span className="w-10 h-[2px] bg-indigo-500/30"></span> Wallet Protocol
+                <span className="w-10 h-[2px] bg-indigo-500/30"></span> Wallet Management
             </h3>
             <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl overflow-hidden relative group">
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><CreditCard size={100} className="text-indigo-500" /></div>
                 <div className="relative z-10">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Grid Balance</p>
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Available Balance</p>
                     <h4 className="text-5xl font-black text-white">{isLoading ? "---" : `₹${wallet?.balance || 0}`}</h4>
                 </div>
                 
                 {!isAdjusting ? (
-                    <button onClick={() => setIsAdjusting(true)} className="h-14 px-10 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Execute Delta Adjust</button>
+                    <button onClick={() => setIsAdjusting(true)} className="h-14 px-10 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Adjust Balance</button>
                 ) : (
                     <div className="w-full md:w-[320px] space-y-3 p-4 bg-black/40 rounded-3xl border border-white/5 animate-in zoom-in-95">
                         <input type="number" placeholder="Enter Amount to Credit/Debit..." value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-white border border-white/10 h-12 px-5 rounded-2xl text-slate-900 font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" />

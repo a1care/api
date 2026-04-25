@@ -8,6 +8,7 @@ import {
   sendWalletTopupEmail,
   sendWelcomeEmail,
 } from "../utils/email.js";
+import sendAlotsSms from "../utils/alotsSms.js";
 
 const connection = getQueueRedisConnection();
 
@@ -35,8 +36,13 @@ new Worker(
       if (payload.kind === "wallet_topup") await sendWalletTopupEmail(payload.data);
       return;
     }
+    if (job.name === "sms") {
+      const { mobileNumber, otp } = job.data;
+      await sendAlotsSms(mobileNumber, otp);
+      return;
+    }
   },
-  { connection }
+  { connection, concurrency: 10 }
 );
 
 console.log("[Worker] communication worker started.");

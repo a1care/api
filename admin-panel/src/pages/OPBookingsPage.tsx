@@ -1,4 +1,5 @@
 import { useState, useDeferredValue, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Clock, CheckCircle2, XCircle, Calendar, CreditCard, Search, Eye, Check, CheckCheck, X, Filter, ChevronDown, RefreshCw, Loader2 } from "lucide-react";
@@ -18,9 +19,11 @@ interface ServiceBooking {
 }
 
 export function OPBookingsPage() {
+    const [searchParams] = useSearchParams();
+    const [page, setPage] = useState(1);
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All");
+    const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "All");
     const [selectedBooking, setSelectedBooking] = useState<ServiceBooking | null>(null);
 
     // Advanced Filters State
@@ -37,21 +40,30 @@ export function OPBookingsPage() {
     // Fetching Bookings
     const deferredSearch = useDeferredValue(searchQuery);
 
-    const { data: serviceBookings, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
-        queryKey: ["admin_service_bookings", deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
+    const { data: serviceData, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
+        queryKey: ["admin_service_bookings", page, deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
         queryFn: async () => {
-            const params = new URLSearchParams();
+            const params = new URLSearchParams({ page: page.toString(), limit: "60" });
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
             if (sourceFilter !== "All") params.append("source", sourceFilter);
             if (departmentFilter !== "All") params.append("department", departmentFilter);
+            if (doctorFilter !== "All") params.append("doctor", doctorFilter);
+            if (slotFilter !== "All") params.append("slot", slotFilter);
+            if (patientTypeFilter !== "All") params.append("patientType", patientTypeFilter);
+            params.append("fulfillmentMode", "HOSPITAL_VISIT"); // Essential for OP tokens
 
             const res = await api.get(`/admin/bookings/services?${params.toString()}`);
-            return res.data.data as ServiceBooking[];
-        }
+            return res.data.data;
+        },
+        placeholderData: (prev) => prev
     });
+
+    const serviceBookings = serviceData?.items || [];
+    const stats = serviceData?.stats || { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+    const totalPages = serviceData?.totalPages || 1;
 
     const { data: categories } = useQuery({
         queryKey: ["admin_categories"],
@@ -76,67 +88,32 @@ export function OPBookingsPage() {
         updateStatusMutation.mutate({ id, status });
     };
 
-    if (loadingServices && !serviceBookings) return (
-        <div className="flex flex-col items-center justify-center p-20 space-y-4">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p className="font-bold text-[var(--text-muted)] animate-pulse">Syncing operations desk...</p>
-        </div>
-    );
+    // Removed early return to prevent flickering
+    // if (loadingServices && !serviceBookings) return (
+    //     <div className="flex flex-col items-center justify-center p-20 space-y-4">
+    //         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+    //         <p className="font-bold text-[var(--text-muted)] animate-pulse">Syncing operations desk...</p>
+    //     </div>
+    // );
 
-    // Initial filter for OP Tokens only
-    const allTokens = serviceBookings?.filter(b => b.fulfillmentMode === "HOSPITAL_VISIT") || [];
-
-    // Calculate counts from the UNFILTERED set (allTokens)
-    const allCount = allTokens.length;
-    const pendingCount = allTokens.filter(b => b.status?.toUpperCase() === "PENDING" || b.status?.toUpperCase() === "RETURNED_TO_ADMIN").length;
-    const confirmedCount = allTokens.filter(b => b.status?.toUpperCase() === "CONFIRMED").length;
-    const completedCount = allTokens.filter(b => b.status?.toUpperCase() === "COMPLETED").length;
-    const cancelledCount = allTokens.filter(b => b.status?.toUpperCase() === "CANCELLED").length;
-
-    // Local Filtering Fallback (ensures filters work even if backend params are partial)
-    const processedTokens = allTokens.filter(b => {
-        const query = deferredSearch.toLowerCase();
-        const matchesSearch = !query || 
-            b._id.toLowerCase().includes(query) || 
-            (b.patientId?.name || "").toLowerCase().includes(query) || 
-            (b.patientId?.mobile || "").toLowerCase().includes(query) ||
-            (b.serviceId?.name || "").toLowerCase().includes(query);
-
-        // Date Logic: dateTo should be inclusive of the full day
-        const bDate = new Date(b.date || b.createdAt).getTime();
-        const matchesFrom = !dateFrom || bDate >= new Date(dateFrom).getTime();
-        const matchesTo = !dateTo || bDate <= (new Date(dateTo).getTime() + 86399999); // Add 23h 59m 59s
-        
-        const matchesPayment = paymentFilter === "All" || b.paymentStatus === paymentFilter;
-        
-        return matchesSearch && matchesFrom && matchesTo && matchesPayment;
-    });
-
-    // Filter displayed tokens based on selected statusFilter
-    const filteredTokens = statusFilter === "All" 
-        ? processedTokens 
-        : processedTokens.filter(b => {
-            const s = b.status?.toUpperCase();
-            if (statusFilter === "PENDING") return s === "PENDING" || s === "RETURNED_TO_ADMIN";
-            return s === statusFilter;
-        });
+    const filteredTokens = serviceBookings;
 
     const statsCards = [
-        { label: "All", count: allCount, value: "All" },
-        { label: "Pending", count: pendingCount, value: "PENDING" },
-        { label: "Confirmed", count: confirmedCount, value: "CONFIRMED" },
-        { label: "Completed", count: completedCount, value: "COMPLETED" },
-        { label: "Cancelled", count: cancelledCount, value: "CANCELLED" },
+        { label: "All", count: stats.all, value: "All" },
+        { label: "Pending", count: stats.pending, value: "PENDING" },
+        { label: "Confirmed", count: stats.confirmed, value: "CONFIRMED" },
+        { label: "Completed", count: stats.completed, value: "COMPLETED" },
+        { label: "Cancelled", count: stats.cancelled, value: "CANCELLED" },
     ];
 
     return (
         <div className="space-y-6 animate-in">
-            <header className="flex flex-col gap-2 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">OP Token Orders</h1>
+            <header className="flex flex-col gap-2 bg-[var(--card-bg)] p-6 md:p-8 rounded-2xl shadow-sm border border-[var(--border-color)] relative overflow-hidden text-left items-start">
+                <div className="relative z-10 text-left items-start">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">Doctor Appointments</h1>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Bookings • OP Token Orders</p>
+                        <p className="text-xs md:text-sm font-medium text-[var(--text-muted)] tracking-wide">Home • Bookings • Doctor Appointments</p>
                     </div>
                 </div>
                 {/* Decorative background element reminiscent of the user's screenshot */}
@@ -168,23 +145,23 @@ export function OPBookingsPage() {
             {/* Filters Row */}
             <div className="flex flex-row items-center gap-4">
                 <div className="relative flex-1">
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 z-10">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
                         {fetchingServices ? <Loader2 size={18} className="text-blue-500 animate-spin" /> : <Search size={18} className="text-[var(--text-muted)]" />}
                     </div>
                     <input
                         type="text"
-                        placeholder="Search by Order ID, Service..."
+                        placeholder="Search by Order ID, Patient name..."
                         className="w-full pr-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl h-12 text-sm focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 outline-none text-[var(--text-main)] transition-shadow shadow-sm"
-                        style={{ paddingLeft: '2.75rem' }}
+                        style={{ paddingLeft: '3rem' }}
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                     />
                 </div>
 
                 <div className="relative w-[180px] shrink-0">
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="w-full h-12 pl-4 pr-10 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl text-sm font-semibold text-[var(--text-main)] outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20 appearance-none shadow-sm cursor-pointer"
                     >
                         {statsCards.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -210,7 +187,7 @@ export function OPBookingsPage() {
                             onClick={() => {
                                 setDateFrom(""); setDateTo(""); setPaymentFilter("All");
                                 setSourceFilter("All"); setDoctorFilter("All"); setDepartmentFilter("All");
-                                setPatientTypeFilter("All"); setSlotFilter("All");
+                                setPatientTypeFilter("All"); setSlotFilter("All"); setPage(1);
                             }}
                             className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                         >
@@ -223,18 +200,18 @@ export function OPBookingsPage() {
                         <div className="col-span-1 lg:col-span-2 grid grid-cols-2 gap-2">
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">From Date</label>
-                                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
+                                <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">To Date</label>
-                                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
+                                <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]" />
                             </div>
                         </div>
 
                         {/* Payment Status */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Payment</label>
-                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Statuses</option>
                                 <option value="COMPLETED">Paid</option>
                                 <option value="PENDING">Pending</option>
@@ -245,7 +222,7 @@ export function OPBookingsPage() {
                         {/* Doctor */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Doctor Assigned</label>
-                            <select value={doctorFilter} onChange={e => setDoctorFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={doctorFilter} onChange={e => { setDoctorFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Doctors</option>
                                 <option value="Unassigned">Unassigned</option>
                             </select>
@@ -254,9 +231,9 @@ export function OPBookingsPage() {
                         {/* Department */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Department Specialization</label>
-                            <select value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={departmentFilter} onChange={e => { setDepartmentFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Departments</option>
-                                {categories?.filter(c => c.type === 'doctor' || c.name.toLowerCase().includes('doctor')).map(c => (
+                                {Array.isArray(categories) && categories.filter(c => c.type === 'doctor' || c.name.toLowerCase().includes('doctor')).map(c => (
                                     <option key={c._id} value={c.name}>{c.name}</option>
                                 ))}
                             </select>
@@ -265,7 +242,7 @@ export function OPBookingsPage() {
                         {/* Slot Time */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Slot Time</label>
-                            <select value={slotFilter} onChange={e => setSlotFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={slotFilter} onChange={e => { setSlotFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Slots</option>
                                 <option value="Morning">Morning (8AM - 12PM)</option>
                                 <option value="Afternoon">Afternoon (12PM - 4PM)</option>
@@ -276,7 +253,7 @@ export function OPBookingsPage() {
                         {/* Booking Source */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Source</label>
-                            <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Sources</option>
                                 <option value="App">Mobile App</option>
                                 <option value="Walk-in">Walk-in</option>
@@ -287,7 +264,7 @@ export function OPBookingsPage() {
                         {/* Patient Type */}
                         <div>
                             <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1.5 ml-1">Patient Type</label>
-                            <select value={patientTypeFilter} onChange={e => setPatientTypeFilter(e.target.value)} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
+                            <select value={patientTypeFilter} onChange={e => { setPatientTypeFilter(e.target.value); setPage(1); }} className="w-full h-11 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 text-[var(--text-main)]">
                                 <option value="All">All Types</option>
                                 <option value="New">New Patient</option>
                                 <option value="Returning">Returning Patient</option>
@@ -306,7 +283,7 @@ export function OPBookingsPage() {
                                 <th className="py-5 px-6 whitespace-nowrap w-[60px]">Sl No</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Order ID</th>
                                 <th className="py-5 px-6 whitespace-nowrap min-w-[200px]">Service</th>
-                                <th className="py-5 px-6 whitespace-nowrap">Customer</th>
+                                <th className="py-5 px-6 whitespace-nowrap">Patient Name</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Date & Time</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Status</th>
                                 <th className="py-5 px-6 whitespace-nowrap">Amount</th>
@@ -314,14 +291,23 @@ export function OPBookingsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-color)]">
-                            {filteredTokens.length > 0 ? (
+                            {loadingServices ? (
+                                <tr>
+                                    <td colSpan={8} className="py-24 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronizing Appointments...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : Array.isArray(filteredTokens) && filteredTokens.length > 0 ? (
                                 filteredTokens.map((booking, index) => {
                                     const isPending = booking.status?.toUpperCase() === "PENDING" || booking.status?.toUpperCase() === "RETURNED_TO_ADMIN";
                                     const isConfirmed = booking.status?.toUpperCase() === "CONFIRMED";
                                     return (
                                         <tr key={booking._id} className="hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-colors group">
                                             <td className="py-5 px-6 text-sm font-black text-[var(--text-muted)]">
-                                                {String(index + 1).padStart(2, '0')}
+                                                {String((page - 1) * 60 + index + 1).padStart(2, '0')}
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded inline-block">
@@ -335,7 +321,7 @@ export function OPBookingsPage() {
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="text-sm font-semibold text-[var(--text-main)]">
-                                                    {booking.patientId?.name || "Guest User"}
+                                                    {booking.patientId?.name || booking.patientId?.mobile || "Anonymous Member"}
                                                 </div>
                                                 <div className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5">
                                                     {booking.patientId?.mobile || "N/A"}
@@ -433,6 +419,30 @@ export function OPBookingsPage() {
                         </tbody>
                     </table>
                 </div>
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="p-8 border-t border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]/30 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                        <div className="flex items-center gap-4">
+                            <span className="bg-[var(--card-bg)] px-4 py-2 rounded-xl border border-[var(--border-color)]">Page <span className="text-[var(--text-main)] ml-2">{page} / {totalPages}</span></span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronDown size={18} className="rotate-90" />
+                            </button>
+                            <button 
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="w-10 h-10 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronDown size={18} className="-rotate-90" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal Popup */}
@@ -456,7 +466,7 @@ export function OPBookingsPage() {
                             <div className="grid grid-cols-2 gap-y-5 gap-x-4">
                                 <div>
                                     <p className="text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)] mb-1">Patient</p>
-                                    <p className="text-sm font-bold text-[var(--text-main)]">{selectedBooking.patientId?.name || "Guest User"}</p>
+                                    <p className="text-sm font-bold text-[var(--text-main)]">{selectedBooking.patientId?.name || selectedBooking.patientId?.mobile || "Guest User"}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)] mb-1">Mobile</p>

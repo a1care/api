@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/store/auth";
-import { ShieldCheck, Lock, Mail, Loader2, HeartPulse, ChevronRight } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Loader2, ChevronRight } from "lucide-react";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -49,8 +49,8 @@ export function LoginPage() {
         <header className="text-center space-y-6">
           <div className="relative inline-block">
             <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 animate-pulse"></div>
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(37,99,235,0.3)] relative group cursor-pointer transition-all duration-500 hover:scale-105 active:scale-95">
-              <HeartPulse size={42} color="white" className="group-hover:rotate-12 transition-transform" />
+            <div className="w-32 h-32 flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(37,99,235,0.2)] relative group cursor-pointer transition-all duration-500 hover:scale-105 active:scale-95 rounded-[1.5rem] overflow-hidden">
+              <img src="/a1care_logo1.png" alt="A1Care Logo" className="w-full h-full object-contain" />
             </div>
           </div>
           <div className="space-y-2">

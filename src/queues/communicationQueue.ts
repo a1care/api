@@ -13,6 +13,11 @@ type EmailJob =
   | { kind: "appointment"; data: Parameters<typeof sendAppointmentConfirmationEmail>[0] }
   | { kind: "wallet_topup"; data: Parameters<typeof sendWalletTopupEmail>[0] };
 
+type SmsJob = {
+  mobileNumber: string;
+  otp: string | number;
+};
+
 type PushManyJob = {
   targets: MultiPushTarget[];
   title: string;
@@ -27,6 +32,8 @@ const queue =
   connection && process.env.ENABLE_QUEUE === "true"
     ? new Queue("a1care-communications", { connection })
     : null;
+
+console.log(`[Queue] Initialized: ${!!queue}, ENABLE_QUEUE: ${process.env.ENABLE_QUEUE}`);
 
 export async function enqueuePush(payload: PushPayload) {
   if (!queue) {
@@ -61,4 +68,20 @@ export async function enqueueEmail(payload: EmailJob) {
   }
 
   await queue.add("email", payload, { removeOnComplete: true, attempts: 3 });
+}
+
+export async function enqueueSms(payload: SmsJob) {
+  if (!queue) {
+    console.log("[Queue] No queue found, sending SMS directly...");
+    const sendAlotsSms = (await import("../utils/alotsSms.js")).default;
+    await sendAlotsSms(payload.mobileNumber, payload.otp);
+    return;
+  }
+
+  console.log(`[Queue] Enqueueing SMS job for ${payload.mobileNumber}`);
+  await queue.add("sms", payload, { 
+    removeOnComplete: true, 
+    attempts: 3,
+    priority: 1 // Highest priority for OTPs
+  });
 }
