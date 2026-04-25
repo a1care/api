@@ -381,12 +381,104 @@ export const getOrderById = asyncHandler(async (req, res) => {
 
 // ─── Admin Functions ──────────────────────────────────────────────────────────
 
-export const adminListOrders = asyncHandler(async (_req, res) => {
-    const orders = await Order.find()
-        .populate("userId", "name email mobileNumber")
-        .sort({ createdAt: -1 })
-        .limit(200);
-    return res.status(200).json(new ApiResponse(200, "Orders fetched", orders));
+export const adminListOrders = asyncHandler(async (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const requestedLimit = Number(req.query.limit) || 50;
+    const limit = Math.min(100, Math.max(1, requestedLimit));
+    const skip = (page - 1) * limit;
+    const search = String(req.query.search || "").trim();
+    const status = String(req.query.status || "ALL").trim().toUpperCase();
+
+    const match: any = {};
+    if (status && status !== "ALL") {
+        match.status = status;
+    }
+
+    if (search) {
+        const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(escaped, "i");
+        match.$or = [
+            { txnId: regex },
+            { "user.name": regex },
+            { "user.mobileNumber": regex }
+        ];
+    }
+
+    const pipeline: any[] = [
+        {
+            $lookup: {
+                from: "patients",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userPatient"
+            }
+        },
+        {
+            $lookup: {
+                from: "doctors",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userDoctor"
+            }
+        },
+        {
+            $addFields: {
+                user: {
+                    $ifNull: [
+                        { $arrayElemAt: ["$userPatient", 0] },
+                        { $arrayElemAt: ["$userDoctor", 0] }
+                    ]
+                }
+            }
+        },
+        { $match: match },
+        { $sort: { createdAt: -1 } },
+        {
+            $project: {
+                txnId: 1,
+                amount: 1,
+                status: 1,
+                type: 1,
+                userId: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                user: {
+                    name: "$user.name",
+                    email: "$user.email",
+                    mobileNumber: "$user.mobileNumber"
+                }
+            }
+        },
+        {
+            $facet: {
+                items: [{ $skip: skip }, { $limit: limit }],
+                meta: [{ $count: "total" }]
+            }
+        }
+    ];
+
+    const result = await Order.aggregate(pipeline);
+    const row = result?.[0] || { items: [], meta: [] };
+    const items = (row.items || []).map((order: any) => ({
+        _id: order._id,
+        txnId: order.txnId,
+        amount: order.amount,
+        status: order.status,
+        type: order.type,
+        userId: order.user || order.userId,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+    }));
+    const total = row.meta?.[0]?.total || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return res.status(200).json(new ApiResponse(200, "Orders fetched", {
+        items,
+        total,
+        page,
+        limit,
+        totalPages
+    }));
 });
 
 export const adminGetLogsForTxn = asyncHandler(async (req, res) => {
@@ -394,3 +486,4 @@ export const adminGetLogsForTxn = asyncHandler(async (req, res) => {
     const logs = await PaymentLog.find({ txnId }).sort({ createdAt: 1 });
     return res.status(200).json(new ApiResponse(200, "Logs fetched", logs));
 });
+

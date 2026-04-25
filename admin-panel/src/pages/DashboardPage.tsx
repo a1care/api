@@ -30,6 +30,8 @@ export function DashboardPage() {
   const [sortField, setSortField] = useState<string>("stats.total");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [activityPage, setActivityPage] = useState(1);
+  const activityPageSize = 5;
 
   // --- Data Fetching ---
   const { data: overview, isLoading: isOverviewLoading } = useQuery({
@@ -84,6 +86,12 @@ export function DashboardPage() {
       return sortOrder === "desc" ? valB - valA : valA - valB;
     });
 
+  const totalActivityPages = Math.max(1, Math.ceil((activity?.length || 0) / activityPageSize));
+  const paginatedActivity = (activity || []).slice(
+    (activityPage - 1) * activityPageSize,
+    activityPage * activityPageSize
+  );
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortOrder(sortOrder === "desc" ? "asc" : "desc");
@@ -102,7 +110,7 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-16 px-2">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-14 px-0 md:px-1">
       {/* Dynamic Header Experience */}
       <header className="relative flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
         <div className="space-y-2">
@@ -147,9 +155,9 @@ export function DashboardPage() {
         />
       )}
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column: Bookings Overview & Activity */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-6">
           
           {/* Booking Matrix - High Density Intelligence */}
           <div className="bg-white/90 backdrop-blur-md rounded-[40px] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all hover:shadow-2xl hover:shadow-blue-500/5 group">
@@ -196,8 +204,8 @@ export function DashboardPage() {
 
           {/* Activity Logs */}
           {/* Activity Logs - High Fidelity Stream */}
-           <div className="bg-white/90 backdrop-blur-md rounded-[40px] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden group">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white/90 backdrop-blur-md rounded-[36px] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden group">
+            <div className="p-7 border-b border-slate-100 flex items-center justify-between gap-4">
                <div className="flex items-center gap-4">
                 <div className="w-2 h-8 bg-slate-900 rounded-full"></div>
                 <div>
@@ -225,7 +233,7 @@ export function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {activity?.map((act) => (
+                  {paginatedActivity.map((act) => (
                     <tr key={act.id} className="hover:bg-blue-50/30 transition-all duration-300 group/row">
                       <td className="p-6">
                         <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${act.type === 'Appointment' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}>
@@ -253,14 +261,44 @@ export function DashboardPage() {
                       </td>
                     </tr>
                   ))}
+                  {!paginatedActivity.length && (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-slate-400">
+                        No activity records found.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            {activity && activity.length > activityPageSize && (
+              <div className="px-6 md:px-8 py-5 border-t border-slate-100 flex items-center justify-between gap-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Page {activityPage} of {totalActivityPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                    disabled={activityPage === 1}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 transition-all"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
+                    disabled={activityPage === totalActivityPages}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
            </div>
         </div>
 
         {/* Right Column: Admin Alerts & Quick Insights */}
-        <div className="space-y-8">
+        <div className="space-y-6">
            <div className="flex items-center gap-3 px-2">
              <AlertCircle size={22} className="text-red-500" />
              <h3 className="text-xl font-black tracking-tight text-slate-900">Critical Alerts</h3>
