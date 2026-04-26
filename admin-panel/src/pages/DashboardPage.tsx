@@ -96,11 +96,7 @@ export function DashboardPage() {
     return sortOrder === "desc" ? valB - valA : valA - valB;
   });
 
-  const totalActivityPages = Math.max(1, Math.ceil((activity?.length || 0) / activityPageSize));
-  const paginatedActivity = (activity || []).slice(
-    (activityPage - 1) * activityPageSize,
-    activityPage * activityPageSize
-  );
+
 
   const handleSort = (field: string) => {
     if (sortField === field) {
