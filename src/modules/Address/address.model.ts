@@ -50,10 +50,40 @@ const UserAddressSchema = new Schema(
       minlength: 2
     },
 
+    // Primary address line (house no / flat / street / area)
+    street: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 2
+    },
+
+    // Optional explicit house number for structured use-cases
+    houseNo: {
+      type: String,
+      trim: true
+    },
+
+    // Backward-compatible aliases from older/newer clients
+    address: {
+      type: String,
+      trim: true
+    },
+
+    addressLine1: {
+      type: String,
+      trim: true
+    },
+
     pincode: {
       type: String,
       required: true,
       match: /^\d{6}$/
+    },
+
+    landmark: {
+      type: String,
+      trim: true
     },
 
     moreInfo: {

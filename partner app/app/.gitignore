@@ -68,3 +68,20 @@ stores/**/*.js
 utils/**/*.js
 App.js
 index.js
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# Caches / temp
+.cache/
+coverage/
+tmp/
+temp/
+*.tmp
+
+# Runtime dumps
+*.pid
+*.seed
+*.stackdump

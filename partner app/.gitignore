@@ -1,0 +1,36 @@
+﻿# dependencies
+node_modules/
+
+# env
+.env
+.env*
+*.local
+
+# Expo / React Native
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+android/
+ios/
+
+# logs / build
+*.log
+*.apk
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+
+# temp
+.cache/
+tmp/
+temp/
+*.tmp

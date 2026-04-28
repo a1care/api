@@ -74,11 +74,23 @@ export function DoctorStaffManagementPage() {
         }
     }, [initialSearch]);
 
+    const normalizeDoctorsPayload = (payload: any) => {
+        if (Array.isArray(payload)) {
+            return {
+                items: payload,
+                total: payload.length,
+                totalPages: 1,
+                page: 1,
+            };
+        }
+        return payload || { items: [], total: 0, totalPages: 1, page: 1 };
+    };
+
     const { data: staffData, isLoading } = useQuery({
         queryKey: ["admin_staff", page, searchQuery],
         queryFn: async () => {
             const res = await api.get(`/admin/doctors?page=${page}&limit=50&search=${searchQuery}`);
-            return res.data.data;
+            return normalizeDoctorsPayload(res.data.data);
         }
     });
 

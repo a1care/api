@@ -7,6 +7,7 @@ import { Clock, CheckCircle2, XCircle, Calendar, CreditCard, Search, Eye, Check,
 interface ServiceBooking {
     _id: string;
     patientId: { name: string; mobile: string };
+    doctorId?: { name?: string; specialization?: string[]; mobileNumber?: string };
     serviceId: { name: string };
     status: "Pending" | "Confirmed" | "Completed" | "Cancelled";
     paymentStatus: "PENDING" | "COMPLETED" | "FAILED";
@@ -36,12 +37,37 @@ export function OPBookingsPage() {
     const [doctorFilter, setDoctorFilter] = useState("All");
     const [departmentFilter, setDepartmentFilter] = useState("All");
     const [slotFilter, setSlotFilter] = useState("All");
+    const STATUS_UI_TO_API: Record<string, string> = {
+        All: "All",
+        PENDING: "Pending",
+        CONFIRMED: "Confirmed",
+        COMPLETED: "Completed",
+        CANCELLED: "Cancelled",
+    };
+    const normalizeBookingPayload = (payload: any) => {
+        if (Array.isArray(payload)) {
+            return {
+                items: payload,
+                total: payload.length,
+                page: 1,
+                totalPages: 1,
+                stats: {
+                    all: payload.length,
+                    pending: 0,
+                    confirmed: 0,
+                    completed: 0,
+                    cancelled: 0,
+                },
+            };
+        }
+        return payload || { items: [], total: 0, page: 1, totalPages: 1, stats: { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 } };
+    };
 
     // Fetching Bookings
     const deferredSearch = useDeferredValue(searchQuery);
 
     const { data: serviceData, isLoading: loadingServices, isFetching: fetchingServices } = useQuery({
-        queryKey: ["admin_service_bookings", page, deferredSearch, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
+        queryKey: ["admin_service_bookings", page, deferredSearch, statusFilter, dateFrom, dateTo, paymentFilter, sourceFilter, patientTypeFilter, doctorFilter, departmentFilter, slotFilter],
         queryFn: async () => {
             const params = new URLSearchParams({ page: page.toString(), limit: "60" });
             if (deferredSearch) params.append("search", deferredSearch);
@@ -53,10 +79,19 @@ export function OPBookingsPage() {
             if (doctorFilter !== "All") params.append("doctor", doctorFilter);
             if (slotFilter !== "All") params.append("slot", slotFilter);
             if (patientTypeFilter !== "All") params.append("patientType", patientTypeFilter);
-            params.append("fulfillmentMode", "HOSPITAL_VISIT"); // Essential for OP tokens
+            if (statusFilter !== "All") params.append("status", STATUS_UI_TO_API[statusFilter] || statusFilter);
 
-            const res = await api.get(`/admin/bookings/services?${params.toString()}`);
-            return res.data.data;
+            const res = await api.get(`/admin/bookings/doctors?${params.toString()}`);
+            const payload = normalizeBookingPayload(res.data.data);
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            const normalizedItems = items.map((item: any) => {
+                const specialization = Array.isArray(item?.doctorId?.specialization) ? item.doctorId.specialization[0] : "";
+                return {
+                    ...item,
+                    serviceId: item.serviceId || { name: specialization || item?.doctorId?.name || "Doctor Consultation" },
+                };
+            });
+            return { ...payload, items: normalizedItems };
         },
         placeholderData: (prev) => prev
     });
@@ -75,8 +110,13 @@ export function OPBookingsPage() {
 
     const updateStatusMutation = useMutation({
         mutationFn: async ({ id, status }: { id: string, status: string }) => {
-            const endpoint = `/admin/bookings/services/${id}/status`;
-            const res = await api.put(endpoint, { status });
+            const endpoint = `/admin/bookings/doctors/${id}/status`;
+            const statusMap: Record<string, string> = {
+                CONFIRMED: "Confirmed",
+                COMPLETED: "Completed",
+                CANCELLED: "Cancelled",
+            };
+            const res = await api.put(endpoint, { status: statusMap[status] || status });
             return res.data;
         },
         onSuccess: () => {

@@ -53,15 +53,44 @@ export function TicketsPage() {
 
     useEffect(() => {
         setLoading(true);
-        api.get(`/tickets/all?page=${page}&limit=50&search=${searchQuery}&status=${statusFilter}`)
+
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('limit', '50');
+        if (searchQuery.trim()) params.set('search', searchQuery.trim());
+        if (statusFilter !== 'All') params.set('status', statusFilter);
+
+        api.get(`/tickets/all?${params.toString()}`)
             .then(res => {
-                const rawData = res.data.data;
-                setTickets(Array.isArray(rawData.items) ? rawData.items : []);
-                setTotalPages(rawData.totalPages || 1);
+                const payload = res?.data?.data;
+
+                const items = Array.isArray(payload)
+                    ? payload
+                    : Array.isArray(payload?.items)
+                        ? payload.items
+                        : Array.isArray(payload?.tickets)
+                            ? payload.tickets
+                            : Array.isArray(payload?.results)
+                                ? payload.results
+                                : [];
+
+                const pages = Number(
+                    payload?.totalPages ??
+                    payload?.pages ??
+                    payload?.pageCount ??
+                    payload?.meta?.totalPages ??
+                    1
+                );
+
+                setTickets(items);
+                setTotalPages(Number.isFinite(pages) && pages > 0 ? pages : 1);
                 setLoading(false);
             })
             .catch(err => {
-                console.error("Failed to load tickets", err);
+                console.error('Failed to load tickets', err);
+                toast.error(err?.response?.data?.message || 'Failed to load tickets');
+                setTickets([]);
+                setTotalPages(1);
                 setLoading(false);
             });
     }, [refreshQueue, page, searchQuery, statusFilter]);
@@ -166,7 +195,7 @@ export function TicketsPage() {
             <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="relative group flex-1 max-w-2xl">
                     <div className="absolute left-6 top-1/2 -translate-y-1/2 z-10">
-                        <Search className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                        {/* <Search className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} /> */}
                     </div>
                     <input 
                         type="text" 

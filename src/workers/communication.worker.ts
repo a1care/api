@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import { Worker } from "bullmq";
+import { Job, Worker } from "bullmq";
 import { getQueueRedisConnection } from "../queues/redisConnection.js";
 import { sendPush, sendPushToMany } from "../utils/sendPushNotification.js";
 import {
@@ -19,7 +19,7 @@ if (!connection || process.env.ENABLE_QUEUE !== "true") {
 
 new Worker(
   "a1care-communications",
-  async (job) => {
+  async (job: Job) => {
     if (job.name === "push") {
       await sendPush(job.data);
       return;

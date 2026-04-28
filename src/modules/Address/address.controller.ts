@@ -6,12 +6,31 @@ import { Patient } from "../Authentication/patient.model.js";
 import { UserAddressModel } from "./address.model.js";
 import { addressValidation } from "./address.schema.js";
 
+const deriveHouseNo = (street?: string) => {
+    const firstChunk = String(street || "").split(",")[0]?.trim() || "";
+    return firstChunk || undefined;
+};
+
+const normalizeAddressPayload = (body: any, userId: string) => {
+    const street = String(body?.street || body?.address || body?.addressLine1 || "").trim();
+    const houseNo = String(body?.houseNo || deriveHouseNo(street) || "").trim();
+    return {
+        ...body,
+        userId,
+        street,
+        // keep aliases synced for compatibility with multiple client versions
+        address: String(body?.address || street || "").trim(),
+        addressLine1: String(body?.addressLine1 || street || "").trim(),
+        houseNo: houseNo || undefined
+    };
+};
+
 export const addAddress = asyncHandler(async (req, res) => {
     const userId = req.user?.id
-    const payload = {
-        ...req.body,
-        userId
+    if (!userId) {
+        throw new ApiError(401, "Not authorized")
     }
+    const payload = normalizeAddressPayload(req.body, userId)
 
     const parsed = addressValidation.safeParse(payload)
     if (!parsed.success) {
@@ -115,11 +134,11 @@ export const makePrimaryAddress = asyncHandler(async (req, res) => {
 export const updateAddress = asyncHandler(async (req, res) => {
     const { addressId } = req.params
     const userId = req.user?.id
-
-    const payload = {
-        ...req.body,
-        userId
+    if (!userId) {
+        throw new ApiError(401, "Not authorized")
     }
+
+    const payload = normalizeAddressPayload(req.body, userId)
 
     const parsed = addressValidation.safeParse(payload)
     if (!parsed.success) {

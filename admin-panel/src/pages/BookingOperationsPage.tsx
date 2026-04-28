@@ -35,7 +35,7 @@ interface HospitalBooking extends BaseBooking {
 export function BookingOperationsPage() {
     const [searchParams] = useSearchParams();
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState<"doctors" | "services" | "hospital">("doctors");
+    const [activeTab, setActiveTab] = useState<"doctors" | "services" | "hospital">("services");
     const [searchQuery, setSearchQuery] = useState("");
 
     const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "All");
@@ -54,6 +54,32 @@ export function BookingOperationsPage() {
     const [departmentFilter, setDepartmentFilter] = useState("All");
     const [serviceFilter, setServiceFilter] = useState("All");
     const [subServiceFilter, setSubServiceFilter] = useState("All");
+    const DOCTOR_STATUS_UI_TO_API: Record<string, string> = {
+        All: "All",
+        PENDING: "Pending",
+        CONFIRMED: "Confirmed",
+        COMPLETED: "Completed",
+        CANCELLED: "Cancelled",
+    };
+
+    const normalizeBookingPayload = (payload: any) => {
+        if (Array.isArray(payload)) {
+            return {
+                items: payload,
+                total: payload.length,
+                page: 1,
+                totalPages: 1,
+                stats: {
+                    all: payload.length,
+                    pending: 0,
+                    confirmed: 0,
+                    completed: 0,
+                    cancelled: 0,
+                },
+            };
+        }
+        return payload || { items: [], total: 0, page: 1, totalPages: 1, stats: { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 } };
+    };
 
     // Fetching Bookings
     const { data: doctorData, isLoading: loadingDocs } = useQuery({
@@ -61,14 +87,14 @@ export function BookingOperationsPage() {
         queryFn: async () => {
             if (activeTab !== "doctors") return null;
             const params = new URLSearchParams({ page: page.toString(), limit: "55" });
-            if (statusFilter !== "All") params.append("status", statusFilter);
+            if (statusFilter !== "All") params.append("status", DOCTOR_STATUS_UI_TO_API[statusFilter] || statusFilter);
             if (deferredSearch) params.append("search", deferredSearch);
             if (dateFrom) params.append("dateFrom", dateFrom);
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
             if (subServiceFilter !== "All") params.append("subService", subServiceFilter);
             const res = await api.get(`/admin/bookings/doctors?${params.toString()}`);
-            return res.data.data;
+            return normalizeBookingPayload(res.data.data);
         },
         placeholderData: (prev) => prev
     });
@@ -86,7 +112,7 @@ export function BookingOperationsPage() {
             if (serviceFilter !== "All") params.append("service", serviceFilter);
             if (departmentFilter !== "All") params.append("department", departmentFilter);
             const res = await api.get(`/admin/bookings/services?${params.toString()}`);
-            return res.data.data;
+            return normalizeBookingPayload(res.data.data);
         },
         placeholderData: (prev) => prev
     });
@@ -102,7 +128,7 @@ export function BookingOperationsPage() {
             if (dateTo) params.append("dateTo", dateTo);
             if (paymentFilter !== "All") params.append("payment", paymentFilter);
             const res = await api.get(`/admin/bookings/hospital?${params.toString()}`);
-            return res.data.data;
+            return normalizeBookingPayload(res.data.data);
         },
         placeholderData: (prev) => prev
     });
@@ -162,6 +188,15 @@ export function BookingOperationsPage() {
     const handleAcceptServiceWithHospital = () => {
         if (!acceptServiceModal || !selectedHospitalId) return;
         handleUpdateStatus(acceptServiceModal.bookingId, "service", "ACCEPTED", selectedHospitalId);
+    };
+
+    const getBookingDisplayName = (booking: any) => {
+        const notes = String(booking?.notes || "").trim();
+        if (notes.startsWith("Symptom:")) return notes.replace("Symptom:", "").trim();
+        if (notes.startsWith("Dept:")) return notes.replace("Dept:", "").trim();
+        if (activeTab === "doctors") return booking.doctorId?.name || "Doctor Consult";
+        if (activeTab === "services") return booking.serviceId?.name || "Service Request";
+        return booking.serviceName || "Hospital Task";
     };
 
     const activeDataset = activeTab === "doctors" ? doctorData : activeTab === "services" ? serviceData : hospitalData;
@@ -373,7 +408,7 @@ export function BookingOperationsPage() {
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="text-sm font-bold text-[var(--text-main)] truncate max-w-[250px]">
-                                                    {activeTab === "doctors" ? booking.doctorId?.name : activeTab === "services" ? booking.serviceId?.name : booking.serviceName}
+                                                    {getBookingDisplayName(booking)}
                                                 </div>
                                             </td>
                                             <td className="py-5 px-6">

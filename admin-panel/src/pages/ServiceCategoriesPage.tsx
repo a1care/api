@@ -175,7 +175,7 @@ export function ServiceCategoriesPage() {
 
                 <div className="flex flex-wrap items-center gap-4">
                     <div className="relative group min-w-[300px]">
-                        <Search size={18} className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
+                        {/* <Search size={18} className="absolute text-[var(--text-muted)] group-focus-within:text-blue-500 transition-colors" style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }} /> */}
                         <input
                             type="text"
                             placeholder="Search portfolios..."

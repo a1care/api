@@ -110,7 +110,7 @@ export function PayoutsPage() {
 
             {/* Search Row */}
             <div className="relative group max-w-md">
-                <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                {/* <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" /> */}
                 <input
                     type="text"
                     placeholder="Search by Partner, Mobile, Bank or ID..."

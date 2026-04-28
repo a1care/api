@@ -244,7 +244,7 @@ export function AppLayout() {
               {servicesOpen && (
                 <div className="submenu-list">
                   {[
-                    { to: "/service-portfolio", label: "Portfolios Hub", icon: Briefcase },
+                    // { to: "/service-portfolio", label: "Portfolios Hub", icon: Briefcase },
                     { to: "/service-categories", label: "Master Categories", icon: LayoutGrid },
                     { to: "/service-subcategories", label: "Sub-Categories", icon: Layers },
                     { to: "/service-child-services", label: "Catalog Offerings", icon: Tag },
