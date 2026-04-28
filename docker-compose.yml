@@ -1,7 +1,7 @@
 services:
   api:
     build:
-      context: ./a1care backend
+      context: .
       dockerfile: Dockerfile
     container_name: a1care-api
     restart: always
@@ -11,7 +11,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
     env_file:
-      - ./a1care backend/.env
+      - ./.env
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 5s
