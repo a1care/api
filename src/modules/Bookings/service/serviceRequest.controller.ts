@@ -245,7 +245,7 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     if (
         status === "CANCELLED" &&
         existing.status !== "CANCELLED" &&
-        existing.paymentStatus === "COMPLETED" &&
+        (existing as any).paymentStatus === "COMPLETED" &&
         (existing.price ?? 0) > 0
     ) {
         const refundDescription = `REFUND:SERVICE:${id}`;

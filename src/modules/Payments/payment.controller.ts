@@ -221,7 +221,7 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
         // Try Doctor Appointment
         const appointment = await DoctorAppointment.findById(order.referenceId);
         if (appointment) {
-            appointment.paymentStatus = "COMPLETED";
+            (appointment as any).paymentStatus = "COMPLETED";
             appointment.status = "Confirmed";
             appointment.isConfirmed = true;
             await appointment.save();
@@ -231,7 +231,7 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
         } else {
             const serviceReq = await ServiceRequest.findById(order.referenceId);
             if (serviceReq) {
-                serviceReq.paymentStatus = "COMPLETED";
+                (serviceReq as any).paymentStatus = "COMPLETED";
                 await serviceReq.save();
                 if (service && typeof service.logEvent === 'function') {
                     await service.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Updated Service Request payment: ${order.referenceId}`);

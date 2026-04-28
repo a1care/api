@@ -683,7 +683,7 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
   // Build Search Query
   if (search && search !== "") {
     const s = new RegExp(search as string, 'i');
-    const searchConditions = [
+    const searchConditions: any[] = [
       { name: s },
       { mobileNumber: s }
     ];
@@ -1305,7 +1305,7 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
         patientId: booking.patientId._id,
         serviceName: (booking.doctorId as any)?.specialization?.[0] || 'Doctor Consult',
         totalAmount: booking.totalAmount || 0,
-        paymentStatus: booking.paymentStatus || 'PENDING',
+        paymentStatus: (booking as any).paymentStatus || 'PENDING',
         status: 'ACCEPTED',
         acceptedAt: new Date()
       },
@@ -1340,7 +1340,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
   if (
     status === "CANCELLED" &&
     existing.status !== "CANCELLED" &&
-    existing.paymentStatus === "COMPLETED" &&
+    (existing as any).paymentStatus === "COMPLETED" &&
     (existing.price ?? 0) > 0
   ) {
     await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), `REFUND:SERVICE:${id}`);
@@ -1944,7 +1944,7 @@ export const getDeletionRequests = asyncHandler(async (req, res) => {
     type: 'patient',
     name: p.name,
     mobileNumber: p.mobileNumber,
-    requestedAt: p.deletionRequestedAt || (p as any).updatedAt || (p as any).createdAt
+    requestedAt: (p as any).deletionRequestedAt || (p as any).updatedAt || (p as any).createdAt
   }));
 
   const shapedStaff = staff.map(s => ({
@@ -1952,7 +1952,7 @@ export const getDeletionRequests = asyncHandler(async (req, res) => {
     type: 'staff',
     name: s.name,
     mobileNumber: s.mobileNumber,
-    requestedAt: s.deletionRequestedAt || (s as any).updatedAt || (s as any).createdAt
+    requestedAt: (s as any).deletionRequestedAt || (s as any).updatedAt || (s as any).createdAt
   }));
 
   const allRequests = [...shapedPatients, ...shapedStaff].sort(
@@ -1977,10 +1977,10 @@ export const approveDeletion = asyncHandler(async (req, res) => {
 
   if (!user) throw new ApiError(404, "User not found");
 
-  user.isDeleted = true;
-  user.deletedAt = new Date();
-  user.deletionRequested = false;
-  user.fcmToken = "";
+  (user as any).isDeleted = true;
+  (user as any).deletedAt = new Date();
+  (user as any).deletionRequested = false;
+  (user as any).fcmToken = "";
   await user.save();
 
   await AuditLog.create({
@@ -1998,11 +1998,11 @@ const isValidTimeString = (value: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(
 
 export const getDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
   const { doctorId } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+  if (!doctorId || !mongoose.Types.ObjectId.isValid(doctorId)) {
     throw new ApiError(400, "Invalid doctorId");
   }
 
-  const availability = await DoctorAvailability.findOne({ doctorId: new mongoose.Types.ObjectId(doctorId) });
+  const availability = await DoctorAvailability.findOne({ doctorId: new mongoose.Types.ObjectId(doctorId as string) });
   return res.status(200).json(new ApiResponse(200, "Doctor availability fetched", availability));
 });
 
@@ -2010,7 +2010,7 @@ export const upsertDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
   const { doctorId } = req.params;
   const { weekDays, startingTime, endingTime, slotDuration } = req.body || {};
 
-  if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+  if (!doctorId || !mongoose.Types.ObjectId.isValid(doctorId)) {
     throw new ApiError(400, "Invalid doctorId");
   }
 
@@ -2027,8 +2027,8 @@ export const upsertDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
     throw new ApiError(400, "startingTime and endingTime must be in HH:mm format");
   }
 
-  const [sh, sm] = startingTime.split(":").map(Number);
-  const [eh, em] = endingTime.split(":").map(Number);
+  const [sh = 0, sm = 0] = startingTime.split(":").map(Number);
+  const [eh = 0, em = 0] = endingTime.split(":").map(Number);
   const startMinutes = sh * 60 + sm;
   const endMinutes = eh * 60 + em;
   if (endMinutes <= startMinutes) {
@@ -2041,9 +2041,9 @@ export const upsertDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
   }
 
   const updated = await DoctorAvailability.findOneAndUpdate(
-    { doctorId: new mongoose.Types.ObjectId(doctorId) },
+    { doctorId: new mongoose.Types.ObjectId(doctorId as string) },
     {
-      doctorId: new mongoose.Types.ObjectId(doctorId),
+      doctorId: new mongoose.Types.ObjectId(doctorId as string),
       weekDays,
       startingTime,
       endingTime,
