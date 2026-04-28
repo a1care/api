@@ -1993,3 +1993,64 @@ export const approveDeletion = asyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200, "Account successfully marked as deleted"));
 });
+
+const isValidTimeString = (value: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+
+export const getDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
+  const { doctorId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+    throw new ApiError(400, "Invalid doctorId");
+  }
+
+  const availability = await DoctorAvailability.findOne({ doctorId: new mongoose.Types.ObjectId(doctorId) });
+  return res.status(200).json(new ApiResponse(200, "Doctor availability fetched", availability));
+});
+
+export const upsertDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
+  const { doctorId } = req.params;
+  const { weekDays, startingTime, endingTime, slotDuration } = req.body || {};
+
+  if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+    throw new ApiError(400, "Invalid doctorId");
+  }
+
+  const doctor = await Doctor.findById(doctorId);
+  if (!doctor) {
+    throw new ApiError(404, "Doctor not found");
+  }
+
+  if (!Array.isArray(weekDays) || weekDays.length === 0 || !weekDays.every((d: any) => Number.isInteger(d) && d >= 0 && d <= 6)) {
+    throw new ApiError(400, "weekDays must be a non-empty array of numbers from 0 to 6");
+  }
+
+  if (typeof startingTime !== "string" || typeof endingTime !== "string" || !isValidTimeString(startingTime) || !isValidTimeString(endingTime)) {
+    throw new ApiError(400, "startingTime and endingTime must be in HH:mm format");
+  }
+
+  const [sh, sm] = startingTime.split(":").map(Number);
+  const [eh, em] = endingTime.split(":").map(Number);
+  const startMinutes = sh * 60 + sm;
+  const endMinutes = eh * 60 + em;
+  if (endMinutes <= startMinutes) {
+    throw new ApiError(400, "endingTime must be greater than startingTime");
+  }
+
+  const durationNum = Number(slotDuration);
+  if (!Number.isFinite(durationNum) || durationNum <= 0) {
+    throw new ApiError(400, "slotDuration must be a positive number");
+  }
+
+  const updated = await DoctorAvailability.findOneAndUpdate(
+    { doctorId: new mongoose.Types.ObjectId(doctorId) },
+    {
+      doctorId: new mongoose.Types.ObjectId(doctorId),
+      weekDays,
+      startingTime,
+      endingTime,
+      slotDuration: String(durationNum),
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+  return res.status(200).json(new ApiResponse(200, "Doctor availability saved", updated));
+});

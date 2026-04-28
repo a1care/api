@@ -265,3 +265,16 @@ export const getConsultationCredentials = asyncHandler(async (req, res) => {
         userName: userName
     }));
 });
+
+export const getAppointmentById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id) throw new ApiError(400, "Appointment ID is required");
+
+    const appointment = await doctorAppointmentModel.findById(id)
+        .populate("doctorId")
+        .populate("patientId");
+
+    if (!appointment) throw new ApiError(404, "Appointment not found");
+
+    return res.status(200).json(new ApiResponse(200, "Appointment fetched", appointment));
+});

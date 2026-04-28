@@ -1,5 +1,5 @@
 import express from 'express'
-import { createDoctorAppointment, getAppointmentsByPatientId, getPendingAppointmentbyProviderId, updateDoctorAppointmentStatus, getConsultationCredentials } from './doctorAppointment.controller.js'
+import { createDoctorAppointment, getAppointmentsByPatientId, getPendingAppointmentbyProviderId, updateDoctorAppointmentStatus, getConsultationCredentials, getAppointmentById } from './doctorAppointment.controller.js'
 import { getProviderUnifiedFeed } from './unifiedBooking.controller.js'
 import { protect } from '../../middlewares/protect.js'
 import { updateLocation, getLocation } from './location.controller.js';
@@ -13,6 +13,7 @@ router.patch('/status/:id', protect, updateDoctorAppointmentStatus)
 router.get('/patient/appointments', protect, getAppointmentsByPatientId)
 router.get('/provider/appointments', protect, getPendingAppointmentbyProviderId)
 router.get('/consultation/:id/token', protect, getConsultationCredentials)
+router.get('/:id', protect, getAppointmentById)
 
 // Live Tracking
 router.post('/location/update', protect, updateLocation);
