@@ -7,6 +7,14 @@ const objectId = z
 const scheduledSlotSchema = z.object({
     startTime: z.coerce.date(),
     endTime: z.coerce.date()
+}).superRefine((slot, ctx) => {
+    if (slot.endTime.getTime() < slot.startTime.getTime()) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "endTime must be greater than or equal to startTime",
+            path: ["endTime"]
+        });
+    }
 });
 
 const locationSchema = z.object({
@@ -43,3 +51,4 @@ const serviceRequestValiation = z.object({
 })
 
 export default serviceRequestValiation
+

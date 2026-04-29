@@ -34,8 +34,23 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const finalPrice = childSvc?.price ?? healthPkg?.price ?? 0;
     const bookingName = childSvc?.name ?? healthPkg?.name ?? "Service";
 
+    // Backward compatibility for live app payloads where scheduledSlot endTime equals startTime.
+    // Normalize to a default 30-minute slot to avoid validation failure.
+    const normalizeScheduledSlot = (slot: any) => {
+        if (!slot?.startTime) return slot;
+        const start = new Date(slot.startTime);
+        if (Number.isNaN(start.getTime())) return slot;
+
+        const endRaw = slot?.endTime ? new Date(slot.endTime) : null;
+        if (!endRaw || Number.isNaN(endRaw.getTime()) || endRaw.getTime() <= start.getTime()) {
+            const fixedEnd = new Date(start.getTime() + 30 * 60 * 1000);
+            return { ...slot, startTime: start, endTime: fixedEnd };
+        }
+        return { ...slot, startTime: start, endTime: endRaw };
+    };
     const payload = {
         ...req.body,
+        scheduledSlot: normalizeScheduledSlot(req.body?.scheduledSlot),
         userId,
         price: finalPrice,
         bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
@@ -327,4 +342,5 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Status updated", booking));
 });
+
 
