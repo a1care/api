@@ -284,6 +284,20 @@ export const registerStaff = asyncHandler(async (req, res) => {
     updateData.isRegistered = true;
   }
 
+  // If previously rejected and partner re-submits details, move back to Pending for admin review.
+  const hasReuploadData =
+    req.body.documents !== undefined ||
+    req.body.name !== undefined ||
+    req.body.specialization !== undefined ||
+    req.body.about !== undefined ||
+    req.body.bankDetails !== undefined ||
+    req.body.workingHours !== undefined;
+  if (findStaff.status === "Rejected" && hasReuploadData) {
+    updateData.status = "Pending";
+    updateData.resubmittedAt = new Date();
+    updateData.resubmissionCount = (findStaff.resubmissionCount || 0) + 1;
+  }
+
   const updatedStaff = await doctorModel.findByIdAndUpdate(
     staffId,
     { $set: updateData },

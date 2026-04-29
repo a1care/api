@@ -988,7 +988,7 @@ export const getUserDetails = asyncHandler(async (req, res) => {
 
 export const updateUserStatus = asyncHandler(async (req, res) => {
   const { id, category } = req.params;
-  const { status, isRegistered } = req.body;
+  const { status, isRegistered, rejectionReason } = req.body;
 
   if (!isDbOnline()) {
     throw new ApiError(503, "Database offline");
@@ -1000,7 +1000,25 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, "Patient status updated", user));
   }
 
-  const user = await Doctor.findByIdAndUpdate(id, { status, isRegistered }, { new: true });
+  const nextStatus = status as "Pending" | "Active" | "Rejected" | undefined;
+  if (nextStatus === "Rejected" && (!rejectionReason || !String(rejectionReason).trim())) {
+    throw new ApiError(400, "Rejection reason is required");
+  }
+
+  const updateDoc: any = { status: nextStatus, isRegistered };
+  if (nextStatus === "Rejected") {
+    updateDoc.rejectionReason = String(rejectionReason).trim();
+    updateDoc.rejectedAt = new Date();
+  }
+  if (nextStatus === "Active") {
+    updateDoc.rejectionReason = "";
+    updateDoc.rejectedAt = null;
+  }
+  if (nextStatus === "Pending") {
+    updateDoc.resubmittedAt = new Date();
+  }
+
+  const user = await Doctor.findByIdAndUpdate(id, updateDoc, { new: true });
   if (!user) throw new ApiError(404, "User not found");
   return res.status(200).json(new ApiResponse(200, "User status updated", user));
 });

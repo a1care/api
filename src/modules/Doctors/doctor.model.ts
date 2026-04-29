@@ -6,7 +6,11 @@ export interface DoctorDocument extends Document {
   gender: "Male" | "Female" | "Other";
   startExperience: Date;
   specialization: string[];
-  status: "Pending" | "Active" | "Inactive";
+  status: "Pending" | "Active" | "Rejected";
+  rejectionReason?: string;
+  rejectedAt?: Date | null;
+  resubmittedAt?: Date | null;
+  resubmissionCount?: number;
   consultationFee: number;
   homeConsultationFee: number;
   onlineConsultationFee: number;
@@ -55,8 +59,25 @@ const DoctorSchema = new Schema<DoctorDocument>(
 
     status: {
       type: String,
-      enum: ["Pending", "Active", "Inactive"],
+      enum: ["Pending", "Active", "Rejected"],
       default: "Pending"
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    rejectedAt: {
+      type: Date,
+      default: null
+    },
+    resubmittedAt: {
+      type: Date,
+      default: null
+    },
+    resubmissionCount: {
+      type: Number,
+      default: 0
     },
 
     consultationFee: {

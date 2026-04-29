@@ -18,7 +18,8 @@ const doctorValidation = z.object({
         type: z.string(),
         url: z.string()
     })).optional(),
-    status: z.enum(["Pending", "Active", "Inactive"]).optional(),
+    status: z.enum(["Pending", "Active", "Rejected"]).optional(),
+    rejectionReason: z.string().optional(),
     isRegistered: z.boolean().optional(),
     vehicleNumber: z.string().optional(),
     vehicleType: z.string().optional(),
