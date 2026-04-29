@@ -42,19 +42,28 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
         status: { $in: srStatus }
     }).populate("userId", "name mobileNumber profileImage").populate("childServiceId");
 
-    // 3. Fetch Broadcasted Service Requests (only for 'Pending' tab and if role matches)
+    // 3. Fetch Broadcasted Service Requests (only for 'Pending' tab and role-compatible)
     let broadcastedServices: any[] = [];
     if (status === 'Pending' || !status) {
         broadcastedServices = await ServiceRequest.find({
             status: "BROADCASTED",
-            // We need to check if the childService allows this provider's role
-            // This is efficient if we join or do a two-step query
+            $or: [
+                { assignedProviderId: { $exists: false } },
+                { assignedProviderId: null },
+                { assignedProviderId: providerId }, // safety: if already pre-assigned to this provider
+            ],
         }).populate("userId", "name mobileNumber profileImage").populate("childServiceId");
-        
-        // Filter those where provider.roleId is in childServiceId.allowedRoleIds
+
+        // Filter where provider.roleId is allowed.
+        // If no allowedRoleIds configured, keep visible (backward-compatible for legacy records).
         broadcastedServices = broadcastedServices.filter(s => {
             const allowed = (s.childServiceId as any)?.allowedRoleIds || [];
-            return allowed.some((id: any) => id.toString() === provider.roleId.toString());
+            if (!Array.isArray(allowed) || allowed.length === 0) return true;
+            const providerRoleId = (provider as any)?.roleId?.toString?.() || "";
+            return allowed.some((id: any) => {
+                const raw = (id as any)?._id ? (id as any)._id : id;
+                return raw?.toString?.() === providerRoleId;
+            });
         });
     }
 
