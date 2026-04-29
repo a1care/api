@@ -48,7 +48,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const parsed = serviceRequestValiation.safeParse(payload);
     if (!parsed.success) {
         console.error("Validation failed!", parsed.error);
-        throw new ApiError(400, "Validation failed: " + parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
+        throw new ApiError(400, "Validation failed: " + (parsed.error as any).errors.map((e: any) => `${e.path?.join('.') || ''}: ${e.message}`).join(', '));
     }
 
     if (payload.paymentMode === 'ONLINE' && !payload.isGatewayPayment) {
