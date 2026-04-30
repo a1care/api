@@ -60,6 +60,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             const allowed = (s.childServiceId as any)?.allowedRoleIds || [];
             if (!Array.isArray(allowed) || allowed.length === 0) return true;
             const providerRoleId = (provider as any)?.roleId?.toString?.() || "";
+            if (!providerRoleId) return true; // Backward compatibility for partners without a role assigned
             return allowed.some((id: any) => {
                 const raw = (id as any)?._id ? (id as any)._id : id;
                 return raw?.toString?.() === providerRoleId;
