@@ -1,0 +1,35 @@
+﻿# dependencies
+node_modules/
+
+# env
+.env
+.env*
+*.local
+
+# build / runtime
+/dist/
+/build/
+coverage/
+*.log
+*.pid
+*.seed
+*.stackdump
+
+# TypeScript
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+
+# temp
+.cache/
+tmp/
+temp/
+*.tmp
+
+# uploads / generated
+uploads/

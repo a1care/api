@@ -160,3 +160,25 @@ test-mongo.js
 build_log*.txt
 screen*.png
 
+# Build and local artifacts
+api.zip
+payload.json
+repos.json
+test_token.txt
+dev_server.log
+server_runtime.log
+seed_output.txt
+remote_info.txt
+dist/
+uploads/
+project_analysis/
+_antigravity/
+scratch/
+seed-diagnostics.ts
+seed-subscriptions.ts
+seed.ts
+check-db.ts
+create-test-admin.ts
+update-admin.ts
+tempSeed.mjs
+test-mongo.ts

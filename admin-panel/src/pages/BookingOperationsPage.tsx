@@ -145,9 +145,17 @@ export function BookingOperationsPage() {
         queryKey: ["admin_doctors_list"],
         queryFn: async () => {
             const res = await api.get("/admin/doctors");
-            return res.data.data as { _id: string; name: string; mobileNumber?: string }[];
+            const payload = res.data?.data;
+            if (Array.isArray(payload)) return payload as { _id: string; name: string; mobileNumber?: string }[];
+            if (Array.isArray(payload?.items)) return payload.items as { _id: string; name: string; mobileNumber?: string }[];
+            return [];
         }
     });
+    const normalizedDoctorsList = Array.isArray(doctorsList)
+        ? doctorsList
+        : Array.isArray((doctorsList as any)?.items)
+            ? (doctorsList as any).items
+            : [];
 
     const doctorCategory = categories?.find(c => c.type === 'doctor' || c.name.toLowerCase().includes('doctor'));
 
@@ -672,7 +680,7 @@ export function BookingOperationsPage() {
                             className="w-full h-12 px-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm font-medium text-[var(--text-main)] mb-4"
                         >
                             <option value="">Choose provider...</option>
-                            {(doctorsList || []).map((d) => (
+                            {normalizedDoctorsList.map((d) => (
                                 <option key={d._id} value={d._id}>{d.name} {d.mobileNumber ? `(${d.mobileNumber})` : ""}</option>
                             ))}
                         </select>

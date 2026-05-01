@@ -1,0 +1,158 @@
+{
+  "user_app": {
+    "appKey": "user_app",
+    "env": {
+      "apiBaseUrl": "",
+      "websiteBaseUrl": "",
+      "cmsBaseUrl": "",
+      "assetsBaseUrl": ""
+    },
+    "branding": {
+      "appName": "A1Care User App",
+      "logoUrl": "",
+      "splashImageUrl": "",
+      "primaryColor": "#1d4ed8",
+      "secondaryColor": "#0f172a",
+      "accentColor": "#22c55e"
+    },
+    "contact": {
+      "supportEmail": "",
+      "supportPhone": "",
+      "whatsappNumber": "",
+      "address": "",
+      "website": "",
+      "faq": "",
+      "privacyPolicy": "",
+      "termsAndConditions": ""
+    },
+    "landing": {
+      "headline": "",
+      "subHeadline": "",
+      "playStoreUrl": "",
+      "appStoreUrl": "",
+      "festivalBanners": []
+    },
+    "knowledgeBase": [],
+    "updatedAt": "2026-04-25T19:33:01.528Z"
+  },
+  "provider_app": {
+    "appKey": "provider_app",
+    "env": {
+      "apiBaseUrl": "",
+      "websiteBaseUrl": "",
+      "cmsBaseUrl": "",
+      "assetsBaseUrl": ""
+    },
+    "branding": {
+      "appName": "A1Care Provider App",
+      "logoUrl": "",
+      "splashImageUrl": "",
+      "primaryColor": "#1d4ed8",
+      "secondaryColor": "#0f172a",
+      "accentColor": "#22c55e"
+    },
+    "contact": {
+      "supportEmail": "",
+      "supportPhone": "",
+      "whatsappNumber": "",
+      "address": "",
+      "website": "",
+      "faq": "",
+      "privacyPolicy": "",
+      "termsAndConditions": ""
+    },
+    "landing": {
+      "headline": "",
+      "subHeadline": "",
+      "playStoreUrl": "",
+      "appStoreUrl": "",
+      "festivalBanners": []
+    },
+    "knowledgeBase": [],
+    "updatedAt": "2026-04-25T19:33:01.528Z"
+  },
+  "system": {
+    "website": {
+      "apiKey": "AIzaSyC4OkQrUi2FGx0hIV0fjDyD0Hwv7tQoo8w",
+      "authDomain": "a1carewebsite.firebaseapp.com",
+      "projectId": "a1carewebsite",
+      "storageBucket": "a1carewebsite.firebasestorage.app",
+      "messagingSenderId": "742774308338",
+      "appId": "1:742774308338:web:a4b403b3ded90987d57f6b",
+      "measurementId": "G-ZSZKQTXE94"
+    },
+    "projectNumber": "742774308338",
+    "projectId": "a1carewebsite",
+    "storageBucket": "a1carewebsite.firebasestorage.app",
+    "clients": [
+      {
+        "platform": "android",
+        "appLabel": "customer",
+        "appId": "1:742774308338:android:8d9bed5df8563aded57f6b",
+        "apiKey": "AIzaSyBMiouUypgK29NCCIWb7ImaPedjiC4BuDA",
+        "packageName": "com.a1care.customer"
+      },
+      {
+        "platform": "android",
+        "appLabel": "partner",
+        "appId": "1:742774308338:android:9e284d859cc3f88ad57f6b",
+        "apiKey": "AIzaSyBMiouUypgK29NCCIWb7ImaPedjiC4BuDA",
+        "packageName": "com.a1care.partner"
+      },
+      {
+        "platform": "ios",
+        "appLabel": "customer",
+        "appId": "1:742774308338:ios:9851205c6bcfd638d57f6b",
+        "apiKey": "AIzaSyDy87QysRYviXSwTTKCjmpM84DxAOc69zM",
+        "packageName": "com.a1care.customer.ios"
+      },
+      {
+        "platform": "ios",
+        "appLabel": "partner",
+        "appId": "1:742774308338:ios:d30961469549b8c8d57f6b",
+        "apiKey": "AIzaSyDy87QysRYviXSwTTKCjmpM84DxAOc69zM",
+        "packageName": "com.a1care.partner.ios"
+      }
+    ],
+    "firebase": {
+      "clientEmail": "",
+      "privateKey": ""
+    },
+    "googleMapsApiKey": "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o",
+    "maintenanceMode": false,
+    "easebuzz": {
+      "merchantKey": "NQOKGR29D",
+      "salt": "DZJLI6TFN",
+      "env": "test"
+    },
+    "email": {
+      "user": "support@a1care247.com",
+      "pass": "",
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "from": "A1Care <support@a1care247.com>"
+    },
+    "twilio": {
+      "accountSid": "",
+      "authToken": "",
+      "verifyServiceSid": ""
+    },
+    "aws": {
+      "accessKeyId": "",
+      "secretAccessKey": "",
+      "region": "ap-south-1",
+      "bucketName": "a1-care"
+    },
+    "redis": {
+      "url": "",
+      "host": "",
+      "port": 6379,
+      "pass": ""
+    },
+    "zego": {
+      "appId": 0,
+      "serverSecret": ""
+    },
+    "updatedAt": "2026-04-25T19:32:59.214Z"
+  }
+}

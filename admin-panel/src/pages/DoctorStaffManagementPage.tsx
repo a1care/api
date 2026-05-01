@@ -47,7 +47,8 @@ interface Doctor {
     gender: string;
     startExperience: string;
     specialization: string[];
-    status: "Pending" | "Active" | "Inactive";
+    status: "Pending" | "Active" | "Rejected";
+    rejectionReason?: string;
     consultationFee: number;
     documents?: { type: string; url: string }[];
 }
@@ -112,8 +113,8 @@ export function DoctorStaffManagementPage() {
     }, [searchQuery]);
 
     const updateStatusMutation = useMutation({
-        mutationFn: async ({ id, status }: { id: string, status: string }) => {
-            return api.put(`/admin/users/doctor/${id}/status`, { status, isRegistered: status === 'Active' });
+        mutationFn: async ({ id, status, rejectionReason }: { id: string, status: string, rejectionReason?: string }) => {
+            return api.put(`/admin/users/doctor/${id}/status`, { status, isRegistered: status === 'Active', rejectionReason });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin_staff"] });
@@ -293,7 +294,7 @@ export function DoctorStaffManagementPage() {
                         </button>
                     ) : (
                         <button
-                            onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Inactive' })}
+                            onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Rejected' })}
                             disabled={updateStatusMutation.isPending}
                             className="button secondary h-14 flex-1 border-none bg-rose-50 text-rose-600 hover:bg-rose-100 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
                         >
@@ -304,7 +305,14 @@ export function DoctorStaffManagementPage() {
                     
                     {doctor.status === 'Pending' && (
                         <button
-                            onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Inactive' })}
+                            onClick={() => {
+                                const reason = window.prompt("Reason for rejection (required):", "");
+                                if (!reason || !reason.trim()) {
+                                    toast.error("Rejection reason is required.");
+                                    return;
+                                }
+                                updateStatusMutation.mutate({ id: doctor._id, status: 'Rejected', rejectionReason: reason.trim() });
+                            }}
                             disabled={updateStatusMutation.isPending}
                             className="button secondary h-14 flex-1 border-none bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-100 gap-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
                         >

@@ -2,6 +2,8 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { Service } from "./service.model.js";
+import { SubService } from "./subService.model.js";
+import { ChildServiceModel as ChildService } from "./childService.model.js";
 import serviceValidation from "./service.schema.js";
 import mongoose from "mongoose";
 
@@ -40,7 +42,20 @@ export const getServices = asyncHandler(async (req, res) => {
 
 //delete service
 export const deleteService = asyncHandler(async (req, res) => {
-  const { id } = req.params
-  const deleteService = await Service.findByIdAndDelete(id)
-  res.status(200).json(new ApiResponse(200, "Deleted Successfully", deleteService))
-})
+  const { id } = req.params;
+
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid Service ID");
+  }
+
+  // Perform cascading delete
+  await SubService.deleteMany({ serviceId: id });
+  await ChildService.deleteMany({ serviceId: id });
+  const deletedService = await Service.findByIdAndDelete(id);
+
+  if (!deletedService) {
+    throw new ApiError(404, "Service not found");
+  }
+
+  res.status(200).json(new ApiResponse(200, "Service and all associated sub-services/child-services deleted successfully", deletedService));
+});

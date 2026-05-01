@@ -25,7 +25,7 @@ interface Doctor {
     gender: string;
     startExperience: string;
     specialization: string[];
-    status: "Pending" | "Active" | "Inactive";
+    status: "Pending" | "Active" | "Rejected";
     consultationFee: number;
     documents?: { type: string; url: string }[];
 }
@@ -36,6 +36,8 @@ export default function KYCVerificationPage() {
     const [page, setPage] = useState(1);
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [viewingDoc, setViewingDoc] = useState<{ type: string; url: string } | null>(null);
+    const [rejectingDoctor, setRejectingDoctor] = useState<Doctor | null>(null);
+    const [rejectReason, setRejectReason] = useState("");
 
     const { data: kycData, isLoading, isFetching } = useQuery({
         queryKey: ["admin_staff_kyc", page, searchQuery],
@@ -49,7 +51,11 @@ export default function KYCVerificationPage() {
             const items = data.items || [];
             return {
                 ...data,
-                items: items.filter((d: Doctor) => d.status === "Pending" || d.status === "Inactive")
+                items: items.filter((d: any) => {
+                    const s = String(d?.status || "").toLowerCase();
+                    // Include legacy "Inactive" records too, since older rejects were stored as Inactive.
+                    return s === "pending" || s === "rejected" || s === "inactive";
+                })
             };
         }
     });
@@ -58,19 +64,34 @@ export default function KYCVerificationPage() {
     const totalPages = kycData?.totalPages || 1;
 
     const updateStatusMutation = useMutation({
-        mutationFn: async ({ id, status }: { id: string, status: string }) => {
-            return api.put(`/admin/users/doctor/${id}/status`, { status, isRegistered: status === 'Active' });
+        mutationFn: async ({ id, status, rejectionReason }: { id: string, status: string, rejectionReason?: string }) => {
+            return api.put(`/admin/users/doctor/${id}/status`, { status, isRegistered: status === 'Active', rejectionReason });
         },
         onSuccess: () => {
             toast.success("Provider status updated successfully");
             queryClient.invalidateQueries({ queryKey: ["admin_staff_kyc"] });
             queryClient.invalidateQueries({ queryKey: ["admin-dashboard-overview"] });
             setSelectedDoctor(null);
+            setRejectingDoctor(null);
+            setRejectReason("");
         },
         onError: (err: any) => {
             toast.error(err?.response?.data?.message || "Verification failed");
         }
     });
+
+    const submitReject = () => {
+        if (!rejectingDoctor?._id) return;
+        if (!rejectReason.trim()) {
+            toast.error("Rejection reason is required");
+            return;
+        }
+        updateStatusMutation.mutate({
+            id: rejectingDoctor._id,
+            status: "Rejected",
+            rejectionReason: rejectReason.trim()
+        });
+    };
 
     // Removed early return to prevent page blinking
     // if (isLoading) {
@@ -187,7 +208,10 @@ export default function KYCVerificationPage() {
                                     <CheckCircle size={14} /> Approve
                                 </button>
                                 <button
-                                    onClick={() => updateStatusMutation.mutate({ id: doctor._id, status: 'Inactive' })}
+                                    onClick={() => {
+                                        setRejectingDoctor(doctor);
+                                        setRejectReason("");
+                                    }}
                                     className="px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-black py-3.5 rounded-2xl text-[10px] uppercase tracking-widest transition-all"
                                 >
                                     Reject
@@ -252,6 +276,46 @@ export default function KYCVerificationPage() {
                             >
                                 <ExternalLink size={18} /> Open in New Tab
                             </a>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {rejectingDoctor && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[110] p-6">
+                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-black text-slate-900">Reject Application</h3>
+                            <button
+                                onClick={() => setRejectingDoctor(null)}
+                                className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-3">
+                            Reason for rejecting <span className="font-bold">{rejectingDoctor.name || "this provider"}</span>.
+                        </p>
+                        <textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Explain clearly what needs re-upload."
+                            className="w-full h-32 p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-100 outline-none text-sm"
+                        />
+                        <div className="flex gap-3 mt-5">
+                            <button
+                                onClick={() => setRejectingDoctor(null)}
+                                className="flex-1 h-11 rounded-xl bg-slate-100 text-slate-700 font-black text-xs uppercase"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitReject}
+                                disabled={updateStatusMutation.isPending}
+                                className="flex-1 h-11 rounded-xl bg-rose-600 text-white font-black text-xs uppercase disabled:opacity-60"
+                            >
+                                {updateStatusMutation.isPending ? "Submitting..." : "Reject with Reason"}
+                            </button>
                         </div>
                     </div>
                 </div>

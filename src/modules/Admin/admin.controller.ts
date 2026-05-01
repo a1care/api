@@ -2072,3 +2072,59 @@ export const upsertDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200, "Doctor availability saved", updated));
 });
+
+export const debugPartnerServiceEligibility = asyncHandler(async (req, res) => {
+  const { mobileNumber, childServiceId } = req.query as { mobileNumber?: string; childServiceId?: string };
+  if (!mobileNumber) throw new ApiError(400, "mobileNumber is required");
+  if (!childServiceId) throw new ApiError(400, "childServiceId is required");
+  if (!mongoose.Types.ObjectId.isValid(childServiceId)) throw new ApiError(400, "Invalid childServiceId");
+
+  const partner = await Doctor.findOne({ mobileNumber: String(mobileNumber).trim() })
+    .select("_id name mobileNumber roleId status isRegistered isVerified fcmToken")
+    .lean();
+  if (!partner) throw new ApiError(404, "Partner not found");
+
+  const childService = await ChildServiceModel.findById(childServiceId)
+    .select("_id name allowedRoleIds")
+    .lean();
+  if (!childService) throw new ApiError(404, "Child service not found");
+
+  const allowed = Array.isArray(childService.allowedRoleIds) ? childService.allowedRoleIds : [];
+  const partnerRoleId = (partner.roleId as any)?.toString?.() || "";
+  const roleMatched = allowed.some((id: any) => id?.toString?.() === partnerRoleId);
+  const isActive = partner.status === "Active";
+  const hasFcmToken = !!partner.fcmToken;
+
+  const reasons: string[] = [];
+  if (!isActive) reasons.push("Partner status is not Active");
+  if (!roleMatched) reasons.push("Partner roleId is not in childService.allowedRoleIds");
+  if (!hasFcmToken) reasons.push("Partner fcmToken missing (push notification won't be sent)");
+
+  return res.status(200).json(
+    new ApiResponse(200, "Partner service eligibility debug", {
+      partner: {
+        id: partner._id,
+        name: partner.name,
+        mobileNumber: partner.mobileNumber,
+        roleId: partnerRoleId,
+        status: partner.status,
+        isRegistered: partner.isRegistered,
+        isVerified: (partner as any).isVerified ?? null,
+        hasFcmToken,
+      },
+      childService: {
+        id: childService._id,
+        name: childService.name,
+        allowedRoleIds: allowed.map((id: any) => id?.toString?.()),
+      },
+      checks: {
+        roleMatched,
+        isActive,
+        hasFcmToken,
+        eligibleForFeed: roleMatched && isActive,
+        eligibleForPush: roleMatched && isActive && hasFcmToken,
+      },
+      reasons,
+    })
+  );
+});

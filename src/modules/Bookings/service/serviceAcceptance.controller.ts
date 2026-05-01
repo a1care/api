@@ -18,12 +18,32 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     if (!providerId) throw new ApiError(401, "Unauthorized");
     if (!serviceRequestId) throw new ApiError(400, "serviceRequestId is required");
 
-    const payload = { ...req.body, serviceRequestId, providerId };
+    const serviceRequestDetails = await serviceRequestModel
+        .findById(serviceRequestId)
+        .populate("userId");
+
+    if (!serviceRequestDetails || (serviceRequestDetails.status !== "PENDING" && serviceRequestDetails.status !== "BROADCASTED")) {
+        throw new ApiError(404, "Service Request not found or already accepted");
+    }
+
+    const providerDetails = await DoctorModel.findById(providerId);
+    if (!providerDetails) throw new ApiError(404, "Provider details not found");
+
+    const payload = { 
+        ...req.body, 
+        serviceRequestId, 
+        providerId,
+        roleId: req.body.roleId || serviceRequestDetails.assignedRoleId?.toString() || providerDetails.roleId?.toString(),
+        patientId: (serviceRequestDetails.userId as any)?._id?.toString(),
+        price: serviceRequestDetails.price || 0,
+        status: "ACCEPTED"
+    };
 
     const parsed = serviceAcceptanceValidation.safeParse(payload);
     if (!parsed.success) {
         console.error("Validation failed!", parsed.error);
-        throw new ApiError(401, "Validation failed!");
+        const firstError = parsed.error.issues[0]?.message || "Validation failed";
+        throw new ApiError(400, `Validation failed: ${firstError}`);
     }
 
     // Subscription Check
@@ -34,14 +54,6 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     });
     if (!activeSub) {
         throw new ApiError(403, "Active subscription required to accept jobs.");
-    }
-
-    const serviceRequestDetails = await serviceRequestModel
-        .findById(serviceRequestId)
-        .populate("userId");
-
-    if (!serviceRequestDetails || serviceRequestDetails.status !== "PENDING") {
-        throw new ApiError(404, "Service Request not found or already accepted");
     }
 
     // Update request status
@@ -83,17 +95,26 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
     const { requestId } = req.params;
     if (!requestId) throw new ApiError(401, "Request id not found");
 
+    const serviceRequestDetails = await serviceRequestModel.findById(requestId);
+    if (!serviceRequestDetails) throw new ApiError(404, "Service Request not found");
+
+    const providerDetails = await DoctorModel.findById(providerId);
+    
     const payload = {
         ...req.body,
         providerId,
         serviceRequestId: requestId,
+        roleId: req.body.roleId || (serviceRequestDetails as any).assignedRoleId?.toString() || providerDetails?.roleId?.toString(),
+        patientId: (serviceRequestDetails.userId as any)?.toString(),
+        price: serviceRequestDetails.price || 0,
         status: "REJECTED",
     };
 
     const parsed = serviceAcceptanceValidation.safeParse(payload);
     if (!parsed.success) {
         console.log("Error in validation:", parsed.error);
-        throw new ApiError(401, "Error in validations!");
+        const firstError = parsed.error.issues[0]?.message || "Error in validations";
+        throw new ApiError(400, `Error in validations: ${firstError}`);
     }
 
     const createRejected = new serviceAcceptanceModal(parsed.data);
