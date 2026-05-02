@@ -41,7 +41,8 @@ import {
   getDeletionRequests,
   approveDeletion,
   getDoctorAvailabilityAdmin,
-  upsertDoctorAvailabilityAdmin
+  upsertDoctorAvailabilityAdmin,
+  debugPartnerServiceEligibility
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -100,6 +101,7 @@ adminRoutes.get("/bookings/doctors", protectAdmin, requireAdminRole(["admin", "s
 adminRoutes.put("/bookings/doctors/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateDoctorBookingStatus);
 
 adminRoutes.get("/bookings/services", protectAdmin, requireAdminRole(["admin", "super_admin"]), getServiceBookings);
+adminRoutes.get("/bookings/services/debug-eligibility", protectAdmin, requireAdminRole(["admin", "super_admin"]), debugPartnerServiceEligibility);
 adminRoutes.get("/bookings/services/returned", protectAdmin, requireAdminRole(["admin", "super_admin"]), getReturnedToAdminServiceBookings);
 adminRoutes.put("/bookings/services/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateServiceBookingStatus);
 adminRoutes.get("/bookings/hospital", protectAdmin, requireAdminRole(["admin", "super_admin"]), getHospitalBookings);
