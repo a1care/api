@@ -39,6 +39,27 @@ export const getServices = asyncHandler(async (req, res) => {
 })
 
 //update service
+export const updateService = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid Service ID");
+  }
+
+  const updateData: Record<string, any> = {};
+  if (req.body.name) updateData.name = req.body.name;
+  if (req.body.title) updateData.title = req.body.title;
+  if (req.body.type) updateData.type = req.body.type;
+  if (req.fileUrl) updateData.imageUrl = req.fileUrl;
+
+  const updated = await Service.findByIdAndUpdate(id, updateData, { new: true });
+
+  if (!updated) {
+    throw new ApiError(404, "Service not found");
+  }
+
+  res.status(200).json(new ApiResponse(200, "Service updated", updated));
+});
 
 //delete service
 export const deleteService = asyncHandler(async (req, res) => {
