@@ -133,6 +133,8 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/medical-records', medicalRecordRoutes)
 app.use('/api/patient', patientMedicalHistoryRoutes)
 app.use('/api/doctor/earnings', staffEarningsRoutes)
+app.use('/api/nurse/earnings', staffEarningsRoutes)
+app.use('/api/ambulance/earnings', staffEarningsRoutes)
 app.use('/api/agora', agoraRoutes)
 app.use('/api/health-packages', healthPackageRoutes)
 

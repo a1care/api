@@ -7,6 +7,6 @@ const router = express.Router()
 
 router.get('/', getServices)
 router.post("/create", uploadServiceImage, attachFileUrl, createService)
-router.delete('/delete/:id', deleteService)
+router.delete('/:id', deleteService)
 
 export default router

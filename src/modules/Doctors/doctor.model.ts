@@ -22,6 +22,7 @@ export interface DoctorDocument extends Document {
   rating: number;
   completed: number;
   roleId: mongoose.Types.ObjectId;
+  role: { _id: mongoose.Types.ObjectId; name: string };
   documents: { type: string; url: string }[];
   fulfillmentMode: "HOME_VISIT" | "HOSPITAL_VISIT" | "VIRTUAL";
   isRegistered: boolean;
@@ -137,6 +138,11 @@ const DoctorSchema = new Schema<DoctorDocument>(
     roleId: {
       type: Schema.Types.ObjectId,
       ref: "Role",
+    },
+
+    role: {
+        _id: Schema.Types.ObjectId,
+        name: String
     },
 
     mobileNumber: {

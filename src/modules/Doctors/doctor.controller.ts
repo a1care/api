@@ -47,11 +47,30 @@ export const getStaffByRoleId = asyncHandler(async (req, res) => {
   const { roleId, specialization } = req.query
   if (!roleId) throw new ApiError(404, "Role id is missing")
 
-  const roleIds = (roleId as string).split(',').map(id => id.trim());
+  const roleIds = (roleId as string)
+    .split(',')
+    .map(id => id.trim())
+    .filter(Boolean)
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
   const query: any = { roleId: { $in: roleIds }, status: 'Active' };
 
   if (specialization) {
-    query.specialization = { $in: [(specialization as string).trim()] };
+    const raw = String(specialization).trim().toLowerCase();
+    const aliases: Record<string, string[]> = {
+      cardiologist: ["cardiologist", "cardiology", "cardiac", "heart specialist"],
+      pulmonologist: ["pulmonologist", "pulmonology", "chest specialist"],
+      neurologist: ["neurologist", "neurology"],
+      dermatologist: ["dermatologist", "dermatology", "skin specialist"],
+      orthopedist: ["orthopedist", "orthopedic", "orthopaedic", "ortho"],
+      "general physician": ["general physician", "physician", "general medicine"],
+    };
+
+    const terms = aliases[raw] || [raw];
+    query.$or = terms.map((term) => ({
+      specialization: { $elemMatch: { $regex: term, $options: "i" } }
+    }));
   }
 
   const staffDetails = await doctorModel.find(query).populate('roleId')
@@ -228,15 +247,14 @@ export const registerStaff = asyncHandler(async (req, res) => {
 
     throw new ApiError(400, message);
   }
-
-  const findStaff = await doctorModel.findById(staffId);
+  const findStaff = await doctorModel.findById(staffId);
   if (!findStaff) throw new ApiError(404, "Staff not found");
 
   // Build update object only with provided fields
   const updateData: any = {};
   const fields = [
     'name', 'gender', 'startExperience', 'specialization', 'about',
-    'workingHours', 'serviceRadius', 'roleId', 'consultationFee', 'homeConsultationFee',
+    'workingHours', 'serviceRadius', 'roleId', 'role', 'consultationFee', 'homeConsultationFee',
     'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage'
   ];
 
@@ -315,3 +333,4 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
   await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
   return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
 });
+
