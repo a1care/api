@@ -85,7 +85,16 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
   }
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
-  
+
+  // Static test number — always use fixed OTP, skip SMS
+  if (cleanMobile === "8309470360") {
+    await RedisClient.setEx(`otp:staff:${cleanMobile}`, 600, "123456");
+    console.log(`[OTP] Static test number — OTP bypassed for ${cleanMobile}`);
+    return res.status(200).json(
+      new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
+    );
+  }
+
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 

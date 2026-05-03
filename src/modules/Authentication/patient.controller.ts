@@ -10,8 +10,9 @@ import { formatZodError } from "../../utils/formatZodError.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import RedisClient from "../../configs/redisConnect.js";
 
-// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-// const DEV_BYPASS_OTP = "123456";
+// ─── STATIC TEST NUMBER ───────────────────────────────────────────────────────
+const STATIC_TEST_MOBILE = "8309470360";
+const STATIC_TEST_OTP = "123456";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const getPatientDetailsById = asyncHandler(async (req, res) => {
@@ -36,7 +37,16 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
   }
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
-  
+
+  // Static test number — always use fixed OTP, skip SMS
+  if (cleanMobile === STATIC_TEST_MOBILE) {
+    await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, STATIC_TEST_OTP);
+    console.log(`[Patient OTP] Static test number — OTP bypassed for ${cleanMobile}`);
+    return res.status(200).json(
+      new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
+    );
+  }
+
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
