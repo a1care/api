@@ -48,6 +48,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         }
         return { ...slot, startTime: start, endTime: endRaw };
     };
+
     const payload = {
         ...req.body,
         scheduledSlot: normalizeScheduledSlot(req.body?.scheduledSlot),
@@ -60,6 +61,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
             ? { notifiedHospitalAt: new Date() }
             : { status: "BROADCASTED", broadcastedAt: new Date() }),
     };
+
     const parsed = serviceRequestValiation.safeParse(payload);
     if (!parsed.success) {
         console.error("Validation failed!", parsed.error);
@@ -124,7 +126,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                     refId: newServiceRequest._id as mongoose.Types.ObjectId,
                 });
             }
-        } 
+        }
         // 2. Hospital-first priority
         else if (hospitalFirst && childSvc?.hospitalProviderId) {
             const hospital = await DoctorModel.findById(childSvc.hospitalProviderId).select("_id fcmToken");
@@ -141,16 +143,24 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                 });
             }
             await scheduleBroadcastToAll(String(newServiceRequest._id));
-        } 
+        }
         // 3. Broadcast to all matching roles
         else {
             const allowedRoleIds = childSvc?.allowedRoleIds ?? healthPkg?.allowedRoleIds;
             if (allowedRoleIds?.length) {
+                // FIX: allowedRoleIds are stored as String[] in childService but staff.roleId
+                // is an ObjectId field. $in with plain strings never matches ObjectIds → 0 results.
+                // Cast to ObjectId before querying so the $in match works correctly.
+                const allowedRoleObjectIds = allowedRoleIds
+                    .filter(id => mongoose.Types.ObjectId.isValid(id))
+                    .map(id => new mongoose.Types.ObjectId(id));
+
                 const matchingPartners = await DoctorModel.find({
-                    roleId: { $in: allowedRoleIds },
+                    roleId: { $in: allowedRoleObjectIds },
                     status: "Active",
                     fcmToken: { $exists: true, $ne: null },
                 }).select("_id fcmToken");
+
                 console.log(`[Push] Found ${matchingPartners.length} matching active partners for role(s): ${allowedRoleIds}`);
                 if (matchingPartners.length > 0) {
                     console.log(`[Push] Partner IDs to notify: ${matchingPartners.map(p => p._id).join(', ')}`);
@@ -342,5 +352,3 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Status updated", booking));
 });
-
-
