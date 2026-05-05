@@ -1,13 +1,17 @@
 name: Deploy to AWS EC2
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
+      - 'src/**'
       - 'a1care backend/**'
       - 'docker-compose.yml'
       - 'nginx/**'
+      - 'package.json'
+      - 'tsconfig.json'
 
 jobs:
   deploy:
