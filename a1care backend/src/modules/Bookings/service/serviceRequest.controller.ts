@@ -64,9 +64,11 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     await newServiceRequest.save();
 
     // ── Notify Admin ────────────────────────────────────────────────────────
+    const patientData = await Patient.findById(userId).select("name");
+    const patientNameForAdmin = patientData?.name || userId;
     notifyAdmin(
         "🆕 New Booking Request", 
-        `Patient ${payload.userId} has booked a ${bookingName}. Value: ₹${finalPrice}`,
+        `Patient ${patientNameForAdmin} has booked a ${bookingName}. Value: ₹${finalPrice}`,
         "ServiceRequest",
         String(newServiceRequest._id)
     );

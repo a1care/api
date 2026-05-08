@@ -1165,7 +1165,7 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
 });
 
 export const getServiceBookings = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode } = req.query;
+  const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode, serviceType } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
   // Auto-update bookings that have timed out
@@ -1189,9 +1189,16 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
       query.assignedProviderId = doctor;
     }
   }
+  if (serviceType && serviceType !== "All") {
+    const mainServices = await Service.find({ type: serviceType }).select("_id");
+    const mainServiceIds = mainServices.map(s => s._id);
+    const matchedChildServices = await ChildServiceModel.find({ serviceId: { $in: mainServiceIds } }).select("_id");
+    const childServiceIds = matchedChildServices.map(s => s._id);
+    query.childServiceId = { $in: childServiceIds };
+  }
 
   if (service && service !== "All") {
-    const matchedServices = await mongoose.model('ChildService').find({ name: { $regex: new RegExp(service as string, 'i') } }).select("_id");
+    const matchedServices = await ChildServiceModel.find({ name: { $regex: new RegExp(service as string, 'i') } }).select("_id");
     const serviceIds = matchedServices.map(s => s._id);
     query.childServiceId = { $in: serviceIds };
   }
@@ -1222,7 +1229,7 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   };
 
   const stats = {
-    all: await serviceRequestModel.countDocuments(),
+    all: await serviceRequestModel.countDocuments(query),
     pending: getCount(["PENDING", "BROADCASTED", "RETURNED_TO_ADMIN"]),
     confirmed: getCount(["ACCEPTED", "CONFIRMED"]),
     completed: getCount("COMPLETED"),
@@ -1669,7 +1676,9 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
 export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
 
-  const { from, to, search = "" } = req.query;
+  const { from, to, search = "", page = 1, limit = 50 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
   const match: any = {};
   if (from && to) {
     match.createdAt = { $gte: new Date(from as string), $lte: new Date(to as string) };
@@ -1683,7 +1692,9 @@ export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
       { mobileNumber: new RegExp(search as string, 'i') }
     ];
   }
-  const doctors = await Doctor.find(doctorQuery);
+
+  const total = await Doctor.countDocuments(doctorQuery);
+  const doctors = await Doctor.find(doctorQuery).skip(skip).limit(Number(limit));
   const doctorIds = doctors.map(d => d._id);
 
   const performance = await doctorAppointmentModel.aggregate([
@@ -1713,7 +1724,12 @@ export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
     };
   });
 
-  return res.status(200).json(new ApiResponse(200, "Doctor performance fetched", results));
+  return res.status(200).json(new ApiResponse(200, "Doctor performance fetched", { 
+    items: results,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit))
+  }));
 });
 
 export const getAdminRecentActivity = asyncHandler(async (req, res) => {
