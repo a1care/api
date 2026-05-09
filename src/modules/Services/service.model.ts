@@ -3,7 +3,7 @@ import { Schema, model, Document } from "mongoose";
 export interface ServiceDocument extends Document {
   name: string;
   title: string;
-  type: "SELECT" | "ASSIGN" | "doctor" | "nurse" | "lab" | "ambulance" | "rental";
+  type: "SELECT" | "ASSIGN" | "doctor" | "nurse" | "lab" | "ambulance" | "rental" | "service";
   imageUrl: string;
   isActive: boolean;
 }
@@ -24,8 +24,9 @@ const ServiceSchema = new Schema<ServiceDocument>(
 
     type: {
       type: String,
-      enum: ["SELECT", "ASSIGN", "doctor", "nurse", "lab", "ambulance", "rental"],
-      required: true
+      enum: ["SELECT", "ASSIGN", "doctor", "nurse", "lab", "ambulance", "rental", "service"],
+      required: true,
+      trim: true
     },
 
     imageUrl: {

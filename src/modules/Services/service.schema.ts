@@ -5,7 +5,7 @@ const serviceTypeSchema = z.preprocess((value) => {
     const trimmed = value.trim();
     if (!trimmed) return trimmed;
     const lower = trimmed.toLowerCase();
-    if (["doctor", "nurse", "lab", "ambulance", "rental"].includes(lower)) {
+    if (["doctor", "nurse", "lab", "ambulance", "rental", "service"].includes(lower)) {
         return lower;
     }
     const upper = trimmed.toUpperCase();
@@ -13,13 +13,13 @@ const serviceTypeSchema = z.preprocess((value) => {
         return upper;
     }
     return trimmed;
-}, z.enum(["SELECT", "ASSIGN", "doctor", "nurse", "lab", "ambulance", "rental"]));
+}, z.enum(["SELECT", "ASSIGN", "doctor", "nurse", "lab", "ambulance", "rental", "service"]));
 
 const serviceValidation = z.object({
-    name: z.string().trim().min(1),
-    title: z.string().trim().min(1),
+    name: z.string().trim().min(1, "Service category name is required"),
+    title: z.string().trim().min(1, "Service category title is required"),
     type: serviceTypeSchema,
-    imageUrl: z.string(),
+    imageUrl: z.string().trim().min(1, "Service category image is required"),
     isActive: z.boolean().default(true)
 })
 
