@@ -6,7 +6,7 @@ export const childServiceValidation = z.object({
     serviceId: z.string(),
     subServiceId: z.string(),
     price: z.number(),
-    bookingType: z.enum(["SELECT", "ASSIGN"]),
+    selectionType: z.enum(["SELECT", "ASSIGN"]),
     isActive: z.boolean().default(true),
     allowedRoleIds: z.array(z.string()).optional(),
     imageUrl: z.string().url().optional(),
