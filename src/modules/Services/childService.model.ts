@@ -7,6 +7,7 @@ export interface ChildServiceDocument extends Document {
   subServiceId: Schema.Types.ObjectId;
   price: number;
   selectionType: "SELECT" | "ASSIGN";
+  fulfillmentMode: "HOME_VISIT" | "HOSPITAL_VISIT" | "VIRTUAL";
   isActive: boolean;
   isFeatured: boolean;
   allowedRoleIds: string[];
@@ -55,9 +56,16 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
       required: true,
     },
 
+    fulfillmentMode: {
+      type: String,
+      enum: ["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL"],
+      default: "HOME_VISIT",
+      required: true,
+    },
+
     isActive: {
       type: Boolean,
-      default: false,
+      default: true,
     },
 
     isFeatured: {

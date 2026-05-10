@@ -8,25 +8,59 @@ import { childServiceValidation } from "./childService.schema.js";
 
 export const createChildService = asyncHandler(async (req, res) => {
     const { serviceId, subServiceId } = req.params
-    console.log("this is request", req.body)
     const payload = {
         ...req.body,
         serviceId,
         subServiceId,
         imageUrl: req.fileUrl,
-        price: Number(req.body.price)
+        price: Number(req.body.price),
+        selectionType: req.body.selectionType || req.body.bookingType || "SELECT",
+        fulfillmentMode: req.body.fulfillmentMode || "HOME_VISIT"
     }
 
     const parsed = childServiceValidation.safeParse(payload);
 
     if (!parsed.success) {
         console.error("Error in creating child", parsed.error)
-        throw new ApiError(401, "validation Failed")
+        throw new ApiError(400, "Validation failed")
     }
 
-    const newChildService = new ChildServiceModel(payload)
+    const newChildService = new ChildServiceModel(parsed.data)
     await newChildService.save()
     return res.status(201).json(new ApiResponse(201, "Child service created", newChildService))
+})
+
+export const updateChildService = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        throw new ApiError(400, "Invalid child service id");
+    }
+
+    const updateData: Record<string, any> = {};
+    if (typeof req.body.name === "string") updateData.name = req.body.name;
+    if (typeof req.body.description === "string") updateData.description = req.body.description;
+    if (req.body.price !== undefined) {
+        const price = Number(req.body.price);
+        if (!Number.isFinite(price) || price < 0) throw new ApiError(400, "Invalid price");
+        updateData.price = price;
+    }
+    if (req.body.selectionType || req.body.bookingType) {
+        const selectionType = req.body.selectionType || req.body.bookingType;
+        if (!["SELECT", "ASSIGN"].includes(selectionType)) throw new ApiError(400, "Invalid selection type");
+        updateData.selectionType = selectionType;
+    }
+    if (req.body.fulfillmentMode) {
+        if (!["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL"].includes(req.body.fulfillmentMode)) {
+            throw new ApiError(400, "Invalid fulfillment mode");
+        }
+        updateData.fulfillmentMode = req.body.fulfillmentMode;
+    }
+    if (req.fileUrl) updateData.imageUrl = req.fileUrl;
+
+    const updated = await ChildServiceModel.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updated) throw new ApiError(404, "Child service not found");
+
+    return res.status(200).json(new ApiResponse(200, "Child service updated", updated));
 })
 
 export const getChildServiceBySubserviceId = asyncHandler(async (req, res) => {

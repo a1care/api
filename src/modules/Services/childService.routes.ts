@@ -16,12 +16,12 @@ const router = express.Router()
 
 router.get('/featured', getFeaturedChildServices)
 router.post('/create/:serviceId/:subServiceId', uploadServiceImage, attachFileUrl, createChildService)
-router.get('/:subServiceId', getChildServiceBySubserviceId)
 router.get('/detail/:id', getChildServiceById)
 router.put("/addroles/:childServiceId", addRolesToChildService)
 router.put("/:id", uploadServiceImage, attachFileUrl, updateChildService)
 router.delete("/:id", deleteChildService)
 router.patch("/featured/toggle/:id", toggleFeaturedChildService)
+router.get('/:subServiceId', getChildServiceBySubserviceId)
 
 
 export default router
