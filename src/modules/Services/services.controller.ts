@@ -13,7 +13,8 @@ export const createService = asyncHandler(async (req, res) => {
     name: req.body.name,
     title: req.body.title,
     type: req.body.type,
-    imageUrl: req.fileUrl // injected by middleware
+    imageUrl: req.body.imageUrl,
+    bannerUrl: req.body.bannerUrl || ""
   };
 
   const parsed = serviceValidation.safeParse(payload);
@@ -50,7 +51,8 @@ export const updateService = asyncHandler(async (req, res) => {
   if (req.body.name) updateData.name = req.body.name;
   if (req.body.title) updateData.title = req.body.title;
   if (req.body.type) updateData.type = req.body.type;
-  if (req.fileUrl) updateData.imageUrl = req.fileUrl;
+  if (req.body.imageUrl) updateData.imageUrl = req.body.imageUrl;
+  if (req.body.bannerUrl) updateData.bannerUrl = req.body.bannerUrl;
 
   const updated = await Service.findByIdAndUpdate(id, updateData, { new: true });
 

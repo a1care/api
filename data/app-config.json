@@ -30,9 +30,19 @@
       "subHeadline": "Connect with top doctors, nurses, and medical services 24/7",
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.a1care.user",
       "appStoreUrl": "https://apps.apple.com/app/a1care-user",
-      "festivalBanners": []
+      "festivalBanners": [],
+      "mainBanners": [
+        {
+          "id": "banner_1778439379932_9dks7i",
+          "title": "diagnostic",
+          "imageUrl": "http://localhost:3000/uploads/app-management/asset-1778439386388-328371298.png",
+          "redirectUrl": "a1care://services?category=diagnostics&serviceId=69ff86c7a217e06e924eb480",
+          "active": true
+        }
+      ],
+      "promotionalBanners": []
     },
-    "updatedAt": "2026-04-13T18:58:18.501Z"
+    "updatedAt": "2026-05-10T18:56:42.586Z"
   },
   "provider_app": {
     "appKey": "provider_app",

@@ -63,6 +63,15 @@ export const uploadServiceImage = createS3Upload({
   maxSizeMB: 2
 }).single("image");
 
+export const uploadServiceAssets = createS3Upload({
+  folder: "services",
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+  maxSizeMB: 2
+}).fields([
+  { name: "image", maxCount: 1 },
+  { name: "banner", maxCount: 1 }
+]);
+
 export const UploadProfileImage = createS3Upload({
   folder: "profiles",
   allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],

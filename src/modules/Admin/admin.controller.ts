@@ -231,6 +231,8 @@ type ManagedAppConfig = {
     playStoreUrl: string;
     appStoreUrl: string;
     festivalBanners: FestivalBanner[];
+    mainBanners?: FestivalBanner[];
+    promotionalBanners?: FestivalBanner[];
   };
   knowledgeBase: any[];
   updatedAt: string;
@@ -296,7 +298,9 @@ const createDefaultConfigFor = (appKey: AppKey): ManagedAppConfig => {
       subHeadline: "",
       playStoreUrl: "",
       appStoreUrl: "",
-      festivalBanners: []
+      festivalBanners: [],
+      mainBanners: [],
+      promotionalBanners: []
     },
     knowledgeBase: [],
     updatedAt: new Date().toISOString()
@@ -370,6 +374,14 @@ const mergeAppConfig = (current: ManagedAppConfig, payload: any): ManagedAppConf
   const incomingContact = payload?.contact ?? {};
   const incomingLanding = payload?.landing ?? {};
 
+  const mainBanners = Array.isArray(incomingLanding.mainBanners)
+    ? incomingLanding.mainBanners.map(normalizeBanner)
+    : current.landing.mainBanners || [];
+
+  const promotionalBanners = Array.isArray(incomingLanding.promotionalBanners)
+    ? incomingLanding.promotionalBanners.map(normalizeBanner)
+    : current.landing.promotionalBanners || [];
+
   const festivalBanners = Array.isArray(incomingLanding.festivalBanners)
     ? incomingLanding.festivalBanners.map(normalizeBanner)
     : current.landing.festivalBanners;
@@ -409,7 +421,9 @@ const mergeAppConfig = (current: ManagedAppConfig, payload: any): ManagedAppConf
       subHeadline: normalizeString(incomingLanding.subHeadline ?? current.landing.subHeadline),
       playStoreUrl: normalizeString(incomingLanding.playStoreUrl ?? current.landing.playStoreUrl),
       appStoreUrl: normalizeString(incomingLanding.appStoreUrl ?? current.landing.appStoreUrl),
-      festivalBanners
+      festivalBanners,
+      mainBanners,
+      promotionalBanners
     },
     knowledgeBase: Array.isArray(payload?.knowledgeBase) ? payload.knowledgeBase : current.knowledgeBase,
     updatedAt: new Date().toISOString()
@@ -1565,6 +1579,14 @@ export const getPublicAppConfig = asyncHandler(async (req, res) => {
   const { appKey } = req.params;
   const store = await readConfigStore();
 
+  const host = req.get("host");
+  
+  const normalizeUrl = (url: string) => {
+    if (!url || typeof url !== 'string') return url;
+    // Replace localhost with actual host that the app is currently using to reach this API
+    return url.replace(/localhost:[0-9]+/g, host || "localhost:3000");
+  };
+
   const key = appKey === "partner" ? "provider_app" : "user_app";
   const appConfig = (store as any)[key];
   const system = (store as any).system ?? DEFAULT_SYSTEM_CONFIG;
@@ -1573,13 +1595,16 @@ export const getPublicAppConfig = asyncHandler(async (req, res) => {
     branding: appConfig.branding,
     contact: appConfig.contact,
     landing: {
-      festivalBanners: appConfig.landing.festivalBanners.filter((b: any) => b.active),
+      mainBanners: (appConfig.landing.mainBanners || []).filter((b: any) => b.active).map((b: any) => ({ ...b, imageUrl: normalizeUrl(b.imageUrl) })),
+      promotionalBanners: (appConfig.landing.promotionalBanners || []).filter((b: any) => b.active).map((b: any) => ({ ...b, imageUrl: normalizeUrl(b.imageUrl) })),
+      knowledgeBanners: (appConfig.landing.knowledgeBanners || []).filter((b: any) => b.active).map((b: any) => ({ ...b, imageUrl: normalizeUrl(b.imageUrl) })),
+      festivalBanners: appConfig.landing.festivalBanners.filter((b: any) => b.active).map((b: any) => ({ ...b, imageUrl: normalizeUrl(b.imageUrl) })),
       playStoreUrl: appConfig.landing.playStoreUrl,
       appStoreUrl: appConfig.landing.appStoreUrl,
     },
     googleMapsApiKey: system.googleMapsApiKey,
     maintenanceMode: system.maintenanceMode || false,
-    knowledgeBase: appConfig.knowledgeBase || [],
+    knowledgeBase: (appConfig.knowledgeBase || []).map((kb: any) => ({ ...kb, imageUrl: normalizeUrl(kb.imageUrl) })),
     updatedAt: appConfig.updatedAt
   };
 

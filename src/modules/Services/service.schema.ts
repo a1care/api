@@ -20,6 +20,7 @@ const serviceValidation = z.object({
     title: z.string().trim().min(1, "Service category title is required"),
     type: serviceTypeSchema,
     imageUrl: z.string().trim().min(1, "Service category image is required"),
+    bannerUrl: z.string().trim().optional(),
     isActive: z.boolean().default(true)
 })
 
