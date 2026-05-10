@@ -99,3 +99,25 @@ export const toggleFeaturedChildService = asyncHandler(async (req, res) => {
 
     return res.json(new ApiResponse(200, `Service marked as ${service.isFeatured ? 'popular' : 'not popular'}`, service));
 });
+
+export const updateChildService = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        throw new ApiError(400, "Invalid ChildService ID");
+    }
+
+    const updateData: Record<string, any> = { ...req.body };
+    
+    if (req.body.price) updateData.price = Number(req.body.price);
+    if (req.fileUrl) updateData.imageUrl = req.fileUrl;
+    if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive === 'true' || req.body.isActive === true;
+
+    const updated = await ChildServiceModel.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!updated) {
+        throw new ApiError(404, "Child service not found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Child service updated successfully", updated));
+});
