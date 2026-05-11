@@ -81,30 +81,30 @@
   },
   "system": {
     "website": {
-      "apiKey": "AIzaSyC4OkQrUi2FGx0hIV0fjDyD0Hwv7tQoo8w",
-      "authDomain": "a1carewebsite.firebaseapp.com",
-      "projectId": "a1carewebsite",
-      "storageBucket": "a1carewebsite.firebasestorage.app",
-      "messagingSenderId": "742774308338",
-      "appId": "1:742774308338:web:a4b403b3ded90987d57f6b",
-      "measurementId": "G-ZSZKQTXE94"
+      "apiKey": "AIzaSyDaM3RJJDE-2GcGKZeJRIAQ35MNihdtiII",
+      "authDomain": "a1-care-hospitals.firebaseapp.com",
+      "projectId": "a1-care-hospitals",
+      "storageBucket": "a1-care-hospitals.firebasestorage.app",
+      "messagingSenderId": "426082561306",
+      "appId": "1:426082561306:android:cfa55ebd9c9ec8a62550a3",
+      "measurementId": ""
     },
-    "projectNumber": "742774308338",
-    "projectId": "a1carewebsite",
-    "storageBucket": "a1carewebsite.firebasestorage.app",
+    "projectNumber": "426082561306",
+    "projectId": "a1-care-hospitals",
+    "storageBucket": "a1-care-hospitals.firebasestorage.app",
     "clients": [
       {
         "platform": "android",
         "appLabel": "customer",
-        "appId": "1:742774308338:android:8d9bed5df8563aded57f6b",
-        "apiKey": "AIzaSyBMiouUypgK29NCCIWb7ImaPedjiC4BuDA",
+        "appId": "1:426082561306:android:cfa55ebd9c9ec8a62550a3",
+        "apiKey": "AIzaSyDaM3RJJDE-2GcGKZeJRIAQ35MNihdtiII",
         "packageName": "com.a1care.customer"
       },
       {
         "platform": "android",
         "appLabel": "partner",
-        "appId": "1:742774308338:android:9e284d859cc3f88ad57f6b",
-        "apiKey": "AIzaSyBMiouUypgK29NCCIWb7ImaPedjiC4BuDA",
+        "appId": "1:426082561306:android:f69da65601be128d2550a3",
+        "apiKey": "AIzaSyDaM3RJJDE-2GcGKZeJRIAQ35MNihdtiII",
         "packageName": "com.a1care.partner"
       },
       {
@@ -123,8 +123,8 @@
       }
     ],
     "firebase": {
-      "clientEmail": "",
-      "privateKey": ""
+      "clientEmail": "firebase-adminsdk-fbsvc@a1-care-hospitals.iam.gserviceaccount.com",
+      "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDRu0uuZ9ywdbqt\nlvAfqK8lV+cAeDKPTaDymTqson6B0o1bbzUa1lr7edpW8YQeAeCe/Yo4F5+R4SN5\nMud7fgm4r/mJ5HjBU8oCZ/vuELBXr/Ij721aBa/Vt8jO5KxOC2YX6uxanGeWKDBP\nowL9+JbPjpbm87Hy01vkM0gHF4zEGDXk5aMtRG5pxIRZ8zIAlXzt200Tc/oXlFWw\n24lmj7udruArq0TJcN60Aplnl8n/G98YYcdrtT4qb2KEG6xWgWsXQHtI2BsoaGvb\nPfOIefENVXR3gwVf6x6NahgiTqMNJB2ItVd+1sIybAFDOWxcycdJsXnDv/lN3xD8\nk1VZPLF7AgMBAAECggEAPCFUNekOM0NVpa44IwOET5MPpilP6ZkKk3NOCK+/0G2y\n3GuaUJrzU9UgPbwZsla8dSjgx2sycysWtglbp6K/m8VMKHYqDtd8e8sfRiZfwIwv\nwpDDC8PEoWQDPRn/spJ/D01pvSLJahoUm8hzM6hhaJmLdySYOLPTTS5MsMfWMmPv\nrtErEQdCCYUwlDuN3Cw7d6G0wnS4PZPZNNZ/ukNqw4zR1HffHsMjfDP+Bogxp5xy\n2ORnkBdNDi0f1WTVeD6/5LnbtS08Qgto1mpKJQURUdftIKqix71KFTA0P+r545Iv\niwpeaBOgTwTMZovWGT0rGNtY4J7g+icDStmTQpc/GQKBgQDsb/pXuiMqZV9TyO8Z\nYtBxfT5A97Tmg7IAY0fePaSa72qYikGCXj5cUBquTh2i1kIj5hUoJy8AYXyxKH7R\nQ6TsgQDwhmSVAeJdxE2M1K3hrnnZkwTkNcr1Cizv5wWHxqHwu3Z3X8muBjkfVpMy\n7bJOwACYs1u/vMSHl+UIYaqZyQKBgQDjFahhAg4BolluKF0HmJWTFqzHRkhjv21e\nY1wc/zKoFu4UEiy0zlAefWQfyt3qsjSwmUOW8W37DwKer1/qJfQHddTv39HnGXuL\nlOdjPoipQw9rf31eBwjRm1m/0Uvm+EZcf50Y6pNL7fJE0Gi2x49BB+BPY9GFNBog\n8uBJtWHTIwKBgGDlOyk8pTC4vqptjF9Q+a+o7hxd54sYqZgzF77icFT2jS7aaiJt\nUQ0v3t9UMB0NxalEn6MG++IiEaHgwKguGqa575Ki4RGX5hcbXdS7TE9S26jo8XY8\n/WISu3vNp5yPMMqhaNlfLh3dewd2yXhzpUFUumnaB126lKgk/b3DmNDRAoGAJx+F\nGel7tkZdOABWPsfIBUZj0BVIxX6mfhuKNCi3doQ00lprP19IKGicBmoyH4xCTaaq\nIWhI9XcZkXNPiAyv5VUksYsTI8idI2gtEUklzFuUXYXieH+nwk0MgmKxvAJMRQVr\ncG6BoBRHqBlr4QmyoZaUy7i70UIvujt97tUEHJcCgYEAsVSeinPm30xAKv+dXrTq\nOnejOFaIKhkUNkISU+Y+ER2/2A3Pj1jJDiwqwj3g9WV8wU0xRHAJUPjeafRL6BLb\nRpNw4SHkEw8V9UuvGBJQsZcFY9b6wkPDK2wxxP/cejxBJ8sbWG+kcJEglD86V90D\ncRYrxIrUJADMmAKl7qPVU5U=\n-----END PRIVATE KEY-----\n"
     },
     "googleMapsApiKey": "AIzaSyCQp47kwCVpsPbgSWB-c9HrlsqyiLwe06o",
     "maintenanceMode": false,

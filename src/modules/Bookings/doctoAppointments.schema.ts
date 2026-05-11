@@ -11,6 +11,7 @@ const doctorAppoinmentValidations = z.object({
     paymentMode:z.enum(['ONLINE' , 'OFFLINE']).optional() , 
     paymentStatus:z.enum(['PENDING' , 'COMPLETED' , 'FAILED']) ,
     totalAmount:z.number().optional() ,
+    serviceName:z.string().optional() ,
 })
 
 export default doctorAppoinmentValidations
