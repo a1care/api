@@ -2,7 +2,7 @@
   "user_app": {
     "appKey": "user_app",
     "env": {
-      "apiBaseUrl": "http://192.168.1.70:3000/api",
+      "apiBaseUrl": "https://api.a1carehospital.in/api",
       "websiteBaseUrl": "https://a1care247.com",
       "cmsBaseUrl": "",
       "assetsBaseUrl": ""
@@ -35,7 +35,7 @@
         {
           "id": "banner_1778439379932_9dks7i",
           "title": "diagnostic",
-          "imageUrl": "http://localhost:3000/uploads/app-management/asset-1778439386388-328371298.png",
+          "imageUrl": "https://api.a1carehospital.in/uploads/app-management/asset-1778439386388-328371298.png",
           "redirectUrl": "a1care://services?category=diagnostics&serviceId=69ff86c7a217e06e924eb480",
           "active": true
         }
@@ -47,7 +47,7 @@
   "provider_app": {
     "appKey": "provider_app",
     "env": {
-      "apiBaseUrl": "http://192.168.1.70:3000/api",
+      "apiBaseUrl": "https://api.a1carehospital.in/api",
       "websiteBaseUrl": "https://a1care247.com",
       "cmsBaseUrl": "",
       "assetsBaseUrl": ""
