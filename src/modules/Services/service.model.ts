@@ -7,6 +7,7 @@ export interface ServiceDocument extends Document {
   imageUrl: string;
   bannerUrl: string;
   isActive: boolean;
+  priority: number;
 }
 
 const ServiceSchema = new Schema<ServiceDocument>(
@@ -43,6 +44,11 @@ const ServiceSchema = new Schema<ServiceDocument>(
     isActive: {
       type: Boolean,
       default: true
+    },
+
+    priority: {
+      type: Number,
+      default: 0
     }
   },
   {

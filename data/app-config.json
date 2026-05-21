@@ -35,14 +35,30 @@
         {
           "id": "banner_1778439379932_9dks7i",
           "title": "diagnostic",
-          "imageUrl": "https://api.a1carehospital.in/uploads/app-management/asset-1778439386388-328371298.png",
+          "imageUrl": "http://localhost:3000/uploads/app-management/asset-1778989388614-947567722.png",
           "redirectUrl": "a1care://services?category=diagnostics&serviceId=69ff86c7a217e06e924eb480",
+          "active": true
+        },
+        {
+          "id": "banner_1778990879467_dr1m51",
+          "title": "Ambulance",
+          "imageUrl": "http://localhost:3000/uploads/app-management/asset-1778990889479-666689612.png",
+          "redirectUrl": "a1care://services?category=Ambulance&serviceId=69ff86c8a217e06e924eb4c2",
+          "active": true
+        },
+        {
+          "id": "banner_1778990904223_9w8744",
+          "title": "Doctor At Home",
+          "imageUrl": "http://localhost:3000/uploads/app-management/asset-1778990913142-581082845.png",
+          "redirectUrl": "a1care://services?category=Doctor%20At%20Home&serviceId=69ff86c8a217e06e924eb4d0",
           "active": true
         }
       ],
+      "knowledgeBanners": [],
       "promotionalBanners": []
     },
-    "updatedAt": "2026-05-10T18:56:42.586Z"
+    "knowledgeBase": [],
+    "updatedAt": "2026-05-17T05:56:07.966Z"
   },
   "provider_app": {
     "appKey": "provider_app",
@@ -75,8 +91,12 @@
       "subHeadline": "Join the A1Care 24/7 network and provide care on your own terms",
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.a1care.partner",
       "appStoreUrl": "https://apps.apple.com/app/a1care-partner",
-      "festivalBanners": []
+      "festivalBanners": [],
+      "mainBanners": [],
+      "knowledgeBanners": [],
+      "promotionalBanners": []
     },
+    "knowledgeBase": [],
     "updatedAt": "2026-04-11T23:17:26.897Z"
   },
   "system": {

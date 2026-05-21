@@ -11,6 +11,7 @@ import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
 import { readConfigStore } from "../Admin/admin.controller.js";
 import HospitalBooking from "./hospitalBooking.model.js";
 import { getActiveCommissionRate } from "../PartnerSubscription/subscription.controller.js";
+import { emitToRoom } from "../../socket.js";
 
 
 export const createDoctorAppointment = asyncHandler(async (req, res) => {
@@ -80,7 +81,7 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
                 fcmToken: doctor.fcmToken ?? null,
                 title: "📅 New Appointment Request",
                 body: `${patient?.name ?? "A patient"} has booked a consultation with you.`,
-                data: { screen: "appointments", appointmentId: String(newAppointment._id) },
+                data: { screen: `/booking/${newAppointment._id}` },
                 refType: "DoctorAppointment",
                 refId: newAppointment._id as mongoose.Types.ObjectId,
             });
@@ -184,6 +185,9 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         await HospitalBooking.findOneAndUpdate({ bookingId: id }, { status: "CANCELLED" });
     }
 
+    // Real-time status push to booking room
+    emitToRoom(String(id), 'booking_status_updated', { bookingId: String(id), status });
+
     const push = pushMap[status];
     if (push && patient) {
         await enqueuePush({
@@ -192,7 +196,7 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
             fcmToken: patient.fcmToken ?? null,
             title: push.title,
             body: push.body,
-            data: { screen: "appointments", appointmentId: String(id) },
+            data: { screen: `/booking/${id}` },
             refType: "DoctorAppointment",
             refId: new mongoose.Types.ObjectId(id as string),
         });

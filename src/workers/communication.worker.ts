@@ -7,6 +7,9 @@ import {
   sendAppointmentConfirmationEmail,
   sendWalletTopupEmail,
   sendWelcomeEmail,
+  sendPartnerWelcomeEmail,
+  sendPartnerApprovalEmail,
+  sendPartnerRejectionEmail,
 } from "../utils/email.js";
 import sendAlotsSms from "../utils/alotsSms.js";
 
@@ -32,6 +35,9 @@ new Worker(
     if (job.name === "email") {
       const payload = job.data as any;
       if (payload.kind === "welcome") await sendWelcomeEmail(payload.data);
+      if (payload.kind === "partner_welcome") await sendPartnerWelcomeEmail(payload.data);
+      if (payload.kind === "partner_approved") await sendPartnerApprovalEmail(payload.data);
+      if (payload.kind === "partner_rejected") await sendPartnerRejectionEmail(payload.data);
       if (payload.kind === "appointment") await sendAppointmentConfirmationEmail(payload.data);
       if (payload.kind === "wallet_topup") await sendWalletTopupEmail(payload.data);
       return;

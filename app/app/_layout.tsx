@@ -9,6 +9,7 @@ import { NativeModules, View, ActivityIndicator, Alert } from "react-native";
 import { useAuthStore } from "../stores/auth";
 import { useConfigStore } from "../stores/config.store";
 import { ToastProvider } from '../components/CustomToast';
+import { needsKycUpload, roleFromPartner } from "../lib/partnerOnboarding";
 
 // Conditional Firebase import 
 let messaging: any;
@@ -72,8 +73,11 @@ function AuthGuard() {
         }
 
         if (token && (inOnboarding || (inAuth && !isInReviewStatus && !inRegister))) {
-            if (user?.isRegistered === false) {
-                router.replace("/(auth)/register" as any);
+            if (needsKycUpload(user, user?.role)) {
+                router.replace({
+                    pathname: "/(auth)/register",
+                    params: { role: roleFromPartner(user, user?.role) }
+                } as any);
             } else if (user?.status === "Pending") {
                 router.replace("/(auth)/review-status" as any);
             } else {
@@ -85,7 +89,7 @@ function AuthGuard() {
         if (!token && !inAuth && !inOnboarding && !isPolicyPage) {
             router.replace("/(auth)/role-select");
         }
-    }, [token, isAppReady, isLoading, segments, config?.maintenanceMode, user?.isRegistered, user?.status]);
+    }, [token, isAppReady, isLoading, segments, config?.maintenanceMode, user?.isRegistered, user?.status, user?.documents, user?.role]);
 
     if (!isAppReady || isLoading) {
         return (

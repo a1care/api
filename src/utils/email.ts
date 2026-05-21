@@ -118,6 +118,34 @@ export const sendPartnerWelcomeEmail = async (data: { email: string; fullName: s
     return sendEmail({ to: data.email, subject: "Welcome to A1Care Partner - Let's Grow Together", html: baseTemplate("Welcome Partner", body) });
 };
 
+export const sendPartnerApprovalEmail = async (data: { email: string; fullName: string }) => {
+    const body = `
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#059669;">Your Partner Account is Approved</h2>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">Great news. Your A1Care partner profile and documents have been verified successfully.</p>
+        <p style="margin-bottom:20px;">You can now go online in the A1Care Partner app and start receiving eligible booking requests.</p>
+        <a href="#" style="display:inline-block;background-color:#059669;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Open Partner App</a>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
+    `;
+    return sendEmail({ to: data.email, subject: "A1Care Partner KYC Approved", html: baseTemplate("Partner Approved", body) });
+};
+
+export const sendPartnerRejectionEmail = async (data: { email: string; fullName: string; reason: string }) => {
+    const body = `
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#e11d48;">Partner KYC Needs Updates</h2>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">We reviewed your A1Care partner application, but we could not approve it yet.</p>
+        <div style="background-color:#fff1f2;padding:24px;border-radius:16px;margin-bottom:24px;border:1px solid #fecdd3;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:800;color:#be123c;text-transform:uppercase;letter-spacing:0.08em;">Reason</p>
+            <p style="margin:0;font-size:15px;color:#881337;font-weight:600;">${data.reason}</p>
+        </div>
+        <p style="margin-bottom:20px;">Please update the required details or re-upload the correct documents in the A1Care Partner app. Our team will review your profile again after resubmission.</p>
+        <a href="#" style="display:inline-block;background-color:#e11d48;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Update Application</a>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
+    `;
+    return sendEmail({ to: data.email, subject: "A1Care Partner KYC Update Required", html: baseTemplate("Partner KYC Update Required", body) });
+};
+
 export const sendJobAcknowledgmentEmail = async (data: { email: string; fullName: string; jobTitle: string }) => {
     const body = `
         <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Application Received</h2>

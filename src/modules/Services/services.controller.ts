@@ -14,7 +14,8 @@ export const createService = asyncHandler(async (req, res) => {
     title: req.body.title,
     type: req.body.type,
     imageUrl: req.body.imageUrl,
-    bannerUrl: req.body.bannerUrl || ""
+    bannerUrl: req.body.bannerUrl || "",
+    priority: req.body.priority !== undefined ? Number(req.body.priority) : 0
   };
 
   const parsed = serviceValidation.safeParse(payload);
@@ -33,9 +34,9 @@ export const createService = asyncHandler(async (req, res) => {
 });
 
 
-//get all service 
+//get all service
 export const getServices = asyncHandler(async (req, res) => {
-  const services = await Service.find().sort({ createdAt: 'desc' }).exec()
+  const services = await Service.find().sort({ priority: 'asc', createdAt: 'asc' }).exec()
   res.status(200).json(new ApiResponse(200, "Services fetched", services))
 })
 
@@ -53,6 +54,7 @@ export const updateService = asyncHandler(async (req, res) => {
   if (req.body.type) updateData.type = req.body.type;
   if (req.body.imageUrl) updateData.imageUrl = req.body.imageUrl;
   if (req.body.bannerUrl) updateData.bannerUrl = req.body.bannerUrl;
+  if (req.body.priority !== undefined) updateData.priority = Number(req.body.priority);
 
   const updated = await Service.findByIdAndUpdate(id, updateData, { new: true });
 
@@ -61,6 +63,20 @@ export const updateService = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json(new ApiResponse(200, "Service updated", updated));
+});
+
+// bulk reorder — body: [{ id, priority }]
+export const reorderServices = asyncHandler(async (req, res) => {
+  const items: { id: string; priority: number }[] = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new ApiError(400, "Expected array of { id, priority }");
+  }
+  await Promise.all(
+    items.map(({ id, priority }) =>
+      Service.findByIdAndUpdate(id, { priority })
+    )
+  );
+  res.status(200).json(new ApiResponse(200, "Order saved", null));
 });
 
 //delete service

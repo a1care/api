@@ -14,6 +14,8 @@ const doctorValidation = z.object({
     serviceRadius: z.number().min(0, "Radius cannot be negative").optional(),
     roleId: z.string(),
     profileImage: z.string().optional(),
+    email: z.string().email().optional(),
+    dateOfBirth: z.coerce.date().optional(),
     documents: z.array(z.object({
         type: z.string(),
         url: z.string()

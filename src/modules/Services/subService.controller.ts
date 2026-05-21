@@ -35,9 +35,31 @@ export const createSubService = asyncHandler(async (req, res) => {
 export const getServicesByServiceId = asyncHandler(async (req, res) => {
     const { serviceId } = req.params
 
-    const subservice = await SubService.find({ serviceId: new mongoose.Types.ObjectId(serviceId) })
-    return res.json(new ApiResponse(200, "subservice succesfully", subservice))
+    const subservices = await SubService.aggregate([
+        { $match: { serviceId: new mongoose.Types.ObjectId(serviceId) } },
+        {
+            $lookup: {
+                from: 'childservices',
+                localField: '_id',
+                foreignField: 'subServiceId',
+                as: 'children'
+            }
+        },
+        {
+            $addFields: {
+                startingPrice: {
+                    $cond: {
+                        if: { $gt: [{ $size: '$children' }, 0] },
+                        then: { $min: '$children.price' },
+                        else: null
+                    }
+                }
+            }
+        },
+        { $project: { children: 0 } }
+    ])
 
+    return res.json(new ApiResponse(200, "subservice succesfully", subservices))
 })
 
 export const deleteSubService = asyncHandler(async (req, res) => {

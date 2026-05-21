@@ -5,14 +5,12 @@ import app from './app.js'
 import { connectDb } from "./configs/db.js";
 import { initFCM } from "./configs/fcmConfig.js";
 import http from 'http';
-import { Server } from 'socket.io';
+import { initSocket } from './socket.js';
 import { saveChatMessage } from './modules/Chat/chat.controller.js';
 import { runSubscriptionCleanup } from './jobs/subscriptionCleaner.js';
 
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+const io = initSocket(server);
 
 io.on('connection', (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`);

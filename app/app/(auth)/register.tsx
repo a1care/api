@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image,
-    Animated, Modal, Dimensions
+    Animated, Modal, Dimensions, Keyboard
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,6 +11,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
+import { missingRequiredDocuments, PARTNER_ROLE_IDS, REQUIRED_DOCUMENTS } from "../../lib/partnerOnboarding";
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
@@ -30,12 +31,21 @@ const SPECIALIZATIONS = [
 ].sort();
 
 const GENDERS = ["Male", "Female", "Other"];
+const WORKING_HOUR_OPTIONS = [
+    "06:00 - 12:00",
+    "08:00 - 14:00",
+    "09:00 - 18:00",
+    "10:00 - 19:00",
+    "12:00 - 20:00",
+    "18:00 - 06:00",
+    "24 Hours",
+];
 
 const roleConfigs: Record<string, { label: string; fields: string[], docs: string[] }> = {
-    doctor: { label: "Doctor", fields: ["name", "email", "gender", "specialization", "experience", "about", "workingHours", "serviceRadius", "homeConsultationFee", "onlineConsultationFee"], docs: ["Selfie", "Aadhar Card", "PAN Card", "Medical Degree Certificate", "MCI/State Registration"] },
-    nurse: { label: "Nurse", fields: ["name", "email", "gender", "experience", "about", "workingHours", "serviceRadius", "homeConsultationFee", "onlineConsultationFee"], docs: ["Selfie", "Aadhar Card", "PAN Card", "Nursing Certificate", "Registration Document"] },
-    ambulance: { label: "Ambulance", fields: ["name", "email", "gender", "vehicleNumber", "vehicleType", "experience", "serviceRadius"], docs: ["Selfie", "Aadhar Card", "PAN Card", "Vehicle RC", "Commercial DL", "Fitness Certificate"] },
-    rental: { label: "Medical Rental", fields: ["name", "email", "gender", "businessName", "gstNumber", "workingHours", "serviceRadius", "about"], docs: ["Selfie", "Aadhar Card", "PAN Card", "Business License", "GST Registration", "Shop Certificate"] },
+    doctor: { label: "Doctor", fields: ["name", "email", "gender", "specialization", "experience", "about", "workingHours", "serviceRadius", "homeConsultationFee", "onlineConsultationFee"], docs: REQUIRED_DOCUMENTS.doctor },
+    nurse: { label: "Nurse", fields: ["name", "email", "gender", "experience", "about", "workingHours", "serviceRadius", "homeConsultationFee", "onlineConsultationFee"], docs: REQUIRED_DOCUMENTS.nurse },
+    ambulance: { label: "Ambulance", fields: ["name", "email", "gender", "vehicleNumber", "vehicleType", "experience", "serviceRadius"], docs: REQUIRED_DOCUMENTS.ambulance },
+    rental: { label: "Medical Rental", fields: ["name", "email", "gender", "businessName", "gstNumber", "workingHours", "serviceRadius", "about"], docs: REQUIRED_DOCUMENTS.rental },
 };
 
 const fieldLabels: Record<string, string> = {
@@ -47,17 +57,12 @@ const fieldLabels: Record<string, string> = {
     businessName: "Business Name", gstNumber: "GST Number",
 };
 
-const ROLE_IDS: Record<string, string> = {
-    doctor: "692c582d17fa4521fcd5a940",
-    nurse: "6968b066a32d6eb67e8b7c74",
-    ambulance: "699946a786e3fd517d046316",
-    rental: "699946a786e3fd517d04631a",
-};
-
 export default function RegisterScreen() {
     const router = useRouter();
     const { role: rawRole, token } = useLocalSearchParams<{ role: string, token: string }>();
-    const { setAuth, token: storedToken } = useAuthStore();
+    const { setAuth, token: storedToken, user } = useAuthStore();
+    const scrollRef = useRef<ScrollView>(null);
+    const fieldOffsets = useRef<Record<string, number>>({});
     const role = (rawRole?.toLowerCase() || "doctor");
     const config = roleConfigs[role] || roleConfigs.doctor;
     const authToken = (token as string) || storedToken;
@@ -67,6 +72,7 @@ export default function RegisterScreen() {
     const [documents, setDocuments] = useState<{ type: string; url: string; uploading?: boolean }[]>([]);
     const [showSpecDropdown, setShowSpecDropdown] = useState(false);
     const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+    const [showWorkingHoursDropdown, setShowWorkingHoursDropdown] = useState(false);
     const [showBankDropdown, setShowBankDropdown] = useState(false);
     const [bankSearch, setBankSearch] = useState("");
     const [specSearch, setSpecSearch] = useState("");
@@ -74,8 +80,69 @@ export default function RegisterScreen() {
     const [showSourceModal, setShowSourceModal] = useState(false);
     const [pickingDocType, setPickingDocType] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     const filteredBanks = COMMON_BANKS.filter(b => b.toLowerCase().includes(bankSearch.toLowerCase()));
+
+    useEffect(() => {
+        const showSub = Keyboard.addListener("keyboardDidShow", (event) => {
+            setKeyboardHeight(event.endCoordinates.height);
+        });
+        const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+            setKeyboardHeight(0);
+        });
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+
+    useEffect(() => {
+        const hydrateExistingProfile = async () => {
+            if (!authToken) return;
+            try {
+                const res = await api.get("/doctor/auth/details", { headers: { Authorization: `Bearer ${authToken}` } });
+                const staff = res.data?.data;
+                if (!staff) return;
+
+                const startExperience = staff.startExperience ? new Date(staff.startExperience) : null;
+                const experience = startExperience && !Number.isNaN(startExperience.getTime())
+                    ? String(Math.max(0, new Date().getFullYear() - startExperience.getFullYear()))
+                    : "";
+
+                setForm(prev => ({
+                    ...prev,
+                    name: staff.name || prev.name,
+                    email: staff.email || prev.email,
+                    gender: staff.gender || prev.gender || "Male",
+                    specialization: Array.isArray(staff.specialization) ? staff.specialization : prev.specialization,
+                    experience: experience || prev.experience,
+                    about: staff.about || prev.about,
+                    workingHours: staff.workingHours || prev.workingHours,
+                    serviceRadius: staff.serviceRadius !== undefined ? String(staff.serviceRadius) : prev.serviceRadius,
+                    homeConsultationFee: staff.homeConsultationFee !== undefined ? String(staff.homeConsultationFee) : prev.homeConsultationFee,
+                    onlineConsultationFee: staff.onlineConsultationFee !== undefined ? String(staff.onlineConsultationFee) : prev.onlineConsultationFee,
+                    bankDetails: {
+                        accountHolderName: staff.bankDetails?.accountHolderName || prev.bankDetails.accountHolderName,
+                        accountNumber: staff.bankDetails?.accountNumber || prev.bankDetails.accountNumber,
+                        ifscCode: staff.bankDetails?.ifscCode || prev.bankDetails.ifscCode,
+                        bankName: staff.bankDetails?.bankName || prev.bankDetails.bankName,
+                    }
+                }));
+
+                setDocuments(Array.isArray(staff.documents) ? staff.documents : []);
+
+                if (staff.isRegistered && missingRequiredDocuments(staff, role).length > 0) {
+                    setStep(2);
+                }
+            } catch (err) {
+                console.log("[Register] Could not hydrate existing profile", err);
+            }
+        };
+
+        hydrateExistingProfile();
+    }, [authToken, role]);
 
     const handlePickDocument = async (docType: string) => {
         if (docType === "Selfie") {
@@ -134,6 +201,7 @@ export default function RegisterScreen() {
 
     const handleRegister = async () => {
         if (!authToken) return router.replace("/(auth)/login");
+        if (!isStep2Valid()) return Alert.alert("Notice", "Upload all documents.");
 
         const step3Errors: Record<string, string> = {};
         if (!form.bankDetails.accountNumber || form.bankDetails.accountNumber.length < 9) step3Errors.accountNumber = "Enter a valid account number.";
@@ -147,7 +215,7 @@ export default function RegisterScreen() {
         try {
             const payload = {
                 ...form,
-                roleId: ROLE_IDS[role] || ROLE_IDS.doctor,
+                roleId: PARTNER_ROLE_IDS[role as keyof typeof PARTNER_ROLE_IDS] || PARTNER_ROLE_IDS.doctor,
                 documents: documents.map(d => ({ type: d.type, url: d.url })),
                 status: "Pending",
                 isRegistered: true,
@@ -175,6 +243,15 @@ export default function RegisterScreen() {
         setFieldErrors(prev => ({ ...prev, [key]: "" }));
     };
     const updateBank = (key: string, val: any) => setForm(prev => ({ ...prev, bankDetails: { ...prev.bankDetails, [key]: val } }));
+    const rememberFieldOffset = (key: string, y: number) => {
+        fieldOffsets.current[key] = y;
+    };
+    const scrollToField = (key: string) => {
+        setTimeout(() => {
+            const y = fieldOffsets.current[key] ?? 0;
+            scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+        }, 120);
+    };
 
     const validateStep1 = () => {
         const nextErrors: Record<string, string> = {};
@@ -200,7 +277,12 @@ export default function RegisterScreen() {
     return (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
             <LinearGradient colors={["#F8FAFC", "#FFFFFF"]} style={StyleSheet.absoluteFill} />
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                ref={scrollRef}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 24 : 100 }]}
+            >
                 <View style={styles.navBar}>
                     <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : router.back()} style={styles.backBtn}><Ionicons name="chevron-back" size={24} color="#1E293B" /></TouchableOpacity>
                     <View style={styles.progressContainer}><View style={[styles.progressIndicator, { width: `${(step / 3) * 100}%` }]} /></View>
@@ -215,9 +297,9 @@ export default function RegisterScreen() {
                             {config.fields.map(f => {
                                 if (f === "specialization" && role !== "doctor") return null;
                                 if (f === "gender") return (
-                                    <View key={f} style={styles.fieldItem}>
+                                    <View key={f} style={styles.fieldItem} onLayout={(event) => rememberFieldOffset(f, event.nativeEvent.layout.y)}>
                                         <Text style={styles.fieldLabel}>Gender Required <Text style={styles.asterisk}>*</Text></Text>
-                                        <TouchableOpacity style={[styles.dropdownToggle, fieldErrors.gender && styles.fieldInputError]} onPress={() => setShowGenderDropdown(true)}>
+                                        <TouchableOpacity style={[styles.dropdownToggle, fieldErrors.gender && styles.fieldInputError]} onPress={() => { Keyboard.dismiss(); setShowGenderDropdown(true); }}>
                                             <MaterialCommunityIcons name={form.gender === "Male" ? "gender-male" : "gender-female"} size={20} color="#2D935C" />
                                             <Text style={styles.dropdownValue}>{form.gender}</Text>
                                             <Ionicons name="chevron-down" size={18} color="#94A3B8" />
@@ -229,21 +311,47 @@ export default function RegisterScreen() {
                                     </View>
                                 );
                                 if (f === "specialization") return (
-                                    <View key={f} style={styles.fieldItem}>
+                                    <View key={f} style={styles.fieldItem} onLayout={(event) => rememberFieldOffset(f, event.nativeEvent.layout.y)}>
                                         <Text style={styles.fieldLabel}>Specializations Required <Text style={styles.asterisk}>*</Text></Text>
-                                        <View style={styles.specContainer}>{form.specialization.map((s: string) => (<TouchableOpacity key={s} style={styles.specChip} onPress={() => { update("specialization", form.specialization.filter((x: string) => x !== s)); setFieldErrors(prev => ({ ...prev, specialization: "" })); }}><Text style={styles.specChipText}>{s}</Text><Ionicons name="close-circle" size={14} color="#FFF" /></TouchableOpacity>))}<TouchableOpacity style={[styles.addSpecBtn, fieldErrors.specialization && styles.specAddError]} onPress={() => setShowSpecDropdown(true)}><Ionicons name="add-circle" size={18} color="#2D935C" /><Text style={styles.addSpecText}>Add</Text></TouchableOpacity></View>
+                                        <View style={styles.specContainer}>{form.specialization.map((s: string) => (<TouchableOpacity key={s} style={styles.specChip} onPress={() => { update("specialization", form.specialization.filter((x: string) => x !== s)); setFieldErrors(prev => ({ ...prev, specialization: "" })); }}><Text style={styles.specChipText}>{s}</Text><Ionicons name="close-circle" size={14} color="#FFF" /></TouchableOpacity>))}<TouchableOpacity style={[styles.addSpecBtn, fieldErrors.specialization && styles.specAddError]} onPress={() => { Keyboard.dismiss(); setShowSpecDropdown(true); }}><Ionicons name="add-circle" size={18} color="#2D935C" /><Text style={styles.addSpecText}>Add</Text></TouchableOpacity></View>
                                         {!!fieldErrors.specialization && <Text style={styles.fieldErrorText}>{fieldErrors.specialization}</Text>}
-                                        <Modal transparent visible={showSpecDropdown} animationType="slide"><View style={styles.modalOverlay}><TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowSpecDropdown(false)} /><View style={styles.modalContentFull}><TextInput style={styles.searchBar} placeholder="Search..." value={specSearch} onChangeText={setSpecSearch} /><ScrollView style={{ maxHeight: 300 }}>{SPECIALIZATIONS.filter(s => s.toLowerCase().includes(specSearch.toLowerCase())).map(s => (<TouchableOpacity key={s} style={styles.modalItem} onPress={() => { if (!form.specialization.includes(s)) update("specialization", [...form.specialization, s]); setFieldErrors(prev => ({ ...prev, specialization: "" })); setShowSpecDropdown(false); }}><Text style={styles.modalItemText}>{s}</Text></TouchableOpacity>))}</ScrollView></View></View></Modal>
+                                        <Modal transparent visible={showSpecDropdown} animationType="slide"><View style={styles.modalOverlay}><TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowSpecDropdown(false)} /><View style={[styles.modalContentFull, keyboardHeight > 0 && { marginBottom: keyboardHeight, maxHeight: '52%' }]}><View style={styles.searchInputWrap}><Ionicons name="search" size={18} color="#64748B" /><TextInput style={styles.searchBar} placeholder="Search specialization" placeholderTextColor="#94A3B8" value={specSearch} onChangeText={setSpecSearch} /></View><ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 300 }}>{SPECIALIZATIONS.filter(s => s.toLowerCase().includes(specSearch.toLowerCase())).map(s => (<TouchableOpacity key={s} style={styles.modalItem} onPress={() => { if (!form.specialization.includes(s)) update("specialization", [...form.specialization, s]); setFieldErrors(prev => ({ ...prev, specialization: "" })); setShowSpecDropdown(false); }}><Text style={styles.modalItemText}>{s}</Text></TouchableOpacity>))}</ScrollView></View></View></Modal>
+                                    </View>
+                                );
+                                if (f === "workingHours") return (
+                                    <View key={f} style={styles.fieldItem} onLayout={(event) => rememberFieldOffset(f, event.nativeEvent.layout.y)}>
+                                        <Text style={styles.fieldLabel}>Working Hours Required <Text style={styles.asterisk}>*</Text></Text>
+                                        <TouchableOpacity style={[styles.dropdownToggle, fieldErrors.workingHours && styles.fieldInputError]} onPress={() => { Keyboard.dismiss(); setShowWorkingHoursDropdown(true); }}>
+                                            <Ionicons name="time-outline" size={20} color="#2D935C" />
+                                            <Text style={[styles.dropdownValue, !form.workingHours && { color: "#A0AABB" }]}>{form.workingHours || "Select working hours"}</Text>
+                                            <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                                        </TouchableOpacity>
+                                        {!!fieldErrors.workingHours && <Text style={styles.fieldErrorText}>{fieldErrors.workingHours}</Text>}
+                                        <Modal visible={showWorkingHoursDropdown} transparent animationType="slide">
+                                            <View style={styles.modalOverlay}>
+                                                <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowWorkingHoursDropdown(false)} />
+                                                <View style={styles.modalContentCompact}>
+                                                    <Text style={styles.modalTitle}>Select Working Hours</Text>
+                                                    {WORKING_HOUR_OPTIONS.map(hours => (
+                                                        <TouchableOpacity key={hours} style={styles.modalItem} onPress={() => { update("workingHours", hours); setFieldErrors(prev => ({ ...prev, workingHours: "" })); setShowWorkingHoursDropdown(false); }}>
+                                                            <Text style={[styles.modalItemText, form.workingHours === hours && styles.modalItemSelected]}>{hours}</Text>
+                                                            {form.workingHours === hours && <Ionicons name="checkmark-circle" size={20} color="#2D935C" />}
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </View>
+                                        </Modal>
                                     </View>
                                 );
                                 return (
-                                    <View key={f} style={styles.fieldItem}>
+                                    <View key={f} style={styles.fieldItem} onLayout={(event) => rememberFieldOffset(f, event.nativeEvent.layout.y)}>
                                         <Text style={styles.fieldLabel}>{fieldLabels[f]} Required <Text style={styles.asterisk}>*</Text></Text>
                                         <TextInput
                                             style={[styles.fieldInput, f === "about" && styles.fieldArea, fieldErrors[f] && styles.fieldInputError]}
                                             placeholder={fieldLabels[f]}
                                             value={form[f]}
                                             onChangeText={v => updateField(f, v)}
+                                            onFocus={() => scrollToField(f)}
                                             multiline={f === "about"}
                                             keyboardType={["experience", "serviceRadius", "consultationFee", "homeConsultationFee", "onlineConsultationFee"].includes(f) ? "number-pad" : "default"}
                                         />
@@ -271,21 +379,21 @@ export default function RegisterScreen() {
                     <View style={styles.stepWrapper}>
                         <Text style={styles.stepTitle}>Settlement Details</Text>
                         <View style={styles.formGroup}>
-                            <View style={styles.fieldItem}><Text style={styles.fieldLabel}>Account Number Required <Text style={styles.asterisk}>*</Text></Text><TextInput style={[styles.fieldInput, fieldErrors.accountNumber && styles.fieldInputError]} placeholder="9-18 digit account number" value={form.bankDetails.accountNumber} onChangeText={v => { updateBank("accountNumber", v.replace(/\D/g, "").slice(0, 18)); setFieldErrors(prev => ({ ...prev, accountNumber: "" })); }} keyboardType="number-pad" />{!!fieldErrors.accountNumber && <Text style={styles.fieldErrorText}>{fieldErrors.accountNumber}</Text>}</View>
-                            <View style={styles.fieldItem}><Text style={styles.fieldLabel}>IFSC Code Required <Text style={styles.asterisk}>*</Text></Text><TextInput style={[styles.fieldInput, fieldErrors.ifscCode && styles.fieldInputError]} placeholder="e.g. SBIN0001234" value={form.bankDetails.ifscCode} onChangeText={v => { updateBank("ifscCode", v.toUpperCase().slice(0, 11)); setFieldErrors(prev => ({ ...prev, ifscCode: "" })); }} autoCapitalize="characters" />{!!fieldErrors.ifscCode && <Text style={styles.fieldErrorText}>{fieldErrors.ifscCode}</Text>}</View>
-                            <View style={styles.fieldItem}>
+                            <View style={styles.fieldItem} onLayout={(event) => rememberFieldOffset("accountNumber", event.nativeEvent.layout.y)}><Text style={styles.fieldLabel}>Account Number Required <Text style={styles.asterisk}>*</Text></Text><TextInput style={[styles.fieldInput, fieldErrors.accountNumber && styles.fieldInputError]} placeholder="9-18 digit account number" value={form.bankDetails.accountNumber} onFocus={() => scrollToField("accountNumber")} onChangeText={v => { updateBank("accountNumber", v.replace(/\D/g, "").slice(0, 18)); setFieldErrors(prev => ({ ...prev, accountNumber: "" })); }} keyboardType="number-pad" />{!!fieldErrors.accountNumber && <Text style={styles.fieldErrorText}>{fieldErrors.accountNumber}</Text>}</View>
+                            <View style={styles.fieldItem} onLayout={(event) => rememberFieldOffset("ifscCode", event.nativeEvent.layout.y)}><Text style={styles.fieldLabel}>IFSC Code Required <Text style={styles.asterisk}>*</Text></Text><TextInput style={[styles.fieldInput, fieldErrors.ifscCode && styles.fieldInputError]} placeholder="e.g. SBIN0001234" value={form.bankDetails.ifscCode} onFocus={() => scrollToField("ifscCode")} onChangeText={v => { updateBank("ifscCode", v.toUpperCase().slice(0, 11)); setFieldErrors(prev => ({ ...prev, ifscCode: "" })); }} autoCapitalize="characters" />{!!fieldErrors.ifscCode && <Text style={styles.fieldErrorText}>{fieldErrors.ifscCode}</Text>}</View>
+                            <View style={styles.fieldItem} onLayout={(event) => rememberFieldOffset("bankName", event.nativeEvent.layout.y)}>
                                 <Text style={styles.fieldLabel}>Bank Name Required <Text style={styles.asterisk}>*</Text></Text>
-                                <TouchableOpacity style={[styles.dropdownToggle, fieldErrors.bankName && styles.fieldInputError]} onPress={() => setShowBankDropdown(true)}>
+                                <TouchableOpacity style={[styles.dropdownToggle, fieldErrors.bankName && styles.fieldInputError]} onPress={() => { Keyboard.dismiss(); setShowBankDropdown(true); }}>
                                     <Text style={[styles.dropdownValue, !form.bankDetails.bankName && { color: "#A0AABB" }]}>{form.bankDetails.bankName || "Select Bank"}</Text>
                                     <Ionicons name="chevron-down" size={18} color="#94A3B8" />
                                 </TouchableOpacity>
                                 {!!fieldErrors.bankName && <Text style={styles.fieldErrorText}>{fieldErrors.bankName}</Text>}
                                 <Modal visible={showBankDropdown} transparent animationType="slide">
                                     <View style={styles.modalOverlay}><TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowBankDropdown(false)} />
-                                    <View style={styles.modalContentFull}><TextInput style={styles.searchBar} placeholder="Search bank..." value={bankSearch} onChangeText={setBankSearch} /><ScrollView style={{ maxHeight: 300 }}>{filteredBanks.map(b => (<TouchableOpacity key={b} style={styles.modalItem} onPress={() => { updateBank("bankName", b); setFieldErrors(prev => ({ ...prev, bankName: "" })); setShowBankDropdown(false); }}><Text style={styles.modalItemText}>{b}</Text></TouchableOpacity>))}</ScrollView></View></View>
+                                    <View style={[styles.modalContentFull, keyboardHeight > 0 && { marginBottom: keyboardHeight, maxHeight: '52%' }]}><View style={styles.searchInputWrap}><Ionicons name="search" size={18} color="#64748B" /><TextInput style={styles.searchBar} placeholder="Search bank" placeholderTextColor="#94A3B8" value={bankSearch} onChangeText={setBankSearch} /></View><ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 300 }}>{filteredBanks.map(b => (<TouchableOpacity key={b} style={styles.modalItem} onPress={() => { updateBank("bankName", b); setFieldErrors(prev => ({ ...prev, bankName: "" })); setShowBankDropdown(false); }}><Text style={styles.modalItemText}>{b}</Text></TouchableOpacity>))}</ScrollView></View></View>
                                 </Modal>
                             </View>
-                            <View style={styles.fieldItem}><Text style={styles.fieldLabel}>Account Holder Name Required <Text style={styles.asterisk}>*</Text></Text><TextInput style={[styles.fieldInput, fieldErrors.accountHolderName && styles.fieldInputError]} placeholder="As per bank records" value={form.bankDetails.accountHolderName} onChangeText={v => { updateBank("accountHolderName", v.replace(/[^a-zA-Z\s]/g, "")); setFieldErrors(prev => ({ ...prev, accountHolderName: "" })); }} />{!!fieldErrors.accountHolderName && <Text style={styles.fieldErrorText}>{fieldErrors.accountHolderName}</Text>}</View>
+                            <View style={styles.fieldItem} onLayout={(event) => rememberFieldOffset("accountHolderName", event.nativeEvent.layout.y)}><Text style={styles.fieldLabel}>Account Holder Name Required <Text style={styles.asterisk}>*</Text></Text><TextInput style={[styles.fieldInput, fieldErrors.accountHolderName && styles.fieldInputError]} placeholder="As per bank records" value={form.bankDetails.accountHolderName} onFocus={() => scrollToField("accountHolderName")} onChangeText={v => { updateBank("accountHolderName", v.replace(/[^a-zA-Z\s]/g, "")); setFieldErrors(prev => ({ ...prev, accountHolderName: "" })); }} />{!!fieldErrors.accountHolderName && <Text style={styles.fieldErrorText}>{fieldErrors.accountHolderName}</Text>}</View>
                         </View>
                         <TouchableOpacity onPress={handleRegister} style={styles.mainActionBtn}>{showThinking ? <ActivityIndicator color="#FFF" /> : <Text style={styles.mainActionText}>Confirm & Finish</Text>}</TouchableOpacity>
                     </View>
@@ -357,7 +465,8 @@ const styles = StyleSheet.create({
     modalItem: { padding: 18, flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
     modalItemText: { fontSize: 15, color: '#475569', fontWeight: '600' },
     modalItemSelected: { color: '#2D935C', fontWeight: '800' },
-    searchBar: { height: 50, backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 15, marginBottom: 15, borderWidth: 1, borderColor: '#E2E8F0' },
+    searchInputWrap: { height: 52, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 14, marginBottom: 15, borderWidth: 1.5, borderColor: '#E2E8F0', gap: 8 },
+    searchBar: { flex: 1, height: '100%', padding: 0, fontSize: 15, fontWeight: '600', color: '#1E293B' },
     sourceRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 20 },
     sourceBtn: { alignItems: 'center', gap: 10 },
     sourceIconBox: { width: 64, height: 64, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },

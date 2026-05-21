@@ -6,24 +6,41 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth";
 import { Toast } from "../../components/CustomToast";
+import { missingRequiredDocuments, needsKycUpload, roleFromPartner } from "../../lib/partnerOnboarding";
 
 const ReviewStatusScreen = () => {
     const router = useRouter();
-    const { user, setAuth } = useAuthStore() as any;
+    const { user, token, setAuth } = useAuthStore() as any;
     const [loading, setLoading] = React.useState(false);
+
+    React.useEffect(() => {
+        if (user && needsKycUpload(user, user?.role)) {
+            router.replace({
+                pathname: "/(auth)/register",
+                params: { role: roleFromPartner(user, user?.role), token }
+            } as any);
+        }
+    }, [user?._id, user?.documents, user?.role, token]);
 
     const handleCheckUpdate = async () => {
         setLoading(true);
         try {
             const res = await api.get("/doctor/auth/details");
             const staff = res.data.data;
+            const partnerRole = roleFromPartner(staff, user?.role);
+            await setAuth(token || "", { ...staff, role: partnerRole });
+
+            if (needsKycUpload(staff, partnerRole)) {
+                Toast.show({ type: 'info', text1: 'Documents Required', text2: 'Please upload your missing KYC documents.' });
+                router.replace({
+                    pathname: "/(auth)/register",
+                    params: { role: partnerRole, token }
+                } as any);
+                return;
+            }
             
             if (staff.status === "Active") {
                 Toast.show({ type: 'success', text1: 'Verified!', text2: 'Welcome to A1Care' });
-                // Update local store status
-                const authHeader = api.defaults.headers.Authorization;
-                const token = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : '';
-                await setAuth(token, { ...staff, role: user?.role });
                 router.replace("/(tabs)/home");
             } else {
                 Toast.show({ type: 'info', text1: 'Still Under Review', text2: 'Our team is reviewing your profile.' });
@@ -37,9 +54,12 @@ const ReviewStatusScreen = () => {
     };
 
     const handleLogout = async () => {
-        // Simple logout: clear store, go back to role-select
+        await useAuthStore.getState().logout();
         router.replace("/(auth)/role-select");
     };
+
+    const missingDocs = missingRequiredDocuments(user, user?.role);
+    const hasMissingDocs = missingDocs.length > 0;
 
     return (
         <View style={styles.container}>
@@ -63,7 +83,7 @@ const ReviewStatusScreen = () => {
                             <Ionicons name="checkmark" size={14} color="#FFF" />
                         </View>
                         <View style={styles.stepLine} />
-                        <Text style={styles.stepText}>Documents Submitted</Text>
+                        <Text style={styles.stepText}>{hasMissingDocs ? "Documents Required" : "Documents Submitted"}</Text>
                     </View>
 
                     <View style={styles.step}>
@@ -71,7 +91,7 @@ const ReviewStatusScreen = () => {
                             <ActivityIndicator size="small" color="#FFF" />
                         </View>
                         <View style={[styles.stepLine, { backgroundColor: "#D1D5DB" }]} />
-                        <Text style={[styles.stepText, { color: "#1A7FD4" }]}>Admin Reviewing</Text>
+                        <Text style={[styles.stepText, { color: "#1A7FD4" }]}>{hasMissingDocs ? "Upload Pending" : "Admin Reviewing"}</Text>
                     </View>
 
                     <View style={styles.step}>

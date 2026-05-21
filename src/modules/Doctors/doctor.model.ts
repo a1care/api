@@ -35,6 +35,7 @@ export interface DoctorDocument extends Document {
   };
   fcmToken?: string;
   email?: string;
+  dateOfBirth?: Date;
 }
 
 const DoctorSchema = new Schema<DoctorDocument>(
@@ -170,6 +171,9 @@ const DoctorSchema = new Schema<DoctorDocument>(
       type: String,
       lowercase: true,
       trim: true
+    },
+    dateOfBirth: {
+      type: Date
     }
   },
 

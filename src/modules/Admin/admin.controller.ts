@@ -31,6 +31,7 @@ import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
 import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
 import Payout from "../Earnings/payout.model.js";
+import { enqueueEmail } from "../../queues/communicationQueue.js";
 
 const ENV_ADMIN_ID = "env-super-admin";
 const APP_KEYS = ["user_app", "provider_app"] as const;
@@ -231,6 +232,9 @@ type ManagedAppConfig = {
     playStoreUrl: string;
     appStoreUrl: string;
     festivalBanners: FestivalBanner[];
+    mainBanners: FestivalBanner[];
+    knowledgeBanners: FestivalBanner[];
+    promotionalBanners: FestivalBanner[];
   };
   knowledgeBase: any[];
   updatedAt: string;
@@ -296,7 +300,10 @@ const createDefaultConfigFor = (appKey: AppKey): ManagedAppConfig => {
       subHeadline: "",
       playStoreUrl: "",
       appStoreUrl: "",
-      festivalBanners: []
+      festivalBanners: [],
+      mainBanners: [],
+      knowledgeBanners: [],
+      promotionalBanners: []
     },
     knowledgeBase: [],
     updatedAt: new Date().toISOString()
@@ -318,6 +325,15 @@ const ensureConfigStore = async () => {
   }
 };
 
+const mergeAppConfigWithDefaults = (def: ManagedAppConfig, saved: any): ManagedAppConfig => ({
+  ...def,
+  ...saved,
+  landing: {
+    ...def.landing,       // fills in mainBanners/knowledgeBanners/promotionalBanners defaults
+    ...(saved?.landing ?? {})
+  }
+});
+
 export const readConfigStore = async () => {
   await ensureConfigStore();
   try {
@@ -327,6 +343,8 @@ export const readConfigStore = async () => {
     return {
       ...defaults,
       ...parsed,
+      user_app: mergeAppConfigWithDefaults(defaults.user_app, parsed.user_app),
+      provider_app: mergeAppConfigWithDefaults(defaults.provider_app, parsed.provider_app),
       // Deep-merge system so new default settings are always available
       system: { ...defaults.system, ...(parsed.system ?? parsed.firebase ?? {}) }
     } as Record<AppKey, ManagedAppConfig> & { system: SystemConfig };
@@ -374,6 +392,18 @@ const mergeAppConfig = (current: ManagedAppConfig, payload: any): ManagedAppConf
     ? incomingLanding.festivalBanners.map(normalizeBanner)
     : current.landing.festivalBanners;
 
+  const mainBanners = Array.isArray(incomingLanding.mainBanners)
+    ? incomingLanding.mainBanners.map(normalizeBanner)
+    : current.landing.mainBanners ?? [];
+
+  const knowledgeBanners = Array.isArray(incomingLanding.knowledgeBanners)
+    ? incomingLanding.knowledgeBanners.map(normalizeBanner)
+    : current.landing.knowledgeBanners ?? [];
+
+  const promotionalBanners = Array.isArray(incomingLanding.promotionalBanners)
+    ? incomingLanding.promotionalBanners.map(normalizeBanner)
+    : current.landing.promotionalBanners ?? [];
+
   return {
     ...current,
     env: {
@@ -409,7 +439,10 @@ const mergeAppConfig = (current: ManagedAppConfig, payload: any): ManagedAppConf
       subHeadline: normalizeString(incomingLanding.subHeadline ?? current.landing.subHeadline),
       playStoreUrl: normalizeString(incomingLanding.playStoreUrl ?? current.landing.playStoreUrl),
       appStoreUrl: normalizeString(incomingLanding.appStoreUrl ?? current.landing.appStoreUrl),
-      festivalBanners
+      festivalBanners,
+      mainBanners,
+      knowledgeBanners,
+      promotionalBanners
     },
     knowledgeBase: Array.isArray(payload?.knowledgeBase) ? payload.knowledgeBase : current.knowledgeBase,
     updatedAt: new Date().toISOString()
@@ -960,12 +993,12 @@ export const uploadAppManagementAsset = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No file uploaded");
   }
 
-  const host = req.get("host");
   const normalizedPath = req.file.path.replace(/\\/g, "/");
   const publicPath = normalizedPath.includes("uploads/")
     ? normalizedPath.slice(normalizedPath.indexOf("uploads/"))
     : normalizedPath;
-  const url = `${req.protocol}://${host}/${publicPath}`;
+  // Store as relative path so each client (browser/app) prefixes its own API origin
+  const url = `/${publicPath}`;
 
   return res.status(200).json(new ApiResponse(200, "Asset uploaded", { url }));
 });
@@ -1020,6 +1053,27 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 
   const user = await Doctor.findByIdAndUpdate(id, updateDoc, { new: true });
   if (!user) throw new ApiError(404, "User not found");
+
+  if (user.email && user.name) {
+    if (nextStatus === "Active") {
+      enqueueEmail({
+        kind: "partner_approved",
+        data: { email: user.email, fullName: user.name }
+      }).catch((err) => console.error("[Admin] Partner approval email failed:", err));
+    }
+
+    if (nextStatus === "Rejected") {
+      enqueueEmail({
+        kind: "partner_rejected",
+        data: {
+          email: user.email,
+          fullName: user.name,
+          reason: String(rejectionReason).trim()
+        }
+      }).catch((err) => console.error("[Admin] Partner rejection email failed:", err));
+    }
+  }
+
   return res.status(200).json(new ApiResponse(200, "User status updated", user));
 });
 
@@ -1168,15 +1222,6 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode, serviceType } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
-  // Auto-update bookings that have timed out
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-  await serviceRequestModel.updateMany({
-    status: { $in: ["PENDING", "BROADCASTED"] },
-    $expr: { $lt: [{ $ifNull: ["$broadcastedAt", "$createdAt"] }, fifteenMinutesAgo] }
-  }, {
-    status: "RETURNED_TO_ADMIN"
-  });
-
   const query: any = {};
   if (status && status !== "All") query.status = status;
   if (payment && payment !== "All") query.paymentStatus = payment;
@@ -1237,7 +1282,7 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   };
 
   const bookings = await serviceRequestModel.find(query)
-    .populate("childServiceId", "name")
+    .populate("childServiceId", "name allowedRoleIds")
     .populate("userId", "name mobileNumber")
     .sort({ createdAt: -1 });
 
@@ -1372,7 +1417,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
   }
 
   const updatePayload: any = { status };
-  if (assignedProviderId && (status === "ACCEPTED" || status === "Confirmed")) {
+  if (assignedProviderId && ["ACCEPTED", "CONFIRMED", "Confirmed"].includes(status)) {
     updatePayload.assignedProviderId = assignedProviderId;
   }
 
@@ -1382,7 +1427,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
     .populate("userId");
   if (!booking) throw new ApiError(404, "Service booking not found");
 
-  if (status === "ACCEPTED" || status === "Confirmed".toUpperCase()) {
+  if (status === "ACCEPTED" || status === "CONFIRMED" || status === "Confirmed") {
     await HospitalBooking.findOneAndUpdate(
       { bookingId: booking._id },
       {
@@ -1408,12 +1453,6 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
 
 /** List service bookings that are RETURNED_TO_ADMIN for admin to accept/reject (with urgency, etc.) */
 export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) => {
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-  await serviceRequestModel.updateMany(
-    { status: { $in: ["PENDING", "BROADCASTED"] }, $expr: { $lt: [{ $ifNull: ["$broadcastedAt", "$createdAt"] }, fifteenMinutesAgo] } },
-    { status: "RETURNED_TO_ADMIN" }
-  );
-
   const list = await serviceRequestModel
     .find({ status: "RETURNED_TO_ADMIN" })
     .populate("childServiceId", "name")
@@ -1573,7 +1612,10 @@ export const getPublicAppConfig = asyncHandler(async (req, res) => {
     branding: appConfig.branding,
     contact: appConfig.contact,
     landing: {
-      festivalBanners: appConfig.landing.festivalBanners.filter((b: any) => b.active),
+      festivalBanners: (appConfig.landing.festivalBanners ?? []).filter((b: any) => b.active),
+      mainBanners: (appConfig.landing.mainBanners ?? []).filter((b: any) => b.active),
+      knowledgeBanners: (appConfig.landing.knowledgeBanners ?? []).filter((b: any) => b.active),
+      promotionalBanners: (appConfig.landing.promotionalBanners ?? []).filter((b: any) => b.active),
       playStoreUrl: appConfig.landing.playStoreUrl,
       appStoreUrl: appConfig.landing.appStoreUrl,
     },

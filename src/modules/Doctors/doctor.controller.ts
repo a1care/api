@@ -12,6 +12,7 @@ import { hmacHash } from "../../utils/Hmac.js";
 import sendMessage from "../../configs/twilioConfig.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import mongoose from "mongoose";
+import { enqueueEmail } from "../../queues/communicationQueue.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
 // const DEV_BYPASS_OTP = "123456";
@@ -264,7 +265,7 @@ export const registerStaff = asyncHandler(async (req, res) => {
   const fields = [
     'name', 'gender', 'startExperience', 'specialization', 'about',
     'workingHours', 'serviceRadius', 'roleId', 'role', 'consultationFee', 'homeConsultationFee',
-    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage'
+    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage', 'email', 'dateOfBirth'
   ];
 
   fields.forEach(field => {
@@ -330,6 +331,11 @@ export const registerStaff = asyncHandler(async (req, res) => {
     { $set: updateData },
     { new: true }
   );
+
+  // Send welcome email on first registration (when name is set for the first time)
+  if (!findStaff.isRegistered && updateData.isRegistered && updatedStaff?.email && updatedStaff?.name) {
+    enqueueEmail({ kind: "partner_welcome", data: { email: updatedStaff.email, fullName: updatedStaff.name } }).catch(() => {});
+  }
 
   return res.status(200).json(new ApiResponse(200, "Profile updated successfully", updatedStaff));
 });

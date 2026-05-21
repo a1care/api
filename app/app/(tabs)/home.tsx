@@ -10,14 +10,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Toast } from "../../components/CustomToast";
 import * as Location from 'expo-location';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// Conditional Firebase import 
-let messaging: any;
-try {
-    if (NativeModules.RNFBAppModule) {
-        messaging = require('@react-native-firebase/messaging').default;
-    }
-} catch (e) { }
+import { getFirebaseMessaging } from "../../lib/nativeFirebase";
 
 // Global persistence to prevent flickering during tab switches
 let cachedLocationText = "";
@@ -36,6 +29,7 @@ export default function HomeScreen() {
     const queryClient = useQueryClient();
     const locationWatcherRef = useRef<Location.LocationSubscription | null>(null);
     const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const messaging = useMemo(() => getFirebaseMessaging(), []);
 
     // 1. Handle Permissions & Tracking after login
     useEffect(() => {

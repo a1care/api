@@ -9,6 +9,7 @@ import PartnerSubscription from "../../PartnerSubscription/subscription.model.js
 import { Patient } from "../../Authentication/patient.model.js";
 import DoctorModel from "../../Doctors/doctor.model.js";
 import { enqueuePush } from "../../../queues/communicationQueue.js";
+import { emitToRoom } from "../../../socket.js";
 
 // Partner accepts a service request
 export const createServiceAcceptance = asyncHandler(async (req, res) => {
@@ -65,6 +66,9 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     const newAcceptance = new serviceAcceptanceModal(parsed.data);
     await newAcceptance.save();
 
+    // Emit real-time status update to booking room
+    emitToRoom(serviceRequestId, 'booking_status_updated', { bookingId: serviceRequestId, status: 'ACCEPTED' });
+
     // ── Push: notify the customer their booking was accepted ─────────────────
     try {
         const patient = await Patient.findById((serviceRequestDetails.userId as any)?._id).select("fcmToken name");
@@ -77,7 +81,7 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
                 fcmToken: patient.fcmToken ?? null,
                 title: "✅ Provider Accepted!",
                 body: `${provider?.name ?? "A provider"} has accepted your booking.`,
-                data: { screen: "bookings", bookingId: serviceRequestId },
+                data: { screen: `/booking/${serviceRequestId}` },
                 refType: "ServiceRequest",
                 refId: new mongoose.Types.ObjectId(serviceRequestId),
             });

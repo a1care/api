@@ -89,7 +89,7 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
     })),
     "🆕 New Job Available!",
     `A new ${serviceName} booking near you — tap to accept.`,
-    { screen: "bookings", bookingId: String(serviceRequestId) },
+    { screen: `/booking/${serviceRequestId}` },
     "ServiceRequest",
     request._id as mongoose.Types.ObjectId
   );

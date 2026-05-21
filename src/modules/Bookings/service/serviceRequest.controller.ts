@@ -6,13 +6,12 @@ import serviceRequestModel from "./serviceRequest.model.js";
 import serviceRequestValiation from "./serviceRequest.schema.js";
 import { ChildServiceModel } from "../../Services/childService.model.js";
 import { creditWalletAtomic, processPaymentFromWallet } from "../../Wallet/wallet.controller.js";
-import DoctorModel from "../../Doctors/doctor.model.js";
 import { Patient } from "../../Authentication/patient.model.js";
-import { enqueueEmail, enqueuePush, enqueuePushToMany } from "../../../queues/communicationQueue.js";
-import { scheduleBroadcastToAll } from "../../../queues/bookingQueue.js";
+import { enqueueEmail, enqueuePush } from "../../../queues/communicationQueue.js";
 import { HealthPackageModel } from "../../HealthPackages/healthPackage.model.js";
 import HospitalBooking from "../hospitalBooking.model.js";
 import { getActiveCommissionRate } from "../../PartnerSubscription/subscription.controller.js";
+import { emitToRoom } from "../../../socket.js";
 
 
 export const createServiceRequest = asyncHandler(async (req, res) => {
@@ -30,7 +29,6 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
 
     if (!childSvc && !healthPkg) throw new ApiError(404, "Service or Package not found");
 
-    const hospitalFirst = !!childSvc?.hospitalProviderId;
     const finalPrice = childSvc?.price ?? healthPkg?.price ?? 0;
     const bookingName = childSvc?.name ?? healthPkg?.name ?? "Service";
 
@@ -57,9 +55,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
         fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
-        ...(hospitalFirst
-            ? { notifiedHospitalAt: new Date() }
-            : { status: "BROADCASTED", broadcastedAt: new Date() }),
+        status: "PENDING",
     };
 
     const parsed = serviceRequestValiation.safeParse(payload);
@@ -90,7 +86,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                     fullName: patient.name || "Customer",
                     serviceName: payload.bookingType || "Home Care Service",
                     date: new Date().toDateString(),
-                    time: "In-Progress Verification",
+                    time: "Awaiting admin assignment",
                     location: patient.primaryAddressId ? "Stored Patient Address" : "Current Location",
                 },
             });
@@ -104,88 +100,6 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         .populate("childServiceId")
         .populate("healthPackageId")
         .populate("addressId");
-    const serviceName = (serviceRequest?.childServiceId as any)?.name ?? (serviceRequest?.healthPackageId as any)?.name ?? "a service";
-
-    // ── Notify Provider(s) ──────────────────────────────────────────────────
-    try {
-        const patient = await Patient.findById(userId).select("name");
-        const patientName = patient?.name || "A patient";
-
-        // 1. Direct Assignment (User selected an expert)
-        if (req.body.assignedProviderId) {
-            const partner = await DoctorModel.findById(req.body.assignedProviderId).select("_id fcmToken");
-            if (partner) {
-                await enqueuePush({
-                    recipientId: partner._id as mongoose.Types.ObjectId,
-                    recipientType: "partner",
-                    fcmToken: partner.fcmToken ?? null,
-                    title: "🆕 New Booking for You!",
-                    body: `${patientName} has booked your ${serviceName} service. Tap to view.`,
-                    data: { screen: "bookings", bookingId: String(newServiceRequest._id) },
-                    refType: "ServiceRequest",
-                    refId: newServiceRequest._id as mongoose.Types.ObjectId,
-                });
-            }
-        }
-        // 2. Hospital-first priority
-        else if (hospitalFirst && childSvc?.hospitalProviderId) {
-            const hospital = await DoctorModel.findById(childSvc.hospitalProviderId).select("_id fcmToken");
-            if (hospital) {
-                await enqueuePush({
-                    recipientId: hospital._id as mongoose.Types.ObjectId,
-                    recipientType: "partner",
-                    fcmToken: hospital.fcmToken ?? null,
-                    title: "🏥 New booking — you have 10s priority",
-                    body: `A new ${serviceName} booking — accept now before it goes to all providers.`,
-                    data: { screen: "bookings", bookingId: String(newServiceRequest._id) },
-                    refType: "ServiceRequest",
-                    refId: newServiceRequest._id as mongoose.Types.ObjectId,
-                });
-            }
-            await scheduleBroadcastToAll(String(newServiceRequest._id));
-        }
-        // 3. Broadcast to all matching roles
-        else {
-            const allowedRoleIds = childSvc?.allowedRoleIds ?? healthPkg?.allowedRoleIds;
-            if (allowedRoleIds?.length) {
-                // FIX: allowedRoleIds are stored as String[] in childService but staff.roleId
-                // is an ObjectId field. $in with plain strings never matches ObjectIds → 0 results.
-                // Cast to ObjectId before querying so the $in match works correctly.
-                const allowedRoleObjectIds = allowedRoleIds
-                    .filter(id => mongoose.Types.ObjectId.isValid(id))
-                    .map(id => new mongoose.Types.ObjectId(id));
-
-                const matchingPartners = await DoctorModel.find({
-                    roleId: { $in: allowedRoleObjectIds },
-                    status: "Active",
-                    fcmToken: { $exists: true, $ne: null },
-                }).select("_id fcmToken");
-
-                console.log(`[Push] Found ${matchingPartners.length} matching active partners for role(s): ${allowedRoleIds}`);
-                if (matchingPartners.length > 0) {
-                    console.log(`[Push] Partner IDs to notify: ${matchingPartners.map(p => p._id).join(', ')}`);
-                } else {
-                    console.warn(`[Push] NO ACTIVE PARTNERS FOUND with roles: ${allowedRoleIds}`);
-                }
-
-                await enqueuePushToMany(
-                    matchingPartners.map((p) => ({
-                        recipientId: p._id as mongoose.Types.ObjectId,
-                        recipientType: "partner" as const,
-                        fcmToken: p.fcmToken ?? null,
-                    })),
-                    "🆕 New Job Available!",
-                    `A new ${serviceName} booking near you — tap to accept.`,
-                    { screen: "bookings", bookingId: String(newServiceRequest._id) },
-                    "ServiceRequest",
-                    newServiceRequest._id as mongoose.Types.ObjectId
-                );
-            }
-        }
-    } catch (e) {
-        console.error("[Push] service request notification error:", e);
-    }
-
     return res.status(201).json(new ApiResponse(201, "Service booked", serviceRequest));
 });
 
@@ -317,6 +231,9 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         await HospitalBooking.findOneAndUpdate({ bookingId: id }, { status: "CANCELLED" });
     }
 
+    // Real-time status push to booking room
+    emitToRoom(String(id), 'booking_status_updated', { bookingId: String(id), status });
+
     const push = pushMap[status];
     if (push && patientFull) {
         await enqueuePush({
@@ -325,7 +242,7 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
             fcmToken: patientFull.fcmToken ?? null,
             title: push.title,
             body: push.body,
-            data: { screen: "bookings", bookingId: String(id) },
+            data: { screen: `/booking/${id}` },
             refType: "ServiceRequest",
             refId: booking._id as mongoose.Types.ObjectId,
         });

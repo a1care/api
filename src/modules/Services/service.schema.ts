@@ -21,7 +21,8 @@ const serviceValidation = z.object({
     type: serviceTypeSchema,
     imageUrl: z.string().trim().min(1, "Service category image is required"),
     bannerUrl: z.string().trim().optional(),
-    isActive: z.boolean().default(true)
+    isActive: z.boolean().default(true),
+    priority: z.number().int().min(0).default(0).optional()
 })
 
 export default serviceValidation

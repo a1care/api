@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Toast } from "../../components/CustomToast";
 import { api } from "../../lib/api";
 import { useAuthStore, PartnerRole } from "../../stores/auth";
+import { needsKycUpload, roleFromPartner } from "../../lib/partnerOnboarding";
 import { Ionicons } from "@expo/vector-icons";
 
 const getAuthModule = () => {
@@ -135,19 +136,21 @@ const LoginScreen = () => {
                 throw new Error("Unable to load partner profile after login");
             }
 
+            const partnerRole = roleFromPartner(userData, role);
+
             // Update Auth Store (this will trigger AuthGuard in layout)
             await setAuth(authToken, {
                 ...userData,
-                role: role as PartnerRole
+                role: partnerRole as PartnerRole
             });
 
             Toast.show({ type: 'success', text1: 'Login Successful' });
 
             // Precise navigation if AuthGuard hasn't kicked in yet
-            if (userData.isRegistered === false) {
+            if (needsKycUpload(userData, partnerRole)) {
                 router.replace({
                     pathname: "/(auth)/register",
-                    params: { role: role ?? "doctor", token: authToken }
+                    params: { role: partnerRole, token: authToken }
                 });
             } else if (userData.status === "Pending") {
                 router.replace("/(auth)/review-status");

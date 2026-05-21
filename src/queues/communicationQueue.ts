@@ -5,11 +5,17 @@ import {
   sendAppointmentConfirmationEmail,
   sendWalletTopupEmail,
   sendWelcomeEmail,
+  sendPartnerWelcomeEmail,
+  sendPartnerApprovalEmail,
+  sendPartnerRejectionEmail,
 } from "../utils/email.js";
 import { getQueueRedisConnection } from "./redisConnection.js";
 
 type EmailJob =
   | { kind: "welcome"; data: Parameters<typeof sendWelcomeEmail>[0] }
+  | { kind: "partner_welcome"; data: Parameters<typeof sendPartnerWelcomeEmail>[0] }
+  | { kind: "partner_approved"; data: Parameters<typeof sendPartnerApprovalEmail>[0] }
+  | { kind: "partner_rejected"; data: Parameters<typeof sendPartnerRejectionEmail>[0] }
   | { kind: "appointment"; data: Parameters<typeof sendAppointmentConfirmationEmail>[0] }
   | { kind: "wallet_topup"; data: Parameters<typeof sendWalletTopupEmail>[0] };
 
@@ -62,6 +68,9 @@ export async function enqueuePushToMany(
 export async function enqueueEmail(payload: EmailJob) {
   if (!queue) {
     if (payload.kind === "welcome") await sendWelcomeEmail(payload.data);
+    if (payload.kind === "partner_welcome") await sendPartnerWelcomeEmail(payload.data);
+    if (payload.kind === "partner_approved") await sendPartnerApprovalEmail(payload.data);
+    if (payload.kind === "partner_rejected") await sendPartnerRejectionEmail(payload.data);
     if (payload.kind === "appointment") await sendAppointmentConfirmationEmail(payload.data);
     if (payload.kind === "wallet_topup") await sendWalletTopupEmail(payload.data);
     return;

@@ -7,6 +7,7 @@ import {
     handleWebhook,
     verifyPayment,
     verifyRazorpay,
+    payWithWallet,
     getOrderById
 } from "./payment.controller.js";
 import { protect } from "../../middlewares/protect.js";
@@ -24,6 +25,9 @@ router.post("/razorpay/initiate", protect, initiateRazorpay);
 
 // Razorpay Verification
 router.post("/razorpay/verify", protect, verifyRazorpay);
+
+// Wallet Pay
+router.post("/wallet/pay", protect, payWithWallet);
 
 // Verify Status
 router.post("/verify", protect, verifyPayment);

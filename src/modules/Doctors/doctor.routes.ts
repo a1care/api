@@ -18,7 +18,9 @@ router.put("/auth/register", protect, registerStaff)
 router.put("/auth/fcm-token", protect, updateFcmToken)
 router.post("/auth/upload-document", protect, uploadStaffDocument, (req, res) => {
     if (!req.file) throw new ApiError(400, "File upload failed");
-    const response = new ApiResponse(200, "Document uploaded", { url: (req.file as any).location });
+    const file = req.file as any;
+    const url = file.location || (file.path ? `/${file.path.replace(/\\/g, '/').split('/uploads/').pop()?.replace(/^/, 'uploads/')}` : undefined);
+    const response = new ApiResponse(200, "Document uploaded", { url });
     return res.status(200).json({ ...response, success: true });
 })
 

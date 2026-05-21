@@ -22,7 +22,7 @@ export async function runSubscriptionCleanup() {
             if (partner?.fcmToken) {
                 await enqueuePush({
                     recipientId: String(partner._id),
-                    recipientType: "staff" as any,
+                    recipientType: "partner",
                     fcmToken: partner.fcmToken,
                     title: "Subscription Expired 🔄",
                     body: "Your active plan has expired. Please renew to continue receiving job requests.",

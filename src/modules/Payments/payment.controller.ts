@@ -38,11 +38,11 @@ const getEasebuzzService = async (): Promise<EasebuzzService> => {
 };
 
 const getRazorpayService = async (): Promise<RazorpayService> => {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const keyId = process.env.LIVE;
+    const keySecret = process.env.SECRET;
 
     if (!keyId || !keySecret) {
-        throw new ApiError(500, "Razorpay gateway not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env");
+        throw new ApiError(500, "Razorpay gateway not configured. Please set LIVE and SECRET in .env");
     }
 
     return new RazorpayService({
@@ -211,7 +211,7 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
 
     // 2. Specialized Fulfillment Logic
     if (order.type === "WALLET_TOPUP") {
-        const description = `Wallet Top-up (Easebuzz: ${response.easepayid || response.txnid})`;
+        const description = `Wallet Top-up (Razorpay: ${response.razorpay_payment_id || response.easepayid || response.txnid})`;
         await creditWalletAtomic(order.userId.toString(), order.amount, description);
         if (service && typeof service.logEvent === 'function') {
             await service.logEvent(order.txnId, "WALLET_CREDITED", "INFO", `Credited ${order.amount} to wallet`);
@@ -288,7 +288,7 @@ export const initiateRazorpay = asyncHandler(async (req, res) => {
 
     const responseData = {
         razorOrder,
-        key: (process.env.RAZORPAY_KEY_ID || "").trim(),
+        key: (process.env.LIVE || "").trim(),
         customer: {
             name: (patient.name || "Customer").trim(),
             email: (patient.email || "").trim(),
@@ -493,6 +493,27 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json(new ApiResponse(200, "Order status updated", order));
+});
+
+/**
+ * Pay for an order using wallet balance.
+ */
+export const payWithWallet = asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    const { orderId } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) throw new ApiError(404, "Order not found");
+    if (String((order as any).userId) !== String(userId)) throw new ApiError(403, "Unauthorized");
+    if (order.status !== OrderStatus.PENDING) throw new ApiError(400, `Order already in ${order.status} state`);
+
+    const { debitWalletAtomic } = await import("../Wallet/wallet.controller.js");
+    const wallet = await debitWalletAtomic(userId!, order.amount, `Booking payment (Order: ${order.txnId})`);
+    if (!wallet) throw new ApiError(400, "Insufficient wallet balance");
+
+    await fulfillOrder(order, { source: "WALLET", txnId: order.txnId }, null);
+
+    return res.status(200).json(new ApiResponse(200, "Payment from wallet successful", order));
 });
 
 export const getOrderById = asyncHandler(async (req, res) => {
