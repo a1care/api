@@ -23,8 +23,18 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         .findById(serviceRequestId)
         .populate("userId");
 
-    if (!serviceRequestDetails || (serviceRequestDetails.status !== "PENDING" && serviceRequestDetails.status !== "BROADCASTED")) {
-        throw new ApiError(404, "Service Request not found or already accepted");
+    if (!serviceRequestDetails) {
+        throw new ApiError(404, "Service Request not found");
+    }
+
+    const isAssignedToProvider =
+        serviceRequestDetails.assignedProviderId?.toString?.() === providerId?.toString?.();
+    if (!isAssignedToProvider) {
+        throw new ApiError(403, "This booking is not assigned to you");
+    }
+
+    if (serviceRequestDetails.status !== "ACCEPTED") {
+        throw new ApiError(400, "Only admin-assigned bookings can be accepted");
     }
 
     const providerDetails = await DoctorModel.findById(providerId);

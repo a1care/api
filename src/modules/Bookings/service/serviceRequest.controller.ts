@@ -142,22 +142,29 @@ export const getServiceRequestForProvider = asyncHandler(async (req, res) => {
     const providerId = req.user?.id;
     const { status } = req.query;
     if (!roleId) throw new ApiError(401, "No role id found");
+    if (!providerId) throw new ApiError(401, "Unauthorized");
 
     const childService = await ChildServiceModel.find({ allowedRoleIds: roleId });
+    const providerStatuses = ["ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "RETURNED_TO_ADMIN"];
     let requests: any[] = [];
-    if (providerId && status !== "PENDING") {
-        requests = await serviceRequestModel
-            .find({ childServiceId: { $in: childService.map((item) => [item._id]) }, status })
-            .populate("childServiceId")
-            .populate("userId")
-            .populate("addressId");
+
+    const query: any = {
+        childServiceId: { $in: childService.map((item) => item._id) },
+        assignedProviderId: new mongoose.Types.ObjectId(providerId),
+    };
+
+    if (typeof status === "string" && providerStatuses.includes(status)) {
+        query.status = status;
     } else {
-        requests = await serviceRequestModel
-            .find({ childServiceId: { $in: childService.map((item) => [item._id]) }, status: "PENDING" })
-            .populate("childServiceId")
-            .populate("userId")
-            .populate("addressId");
+        query.status = { $in: ["ACCEPTED", "IN_PROGRESS"] };
     }
+
+    requests = await serviceRequestModel
+        .find(query)
+        .populate("childServiceId")
+        .populate("userId")
+        .populate("addressId");
+
     return res.status(200).json(new ApiResponse(200, "Fetched requests", requests));
 });
 
