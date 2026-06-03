@@ -5,12 +5,28 @@ import app from './app.js'
 import { connectDb } from "./configs/db.js";
 import { initFCM } from "./configs/fcmConfig.js";
 import http from 'http';
+import jwt from 'jsonwebtoken';
 import { initSocket } from './socket.js';
 import { saveChatMessage } from './modules/Chat/chat.controller.js';
 import { runSubscriptionCleanup } from './jobs/subscriptionCleaner.js';
 
 const server = http.createServer(app);
 const io = initSocket(server);
+
+// Authenticate every socket connection with the same JWT used for HTTP.
+io.use((socket, next) => {
+    const token = (socket.handshake.auth?.token || socket.handshake.query?.token) as string | undefined;
+    if (!token) return next(new Error("Unauthorized"));
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+        (socket as any).userId = decoded.userId ?? decoded.staffId;
+        (socket as any).userRole = decoded.userId ? 'Patient' : 'Staff';
+        if (!(socket as any).userId) return next(new Error("Unauthorized"));
+        next();
+    } catch {
+        next(new Error("Unauthorized"));
+    }
+});
 
 io.on('connection', (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`);
@@ -21,11 +37,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_message', async (data) => {
-        // 1. Persist to DB
-        await saveChatMessage(data);
-
-        // 2. Broadcast to target room
-        socket.to(data.roomId).emit('receive_message', data);
+        // Identity comes from the verified socket, never from the client payload —
+        // and senderType must match the ChatMessage enum ["Patient","Partner"].
+        const verified = {
+            ...data,
+            senderId: (socket as any).userId,
+            senderType: (socket as any).userRole === 'Patient' ? 'Patient' : 'Partner',
+        };
+        await saveChatMessage(verified);
+        socket.to(data.roomId).emit('receive_message', verified);
     });
 
     socket.on('update_location', (data) => {

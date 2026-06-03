@@ -16,12 +16,9 @@ export const protect = asyncHandler(
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("token from middleware" , token)
     // 2. Verify & decode JWT
     try {
       const decoded = jwt.verify(token as string , process.env.JWT_SECRET as string) as any
-
-      console.log("date from protected route" , decoded)
 
        req.user = {
         id: decoded.userId ?? decoded.staffId,

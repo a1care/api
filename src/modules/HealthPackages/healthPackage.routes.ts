@@ -10,6 +10,7 @@ import {
     toggleHealthPackageFeatured,
     seedHealthPackages,
 } from "./healthPackage.controller.js";
+import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
 
 const router = express.Router();
 
@@ -17,13 +18,14 @@ const router = express.Router();
 router.get("/", getHealthPackages);
 router.get("/detail/:id", getHealthPackageById);
 
-// Admin
-router.get("/admin/all", getAllHealthPackagesAdmin);
-router.post("/admin/create", createHealthPackage);
-router.put("/admin/update/:id", updateHealthPackage);
-router.delete("/admin/delete/:id", deleteHealthPackage);
-router.patch("/admin/toggle-active/:id", toggleHealthPackageActive);
-router.patch("/admin/toggle-featured/:id", toggleHealthPackageFeatured);
-router.post("/admin/seed", seedHealthPackages);
+// Admin — previously unprotected; the /admin/ prefix was cosmetic only.
+const adminOnly = [protectAdmin, requireAdminRole(["admin", "super_admin"])];
+router.get("/admin/all", ...adminOnly, getAllHealthPackagesAdmin);
+router.post("/admin/create", ...adminOnly, createHealthPackage);
+router.put("/admin/update/:id", ...adminOnly, updateHealthPackage);
+router.delete("/admin/delete/:id", ...adminOnly, deleteHealthPackage);
+router.patch("/admin/toggle-active/:id", ...adminOnly, toggleHealthPackageActive);
+router.patch("/admin/toggle-featured/:id", ...adminOnly, toggleHealthPackageFeatured);
+router.post("/admin/seed", protectAdmin, requireAdminRole(["super_admin"]), seedHealthPackages);
 
 export default router;

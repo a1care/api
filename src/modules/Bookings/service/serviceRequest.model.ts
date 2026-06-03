@@ -127,10 +127,6 @@ const ServiceRequestSchema = new Schema(
       enum: ["NORMAL", "URGENT", "CRITICAL"],
       default: "NORMAL"
     },
-    isGatewayPayment: {
-      type: Boolean,
-      default: false
-    },
     couponCode: {
       type: String
     },

@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { partnerBookingService } from '../lib/bookings';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from '../stores/auth';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https://api.a1carehospital.in';
 
@@ -24,6 +25,7 @@ export default function BookingChatScreen() {
     const { id, name } = useLocalSearchParams<{ id: string, name: string }>();
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { token } = useAuthStore();
     const scrollRef = useRef<ScrollView>(null);
     const [typedMessage, setTypedMessage] = useState('');
     const socketRef = useRef<Socket | null>(null);
@@ -45,7 +47,7 @@ export default function BookingChatScreen() {
     useEffect(() => {
         if (!id) return;
 
-        socketRef.current = io(API_URL);
+        socketRef.current = io(API_URL, { auth: { token } });
         const socket = socketRef.current;
 
         socket.on('connect', () => {
@@ -61,7 +63,7 @@ export default function BookingChatScreen() {
         return () => {
             socket.disconnect();
         };
-    }, [id]);
+    }, [id, token]);
 
     const mutation = useMutation({
         mutationFn: (msg: string) => partnerBookingService.sendMessage(id!, msg),
@@ -70,7 +72,7 @@ export default function BookingChatScreen() {
             socketRef.current?.emit('send_message', {
                 ...newMsg,
                 roomId: id,
-                senderType: 'Staff'
+                senderType: 'Partner'
             });
             setChatMessages(prev => [...prev, newMsg]);
         },
@@ -113,7 +115,7 @@ export default function BookingChatScreen() {
                     showsVerticalScrollIndicator={false}
                 >
                     {chatMessages.map((msg: any) => {
-                        const isMe = msg.senderType === 'Staff';
+                        const isMe = msg.senderType === 'Partner';
                         return (
                             <View key={msg._id || Math.random()} style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
                                 <Text style={[styles.msgText, isMe ? styles.myText : styles.theirText]}>{msg.message}</Text>

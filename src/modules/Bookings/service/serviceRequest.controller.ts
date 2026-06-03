@@ -75,11 +75,9 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         discountAmount,
         bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
         fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
-        // SECURITY: never trust isGatewayPayment from the client. An ONLINE booking is paid
-        // from the wallet here; the wallet itself is funded via the verified gateway top-up
-        // flow (/wallet/initiate + /wallet/response). Forcing this false closes the
-        // "isGatewayPayment:true ⇒ free booking marked COMPLETED" exploit.
-        isGatewayPayment: false,
+        // SECURITY: an ONLINE booking is always paid from the wallet below; the wallet is
+        // funded via the verified gateway top-up flow (/wallet/initiate + /wallet/response).
+        // The client-trustable isGatewayPayment field has been removed entirely.
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
         status: "PENDING",
     };

@@ -39,6 +39,12 @@ export const getDoctorAvailabilitybyDoctorId = asyncHandler(async (req, res) => 
 // block timings
 export const blockTiming = asyncHandler(async (req, res) => {
   const { doctorId } = req.params
+
+  // A partner may only block their OWN schedule (doctorId comes from the URL).
+  if (String(doctorId) !== String(req.user?.id)) {
+    throw new ApiError(403, "You can only block your own schedule");
+  }
+
   const payload = {
     ...req.body,
     date: new Date(req.body.date),

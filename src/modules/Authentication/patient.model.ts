@@ -16,6 +16,9 @@ export interface PatientDocument extends Document {
   primaryAddressId: mongoose.Schema.Types.ObjectId;
   referralCode?: string;
   referredBy?: mongoose.Schema.Types.ObjectId;
+  deletionRequested?: boolean;
+  deletionRequestedAt?: Date | null;
+  deletedAt?: Date | null;
 }
 
 const PatientSchema = new Schema<PatientDocument>(
@@ -82,6 +85,18 @@ const PatientSchema = new Schema<PatientDocument>(
     referredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patient",
+    },
+    deletionRequested: {
+      type: Boolean,
+      default: false
+    },
+    deletionRequestedAt: {
+      type: Date,
+      default: null
+    },
+    deletedAt: {
+      type: Date,
+      default: null
     },
   },
   {

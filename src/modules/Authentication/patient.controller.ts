@@ -255,3 +255,16 @@ export const updatePatientFcmToken = asyncHandler(async (req, res) => {
   await Patient.findByIdAndUpdate(patientId, { fcmToken });
   return res.status(200).json(new ApiResponse(200, "FCM Token updated", {}));
 });
+
+// Patient self-service account deletion request — surfaces in the admin Deletion
+// Requests queue (admin finalises via /admin/deletion-approve/:id).
+export const requestPatientDeletion = asyncHandler(async (req, res) => {
+  const patientId = req.user?.id;
+  if (!patientId) throw new ApiError(401, "Unauthorized");
+  await Patient.findByIdAndUpdate(patientId, {
+    deletionRequested: true,
+    deletionRequestedAt: new Date(),
+    fcmToken: "",
+  });
+  return res.status(200).json(new ApiResponse(200, "Deletion request submitted. Admin will review within 48 hours.", {}));
+});

@@ -33,7 +33,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https:/
 export default function BookingsScreen() {
     const queryClient = useQueryClient();
     const router = useRouter();
-    const { user } = useAuthStore();
+    const { user, token } = useAuthStore();
     const { status } = useLocalSearchParams<{ status?: string }>();
     const [activeTab, setActiveTab] = useState("Pending");
     const primaryColor = "#2D935C";
@@ -46,11 +46,11 @@ export default function BookingsScreen() {
         if (status && TABS.includes(status)) {
             setActiveTab(status);
         }
-        socketRef.current = io(API_URL);
+        socketRef.current = io(API_URL, { auth: { token } });
         return () => {
             socketRef.current?.disconnect();
         };
-    }, [status]);
+    }, [status, token]);
 
     const { data: bookings = [], isLoading, refetch, isRefetching } = useQuery({
         queryKey: ["bookings", activeTab],

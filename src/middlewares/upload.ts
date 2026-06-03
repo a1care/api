@@ -14,13 +14,28 @@ interface UploadOptions {
   maxSizeMB: number;
 }
 
+// Map each accepted MIME type to its valid file extensions. The client-supplied
+// mimetype alone is spoofable, so we also require the extension to match — this
+// blocks e.g. an .html file sent as Content-Type: image/jpeg.
+const MIME_TO_EXT: Record<string, string[]> = {
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/webp": [".webp"],
+  "application/pdf": [".pdf"],
+};
+
+// Strip anything that isn't a safe filename character (prevents path traversal).
+const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
 export function createS3Upload(options: UploadOptions) {
   const { folder, allowedMimeTypes, maxSizeMB } = options;
   const bucket = process.env.S3_BUCKET_NAME;
 
   const fileFilter: multer.Options['fileFilter'] = (req, file, cb) => {
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      cb(new ApiError(400, `Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = MIME_TO_EXT[file.mimetype];
+    if (!allowedMimeTypes.includes(file.mimetype) || !allowedExts || !allowedExts.includes(ext)) {
+      cb(new ApiError(400, `Invalid file. Allowed types: ${allowedMimeTypes.join(", ")}`));
       return;
     }
     cb(null, true);
@@ -37,7 +52,7 @@ export function createS3Upload(options: UploadOptions) {
       fileFilter,
       storage: multer.diskStorage({
         destination: (_req, _file, cb) => cb(null, localDir),
-        filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`)
+        filename: (_req, file, cb) => cb(null, `${Date.now()}-${sanitizeFilename(file.originalname)}`)
       })
     });
   }
@@ -50,7 +65,7 @@ export function createS3Upload(options: UploadOptions) {
       bucket,
       contentType: multerS3.AUTO_CONTENT_TYPE,
       key(req, file, cb) {
-        const uniqueName = `${folder}/${Date.now()}-${file.originalname}`;
+        const uniqueName = `${folder}/${Date.now()}-${sanitizeFilename(file.originalname)}`;
         cb(null, uniqueName);
       }
     })

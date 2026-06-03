@@ -1715,6 +1715,12 @@ export const updateSystemConfig = asyncHandler(async (req, res) => {
   const nextStore = { ...store, system: merged };
   await writeConfigStore(nextStore as any);
 
+  // Bust the maintenance-flag cache so a toggle takes effect immediately.
+  try {
+    const { invalidateMaintenanceCache } = await import("../../app.js");
+    invalidateMaintenanceCache();
+  } catch { /* non-fatal */ }
+
   return res.status(200).json(new ApiResponse(200, "System config updated", merged));
 });
 

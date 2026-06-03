@@ -8,8 +8,6 @@ import { getSystemSettings } from "../Admin/admin.controller.js";
 import { Patient } from "../Authentication/patient.model.js";
 import { creditWalletAtomic } from "../Wallet/wallet.controller.js";
 import { v4 as uuidv4 } from "uuid";
-import { promises as fs } from "fs";
-import path from "path";
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
 const getEasebuzzService = async (): Promise<EasebuzzService> => {
@@ -136,32 +134,14 @@ export const initiatePayment = asyncHandler(async (req, res) => {
     };
 
     console.log(`\n💳 [Easebuzz Init] Order: ${order.txnId} (${order.amount})`);
-    console.log(`🔑 Key: ${finalKey} | Env: ${finalEnv}`);
+    console.log(`🔑 Easebuzz env: ${finalEnv} (key present: ${finalKey ? "yes" : "no"})`);
     console.log(`🔗 Redirect: ${redirectUrl}`);
     console.log(`📝 Params:`, JSON.stringify(params, null, 2));
-
-    const debugMsg = `
-[${new Date().toISOString()}] ATTEMPTING_INITIATION
-Order: ${order.txnId} | Amount: ${order.amount}
-MerchantKey: ${finalKey} | Env: ${finalEnv}
-RedirectURL: ${redirectUrl}
-Params: ${JSON.stringify(params, null, 2)}
---------------------------------------------------\n`;
-    await fs.appendFile(path.join(process.cwd(), "payment_debug.log"), debugMsg).catch(err => console.error("Logger Failed:", err));
 
     // Server-to-Server initiation to get access_key
     const apiResult = await ezService!.initiatePaymentApi(params);
 
-    // Log the API Result to file for debugging
-    const resultMsg = `
-[${new Date().toISOString()}] GATEWAY_RESPONSE_RAW
-TxnID: ${order.txnId}
-Status: ${apiResult.status}
-Data/Message: ${JSON.stringify(apiResult.data || apiResult.error_desc || apiResult.message || apiResult, null, 2)}
---------------------------------------------------\n`;
-    await fs.appendFile(path.join(process.cwd(), "payment_debug.log"), resultMsg).catch(() => { });
-
-    console.log("💳 Easebuzz API Response:", JSON.stringify(apiResult, null, 2));
+    console.log(`[Payment] Initiation for ${order.txnId} — gateway status: ${apiResult.status}`);
 
     if (apiResult.status !== 1) {
         console.error("🔴 Easebuzz API Initiation Failed:", apiResult);
@@ -170,7 +150,7 @@ Data/Message: ${JSON.stringify(apiResult.data || apiResult.error_desc || apiResu
     }
 
     const accessKey = apiResult.data;
-    console.log(`🔑 Access Key Received: ${accessKey}`);
+    console.log(`🔑 Access key received: ${accessKey ? "yes" : "no"}`);
 
     // Create initial payment transaction record
     await PaymentTransaction.create({
@@ -397,14 +377,6 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
 
     const response = req.method === "POST" ? req.body : req.query;
     const ezService = await getEasebuzzService();
-
-    // Persistent log for debugging using static fs import
-    try {
-        const logData = `\n[${new Date().toISOString()}] REDIRECT: ${JSON.stringify(response, null, 2)}\n`;
-        require('fs').appendFileSync('payment_debug.log', logData);
-    } catch (err) {
-        console.error("Failed to log redirect:", err);
-    }
 
     console.log(`🔗 [Easebuzz Redirect] User returned for Txn: ${response.txnid}`);
 
