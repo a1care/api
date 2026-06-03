@@ -47,7 +47,15 @@ const serviceRequestValiation = z.object({
     assignedProviderId: objectId.optional(),
     assignRoleId: objectId.optional(),
     bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]),
-    price: z.number()
+    price: z.number(),
+    paymentMode: z.enum(["ONLINE", "OFFLINE", "COD"]).optional(),
+    paymentStatus: z.enum(["PENDING", "COMPLETED", "FAILED"]).optional(),
+    notes: z.string().optional(),
+    urgency: z.enum(["NORMAL", "URGENT", "CRITICAL"]).optional(),
+    isGatewayPayment: z.boolean().optional(),
+    couponCode: z.string().optional(),
+    discountAmount: z.number().optional(),
+    referralCode: z.string().optional()
 })
 
 export default serviceRequestValiation

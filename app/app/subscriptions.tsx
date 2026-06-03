@@ -327,13 +327,12 @@ export default function SubscriptionsScreen() {
                         onNavigationStateChange={(navState) => {
                             if (navState.url.includes("status=success")) {
                                 setPaymentUrl(null);
-                                Alert.alert("Payment Successful", "Subscription activated!");
                                 queryClient.invalidateQueries({ queryKey: ["myActiveSubscription"] });
                                 queryClient.invalidateQueries({ queryKey: ["subscriptionHistory"] });
-                                router.replace("/(tabs)/profile");
+                                router.replace({ pathname: "/checkout_status" as any, params: { status: "success", context: "subscription" } });
                             } else if (navState.url.includes("status=failure")) {
                                 setPaymentUrl(null);
-                                Alert.alert("Payment Failed", "Transaction failed. Please try again or check your account.");
+                                router.replace({ pathname: "/checkout_status" as any, params: { status: "failure", context: "subscription" } });
                             }
                         }}
                     />

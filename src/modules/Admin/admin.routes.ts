@@ -48,6 +48,8 @@ import { adminListNotifications, adminBroadcastNotification, adminClearNotificat
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
 import { adminListOrders, adminGetLogsForTxn } from "../Payments/payment.controller.js";
+import { getReferralStats } from "../Referral/referral.controller.js";
+import { createCoupon, listCoupons, updateCoupon, deleteCoupon } from "../Coupons/coupon.controller.js";
 
 const adminRoutes = Router();
 const appAssetUploadDir = path.join(process.cwd(), "uploads", "app-management");
@@ -136,5 +138,14 @@ adminRoutes.get("/payments/logs/:txnId", protectAdmin, requireAdminRole(["admin"
 
 adminRoutes.get("/deletion-requests", protectAdmin, requireAdminRole(["super_admin"]), getDeletionRequests);
 adminRoutes.post("/deletion-approve/:id", protectAdmin, requireAdminRole(["super_admin"]), approveDeletion);
+
+// Referrals
+adminRoutes.get("/referrals", protectAdmin, requireAdminRole(["admin", "super_admin"]), getReferralStats);
+
+// Coupons
+adminRoutes.post("/coupons", protectAdmin, requireAdminRole(["super_admin"]), createCoupon);
+adminRoutes.get("/coupons", protectAdmin, requireAdminRole(["admin", "super_admin"]), listCoupons);
+adminRoutes.put("/coupons/:id", protectAdmin, requireAdminRole(["super_admin"]), updateCoupon);
+adminRoutes.delete("/coupons/:id", protectAdmin, requireAdminRole(["super_admin"]), deleteCoupon);
 
 export default adminRoutes;

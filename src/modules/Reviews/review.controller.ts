@@ -5,6 +5,9 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import ReviewModel from "./review.model.js";
 import DoctorModel from "../Doctors/doctor.model.js";
 import { ChildServiceModel } from "../Services/childService.model.js";
+import doctorAppointmentModel from "../Bookings/doctorAppointment.model.js";
+import serviceRequestModel from "../Bookings/service/serviceRequest.model.js";
+import { escapeRegex } from "../../utils/escapeRegex.js";
 
 export const addReview = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
@@ -27,6 +30,28 @@ export const addReview = asyncHandler(async (req, res) => {
     const existing = await ReviewModel.findOne({ bookingId, userId });
     if (existing) {
         throw new ApiError(400, "Review already submitted for this booking");
+    }
+
+    // Verify the caller actually owns this booking and it has been completed —
+    // otherwise anyone could manufacture reviews for any doctor/service.
+    if (bookingType === "Doctor") {
+        const appt = await doctorAppointmentModel.findById(bookingId);
+        if (!appt || String(appt.patientId) !== String(userId)) {
+            throw new ApiError(403, "You can only review your own bookings");
+        }
+        if (appt.status !== "Completed") {
+            throw new ApiError(400, "You can only review a completed booking");
+        }
+    } else if (bookingType === "Service") {
+        const svc = await serviceRequestModel.findById(bookingId);
+        if (!svc || String(svc.userId) !== String(userId)) {
+            throw new ApiError(403, "You can only review your own bookings");
+        }
+        if (svc.status !== "COMPLETED") {
+            throw new ApiError(400, "You can only review a completed booking");
+        }
+    } else {
+        throw new ApiError(400, "Invalid booking type");
     }
 
     const review = await ReviewModel.create({
@@ -89,8 +114,10 @@ export const getServiceReviews = asyncHandler(async (req, res) => {
 });
 
 export const getAllReviews = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 60, search, status } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, search, status } = req.query;
+    // Cap the page size so a caller can't pull the entire collection into memory.
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 60));
+    const skip = (Number(page) - 1) * limit;
     const query: any = {};
 
     if (status && status !== "All") {
@@ -98,7 +125,7 @@ export const getAllReviews = asyncHandler(async (req, res) => {
     }
 
     if (search && search !== "") {
-        const s = new RegExp(search as string, 'i');
+        const s = new RegExp(escapeRegex(search), 'i');
         const searchConditions: any[] = [
             { comment: s }
         ];

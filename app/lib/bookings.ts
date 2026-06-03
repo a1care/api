@@ -16,6 +16,11 @@ export const partnerBookingService = {
         return api.post(`/service/booking/accept/${id}`, body);
     },
 
+    getBookingDetail: async (id: string, bookingType: 'Doctor' | 'Service' = 'Service') => {
+        const res = await api.get(`/appointment/provider/booking/${id}`, { params: { type: bookingType } });
+        return res.data.data;
+    },
+
     rejectServiceRequest: async (id: string) => {
         return api.post(`/service/booking/reject/${id}`);
     },

@@ -191,7 +191,7 @@ export default function BookingsScreen() {
                 ) : (
                     bookings.map((b: any) => (
                         <View key={b._id} style={styles.card}>
-                            <View style={styles.cardInfo}>
+                            <TouchableOpacity activeOpacity={0.7} style={styles.cardInfo} onPress={() => router.push({ pathname: '/booking_detail' as any, params: { id: b._id, type: b.bookingType } })}>
                                 <View style={styles.cardHeader}>
                                     <View>
                                         <Text style={styles.patientName}>{b.patientName || "Guest Patient"}</Text>
@@ -230,7 +230,7 @@ export default function BookingsScreen() {
                                     <MapPin size={16} color="#EF4444" />
                                     <Text style={styles.addressText} numberOfLines={1}>{b.location?.address || "Location not provided"}</Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
 
                             <View style={styles.actions}>
                                 {b.status?.toLowerCase?.() === "broadcasted" && (
@@ -279,11 +279,16 @@ export default function BookingsScreen() {
                                         )}
                                         <TouchableOpacity
                                             style={[styles.mainBtn, { flex: 1.2 }]}
-                                            onPress={() => updateStatusMutation.mutate({ 
-                                                id: b._id, 
-                                                status: b.bookingType === 'Doctor' ? "Completed" : "COMPLETED", 
-                                                bookingType: b.bookingType 
-                                            })}
+                                            onPress={async () => {
+                                                try {
+                                                    await updateStatusMutation.mutateAsync({
+                                                        id: b._id,
+                                                        status: b.bookingType === 'Doctor' ? "Completed" : "COMPLETED",
+                                                        bookingType: b.bookingType
+                                                    });
+                                                    router.push({ pathname: '/booking_feedback' as any, params: { id: b._id, type: b.bookingType, name: b.patientName || 'Patient', amount: String(b.totalAmount || 0) } });
+                                                } catch { /* error handled by mutation onError */ }
+                                            }}
                                         >
                                             <Text style={styles.mainBtnText}>End Service</Text>
                                         </TouchableOpacity>

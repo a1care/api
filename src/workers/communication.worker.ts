@@ -10,6 +10,9 @@ import {
   sendPartnerWelcomeEmail,
   sendPartnerApprovalEmail,
   sendPartnerRejectionEmail,
+  sendRefundConfirmationEmail,
+  sendServiceCompletedEmail,
+  sendPayoutStatusEmail,
 } from "../utils/email.js";
 import sendAlotsSms from "../utils/alotsSms.js";
 
@@ -40,6 +43,9 @@ new Worker(
       if (payload.kind === "partner_rejected") await sendPartnerRejectionEmail(payload.data);
       if (payload.kind === "appointment") await sendAppointmentConfirmationEmail(payload.data);
       if (payload.kind === "wallet_topup") await sendWalletTopupEmail(payload.data);
+      if (payload.kind === "refund") await sendRefundConfirmationEmail(payload.data.email, payload.data.fullName, payload.data.amount, payload.data.serviceName, payload.data.bookingId);
+      if (payload.kind === "service_completed") await sendServiceCompletedEmail(payload.data.email, payload.data.fullName, payload.data.serviceName, payload.data.partnerName, payload.data.amount, payload.data.date);
+      if (payload.kind === "payout_update") await sendPayoutStatusEmail(payload.data.email, payload.data.fullName, payload.data.amount, payload.data.status, payload.data.adminNote);
       return;
     }
     if (job.name === "sms") {

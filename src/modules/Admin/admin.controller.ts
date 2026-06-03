@@ -6,6 +6,7 @@ import path from "path";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
+import { escapeRegex } from "../../utils/escapeRegex.js";
 import { Admin } from "./admin.model.js";
 import { AuditLog } from "./audit.model.js";
 import { createAdminSchema, adminLoginSchema, updateAdminRoleSchema } from "./admin.schema.js";
@@ -705,8 +706,10 @@ export const getUserCategoryStats = asyncHandler(async (req, res) => {
 
 export const listUsersByCategory = asyncHandler(async (req, res) => {
   const { category } = req.params;
-  const { page = 1, limit = 50, search, status } = req.query;
-  const skip = (Number(page) - 1) * Number(limit);
+  const { page = 1, search, status } = req.query;
+  // Cap the page size so a caller can't request the entire collection into memory.
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+  const skip = (Number(page) - 1) * limit;
 
   if (!category) throw new ApiError(400, "Category param is required");
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
@@ -715,7 +718,7 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
 
   // Build Search Query
   if (search && search !== "") {
-    const s = new RegExp(search as string, 'i');
+    const s = new RegExp(escapeRegex(search), 'i');
     const searchConditions: any[] = [
       { name: s },
       { mobileNumber: s }
@@ -848,7 +851,7 @@ export const listDoctors = asyncHandler(async (req, res) => {
   if (status && status !== "All") query.status = status;
 
   if (search && search !== "") {
-    const s = new RegExp(search as string, 'i');
+    const s = new RegExp(escapeRegex(search), 'i');
     query.$or = [
       { name: s },
       { mobileNumber: s },
@@ -1153,21 +1156,33 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
     }
   }
 
-  // Stats aggregation
-  const statsData = await doctorAppointmentModel.aggregate([
-    {
-      $group: {
-        _id: "$status",
-        count: { $sum: 1 }
-      }
-    }
-  ]);
+  // ── Search at DB level so pagination & stats stay correct ──
+  if (search && search !== "") {
+    const term = String(search).trim();
+    const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const [matchDoctors, matchPatients] = await Promise.all([
+      Doctor.find({ name: rx }).select("_id").lean(),
+      Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean(),
+    ]);
+    const searchOr: any[] = [{ status: rx }];
+    if (matchDoctors.length) searchOr.push({ doctorId: { $in: matchDoctors.map((d: any) => d._id) } });
+    if (matchPatients.length) searchOr.push({ patientId: { $in: matchPatients.map((p: any) => p._id) } });
+    if (/^[0-9a-fA-F]{24}$/.test(term)) searchOr.push({ _id: term });
+    query.$and = [...(query.$and || []), { $or: searchOr }];
+  }
 
-  const statsMap = statsData || [];
-  const getCount = (s: string) => statsMap.find((x: any) => x._id === s)?.count || 0;
+  // Stats aggregation — run WITHOUT the status filter so every status bucket (and the
+  // "all" total) reflects the full result set for the other active filters, regardless
+  // of which status tab the admin is currently viewing.
+  const { status: _omitDoctorStatus, ...statsQuery } = query;
+  const statsData = await doctorAppointmentModel.aggregate([
+    { $match: statsQuery },
+    { $group: { _id: "$status", count: { $sum: 1 } } }
+  ]);
+  const getCount = (s: string) => statsData.find((x: any) => x._id === s)?.count || 0;
 
   const stats = {
-    all: await doctorAppointmentModel.countDocuments(),
+    all: statsData.reduce((sum: number, x: any) => sum + x.count, 0),
     pending: getCount("Pending"),
     confirmed: getCount("Confirmed"),
     completed: getCount("Completed"),
@@ -1182,7 +1197,7 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
   const total = await doctorAppointmentModel.countDocuments(query);
   const bookings = await bookingsQuery.skip(skip).limit(Number(limit));
 
-  let formatted = bookings.map(b => {
+  const formatted = bookings.map(b => {
     const obj = b.toObject() as any;
     return {
       ...obj,
@@ -1198,16 +1213,6 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
       paymentStatus: obj.paymentStatus || "PENDING"
     };
   });
-
-  if (search && search !== "") {
-    const s = (search as string).toLowerCase();
-    formatted = formatted.filter(b =>
-      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
-      (b.patientId?.mobile?.toLowerCase() || "").includes(s) ||
-      (b.doctorId?.name?.toLowerCase() || "").includes(s) ||
-      (b._id || "").toLowerCase().includes(s)
-    );
-  }
 
   res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", {
     items: formatted,
@@ -1234,18 +1239,24 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
       query.assignedProviderId = doctor;
     }
   }
+  // serviceType + service can both constrain childServiceId — combine via $and so one
+  // doesn't silently overwrite the other (they must BOTH match).
+  const childServiceConstraints: any[] = [];
   if (serviceType && serviceType !== "All") {
     const mainServices = await Service.find({ type: serviceType }).select("_id");
     const mainServiceIds = mainServices.map(s => s._id);
     const matchedChildServices = await ChildServiceModel.find({ serviceId: { $in: mainServiceIds } }).select("_id");
     const childServiceIds = matchedChildServices.map(s => s._id);
-    query.childServiceId = { $in: childServiceIds };
+    childServiceConstraints.push({ childServiceId: { $in: childServiceIds } });
   }
 
   if (service && service !== "All") {
-    const matchedServices = await ChildServiceModel.find({ name: { $regex: new RegExp(service as string, 'i') } }).select("_id");
+    const matchedServices = await ChildServiceModel.find({ name: { $regex: new RegExp(escapeRegex(service), 'i') } }).select("_id");
     const serviceIds = matchedServices.map(s => s._id);
-    query.childServiceId = { $in: serviceIds };
+    childServiceConstraints.push({ childServiceId: { $in: serviceIds } });
+  }
+  if (childServiceConstraints.length) {
+    query.$and = [...(query.$and || []), ...childServiceConstraints];
   }
 
   if (dateFrom || dateTo) {
@@ -1258,35 +1269,51 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     }
   }
 
-  // Stats aggregation
-  const statsData = await serviceRequestModel.aggregate([
-    {
-      $group: {
-        _id: "$status",
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-  const statsMap = statsData || [];
-  const getCount = (s: string | string[]) => {
-    if (Array.isArray(s)) return statsMap.filter((x: any) => s.includes(x._id)).reduce((acc: number, x: any) => acc + x.count, 0);
-    return statsMap.find((x: any) => x._id === s)?.count || 0;
-  };
+  // ── Search at DB level so pagination & stats stay correct ──
+  if ((search && search !== "") || (department && department !== "All")) {
+    const term = String(search || department).trim();
+    const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const [matchPatients, matchServices] = await Promise.all([
+      Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean(),
+      ChildServiceModel.find({ name: rx }).select("_id").lean(),
+    ]);
+    const searchOr: any[] = [{ status: rx }, { paymentStatus: rx }];
+    if (matchPatients.length) searchOr.push({ userId: { $in: matchPatients.map((p: any) => p._id) } });
+    if (matchServices.length) searchOr.push({ childServiceId: { $in: matchServices.map((c: any) => c._id) } });
+    if (/^[0-9a-fA-F]{24}$/.test(term)) searchOr.push({ _id: term });
+    query.$and = [...(query.$and || []), { $or: searchOr }];
+  }
 
+  // Stats aggregation — run WITHOUT the status filter so every status bucket (and the
+  // "all" total) reflects the full result set for the other active filters, regardless
+  // of which status tab the admin is currently viewing.
+  const { status: _omitStatus, ...statsQuery } = query;
+  const statsData = await serviceRequestModel.aggregate([
+    { $match: statsQuery },
+    { $group: { _id: "$status", count: { $sum: 1 } } }
+  ]);
+  const getCount = (s: string | string[]) => {
+    if (Array.isArray(s)) return statsData.filter((x: any) => s.includes(x._id)).reduce((acc: number, x: any) => acc + x.count, 0);
+    return statsData.find((x: any) => x._id === s)?.count || 0;
+  };
   const stats = {
-    all: await serviceRequestModel.countDocuments(query),
+    all: statsData.reduce((sum: number, x: any) => sum + x.count, 0),
     pending: getCount(["PENDING", "BROADCASTED", "RETURNED_TO_ADMIN"]),
     confirmed: getCount(["ACCEPTED", "CONFIRMED"]),
     completed: getCount("COMPLETED"),
     cancelled: getCount("CANCELLED"),
   };
 
+  // Paginated fetch — DB-level skip/limit
+  const total = await serviceRequestModel.countDocuments(query);
   const bookings = await serviceRequestModel.find(query)
     .populate("childServiceId", "name allowedRoleIds")
     .populate("userId", "name mobileNumber")
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
 
-  let formatted = bookings.map(b => {
+  const items = bookings.map(b => {
     const obj = b.toObject() as any;
     return {
       ...obj,
@@ -1303,33 +1330,8 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     };
   });
 
-  if (search && search !== "") {
-    const s = (search as string).toLowerCase();
-    // Broad search across fields
-    formatted = formatted.filter(b =>
-      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
-      (b.patientId?.mobile?.toLowerCase() || "").includes(s) ||
-      (b.serviceId?.name?.toLowerCase() || "").includes(s) ||
-      (b.doctorId?.name?.toLowerCase() || "").includes(s) ||
-      (b._id || "").toLowerCase().includes(s) ||
-      (b.status || "").toLowerCase().includes(s) ||
-      (b.paymentStatus || "").toLowerCase().includes(s) ||
-      (String(b.totalAmount || "")).includes(s)
-    );
-  }
-
-  if (payment && payment !== "All") {
-    formatted = formatted.filter(b => b.paymentStatus === payment);
-  }
-  if (department && department !== "All") {
-    formatted = formatted.filter(b => (b.serviceId?.name || "").toLowerCase().includes((department as string).toLowerCase()));
-  }
-
-  const total = formatted.length;
-  const paginated = formatted.slice(skip, skip + Number(limit));
-
   res.status(200).json(new ApiResponse(200, "Service bookings fetched successfully", {
-    items: paginated,
+    items,
     total,
     page: Number(page),
     totalPages: Math.ceil(total / Number(limit)),
@@ -1343,6 +1345,15 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
 
   if (!status) throw new ApiError(400, "Status is required");
 
+  // Normalize status case — admin panel/frontends may send UPPERCASE
+  const STATUS_MAP: Record<string, string> = {
+    "CONFIRMED": "Confirmed",
+    "COMPLETED": "Completed",
+    "CANCELLED": "Cancelled",
+    "PENDING": "Pending",
+  };
+  const normalizedStatus = STATUS_MAP[status] ?? status;
+
   let existing = await doctorAppointmentModel.findById(id);
   if (!existing) {
     const hosp = await HospitalBooking.findById(id);
@@ -1354,19 +1365,42 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
 
   if (!existing) throw new ApiError(404, "Booking not found");
 
+  // Guard: cannot cancel an already in-progress/completed/cancelled appointment
+  if (normalizedStatus === "Cancelled" && ["Completed", "Cancelled"].includes(existing.status)) {
+    throw new ApiError(400, `Cannot cancel a booking that is already ${existing.status}`);
+  }
+
+  let didRefund = false;
   if (
-    status === "Cancelled" &&
+    normalizedStatus === "Cancelled" &&
     existing.status !== "Cancelled" &&
     existing.paymentStatus === "COMPLETED" &&
     (existing.totalAmount ?? 0) > 0
   ) {
     await creditWalletAtomic(String(existing.patientId), Number(existing.totalAmount || 0), `REFUND:APPOINTMENT:${id}`);
+    didRefund = true;
   }
 
-  const booking = await doctorAppointmentModel.findByIdAndUpdate(id, { status }, { new: true }).populate("doctorId").populate("patientId");
+  // Build update doc; calculate commission on completion (parity with partner-side)
+  const updateDoc: any = { status: normalizedStatus };
+  if (normalizedStatus === "Completed" && existing.status !== "Completed" && existing.doctorId) {
+    try {
+      const { getActiveCommissionRate } = await import("../PartnerSubscription/subscription.controller.js");
+      const commissionPct = await getActiveCommissionRate(existing.doctorId.toString());
+      const totalAmt = existing.totalAmount || 0;
+      const commissionAmt = (totalAmt * commissionPct) / 100;
+      updateDoc.commissionPercentage = commissionPct;
+      updateDoc.commissionAmount = commissionAmt;
+      updateDoc.partnerEarning = totalAmt - commissionAmt;
+    } catch (e) {
+      console.error("[Commission] doctor completion calc error:", e);
+    }
+  }
+
+  const booking = await doctorAppointmentModel.findByIdAndUpdate(id, updateDoc, { new: true }).populate("doctorId").populate("patientId");
   if (!booking) throw new ApiError(404, "Booking not found");
 
-  if (status === "Confirmed" || status === "Confirmed".toUpperCase()) {
+  if (normalizedStatus === "Confirmed") {
     await HospitalBooking.findOneAndUpdate(
       { bookingId: booking._id },
       {
@@ -1381,9 +1415,31 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
       },
       { upsert: true }
     );
-  } else if (status === "Cancelled" || status === "CANCELLED") {
+  } else if (normalizedStatus === "Cancelled") {
     // Sync cancel state with HospitalBooking if it exists
     await HospitalBooking.findOneAndUpdate({ bookingId: booking._id }, { status: "CANCELLED" });
+  }
+
+  // ── Refund confirmation email (only if money was actually returned) ──
+  if (didRefund) {
+    try {
+      const patient = booking.patientId as any;
+      if (patient?.email) {
+        const { enqueueEmail } = await import("../../queues/communicationQueue.js");
+        await enqueueEmail({
+          kind: "refund",
+          data: {
+            email: patient.email,
+            fullName: patient.name || "Customer",
+            amount: Number(existing.totalAmount || 0),
+            serviceName: (booking as any).serviceName || `Consultation with Dr. ${(booking.doctorId as any)?.name || "Doctor"}`,
+            bookingId: String(booking._id),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("[Email] doctor refund email error:", e);
+    }
   }
 
   res.status(200).json(new ApiResponse(200, "Booking status updated", booking));
@@ -1407,6 +1463,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
 
   if (!existing) throw new ApiError(404, "Service booking not found");
 
+  let didServiceRefund = false;
   if (
     status === "CANCELLED" &&
     existing.status !== "CANCELLED" &&
@@ -1414,6 +1471,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
     (existing.price ?? 0) > 0
   ) {
     await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), `REFUND:SERVICE:${id}`);
+    didServiceRefund = true;
   }
 
   const updatePayload: any = { status };
@@ -1445,6 +1503,70 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
   } else if (status === "CANCELLED" || status === "Cancelled") {
     // Sync cancel state with HospitalBooking if it exists
     await HospitalBooking.findOneAndUpdate({ bookingId: booking._id }, { status: "CANCELLED" });
+  }
+
+  // ── Refund confirmation email (only if money was actually returned) ──
+  if (didServiceRefund) {
+    try {
+      const customer = (booking as any).userId;
+      if (customer?.email) {
+        const { enqueueEmail } = await import("../../queues/communicationQueue.js");
+        await enqueueEmail({
+          kind: "refund",
+          data: {
+            email: customer.email,
+            fullName: customer.name || "Customer",
+            amount: Number(existing.price || 0),
+            serviceName: (booking as any).childServiceId?.name || "Service Booking",
+            bookingId: String(booking._id),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("[Email] service refund email error:", e);
+    }
+  }
+
+  // ── Notify assigned partner + customer when admin assigns a provider ──
+  if (assignedProviderId && ["ACCEPTED", "CONFIRMED", "Confirmed"].includes(status)) {
+    try {
+      const { enqueuePush } = await import("../../queues/communicationQueue.js");
+      const DoctorMdl = (await import("../Doctors/doctor.model.js")).default;
+      const serviceName = (booking as any).childServiceId?.name || "Service";
+
+      // Partner
+      const partner = await DoctorMdl.findById(assignedProviderId).select("fcmToken name");
+      if (partner?.fcmToken) {
+        await enqueuePush({
+          recipientId: partner._id as any,
+          recipientType: "partner",
+          fcmToken: partner.fcmToken,
+          title: "📋 New Job Assigned!",
+          body: `You have been assigned a ${serviceName} booking. Tap to review and accept.`,
+          data: { screen: `/booking/${String(booking._id)}`, type: "JOB_ASSIGNED" },
+          refType: "ServiceRequest",
+          refId: booking._id as any,
+        });
+      }
+
+      // Customer
+      const patientId = (booking as any).userId?._id || (booking as any).userId;
+      const patient = await Patient.findById(patientId).select("fcmToken name");
+      if (patient?.fcmToken) {
+        await enqueuePush({
+          recipientId: patient._id as any,
+          recipientType: "patient",
+          fcmToken: patient.fcmToken,
+          title: "✅ Provider Assigned!",
+          body: `${partner?.name ?? "A provider"} has been assigned to your ${serviceName} booking.`,
+          data: { screen: `/booking/${String(booking._id)}`, type: "PROVIDER_ASSIGNED" },
+          refType: "ServiceRequest",
+          refId: booking._id as any,
+        });
+      }
+    } catch (e) {
+      console.error("[Push] assignment notification error:", e);
+    }
   }
 
   res.status(200).json(new ApiResponse(200, "Service booking status updated", booking));
@@ -1729,9 +1851,10 @@ export const getAdminDoctorPerformance = asyncHandler(async (req, res) => {
   // Find doctors
   const doctorQuery: any = {};
   if (search) {
+    const s = new RegExp(escapeRegex(search), 'i');
     doctorQuery.$or = [
-      { name: new RegExp(search as string, 'i') },
-      { mobileNumber: new RegExp(search as string, 'i') }
+      { name: s },
+      { mobileNumber: s }
     ];
   }
 
@@ -1899,6 +2022,24 @@ export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
       body,
       data: { type: "PAYOUT_UPDATE", payoutId: String(payout._id), status }
     });
+  }
+
+  // ── Payout status email to partner ──
+  if (partner?.email) {
+    try {
+      await (await import("../../queues/communicationQueue.js")).enqueueEmail({
+        kind: "payout_update",
+        data: {
+          email: partner.email,
+          fullName: partner.name || "Partner",
+          amount: Number(payout.amount || 0),
+          status,
+          adminNote,
+        },
+      });
+    } catch (e) {
+      console.error("[Email] payout status email error:", e);
+    }
   }
 
   return res.status(200).json(new ApiResponse(200, "Payout status updated", payout));

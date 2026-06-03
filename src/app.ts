@@ -26,6 +26,8 @@ import staffEarningsRoutes from './modules/Earnings/earnings.routes.js'
 import paymentRoutes from './modules/Payments/payment.routes.js'
 import agoraRoutes from './modules/Agora/agora.routes.js'
 import healthPackageRoutes from './modules/HealthPackages/healthPackage.routes.js'
+import couponRoutes from './modules/Coupons/coupon.routes.js'
+import referralRoutes from './modules/Referral/referral.routes.js'
 const PORT = process.env.PORT || 3000
 
 const app = express()
@@ -137,6 +139,12 @@ app.use('/api/nurse/earnings', staffEarningsRoutes)
 app.use('/api/ambulance/earnings', staffEarningsRoutes)
 app.use('/api/agora', agoraRoutes)
 app.use('/api/health-packages', healthPackageRoutes)
+
+//coupons
+app.use('/api/coupons', couponRoutes)
+
+//referrals
+app.use('/api/referral', referralRoutes)
 
 import { getPublicAppConfig } from "./modules/Admin/admin.controller.js";
 app.get("/api/common/config/:appKey", getPublicAppConfig);

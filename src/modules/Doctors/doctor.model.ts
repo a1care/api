@@ -36,6 +36,9 @@ export interface DoctorDocument extends Document {
   fcmToken?: string;
   email?: string;
   dateOfBirth?: Date;
+  deletionRequested?: boolean;
+  deletionRequestedAt?: Date | null;
+  deletedAt?: Date | null;
 }
 
 const DoctorSchema = new Schema<DoctorDocument>(
@@ -174,6 +177,18 @@ const DoctorSchema = new Schema<DoctorDocument>(
     },
     dateOfBirth: {
       type: Date
+    },
+    deletionRequested: {
+      type: Boolean,
+      default: false
+    },
+    deletionRequestedAt: {
+      type: Date,
+      default: null
+    },
+    deletedAt: {
+      type: Date,
+      default: null
     }
   },
 

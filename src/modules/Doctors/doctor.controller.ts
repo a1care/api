@@ -13,6 +13,7 @@ import sendMessage from "../../configs/twilioConfig.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import mongoose from "mongoose";
 import { enqueueEmail } from "../../queues/communicationQueue.js";
+import { notifyAdmin } from "../Notifications/notification.controller.js";
 
 // ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
 // const DEV_BYPASS_OTP = "123456";
@@ -335,6 +336,23 @@ export const registerStaff = asyncHandler(async (req, res) => {
   // Send welcome email on first registration (when name is set for the first time)
   if (!findStaff.isRegistered && updateData.isRegistered && updatedStaff?.email && updatedStaff?.name) {
     enqueueEmail({ kind: "partner_welcome", data: { email: updatedStaff.email, fullName: updatedStaff.name } }).catch(() => {});
+    // Alert admins that a new partner needs KYC verification
+    await notifyAdmin(
+      "🧑‍⚕️ New Partner Registration",
+      `${updatedStaff.name} registered and is awaiting KYC verification.`,
+      "Partner",
+      String(updatedStaff._id)
+    );
+  }
+
+  // Alert admins when a previously-rejected partner re-submits for review
+  if (updateData.status === "Pending" && findStaff.status === "Rejected") {
+    await notifyAdmin(
+      "🔁 Partner Re-submitted KYC",
+      `${updatedStaff?.name || "A partner"} re-submitted documents for review.`,
+      "Partner",
+      String(staffId)
+    );
   }
 
   return res.status(200).json(new ApiResponse(200, "Profile updated successfully", updatedStaff));
@@ -347,5 +365,28 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
 
   await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
   return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
+});
+
+// Partner requests account deletion — flags the account so it surfaces in the admin
+// Deletion Requests queue (admin approves/finalises via /admin/deletion-approve/:id).
+export const requestStaffDeletion = asyncHandler(async (req, res) => {
+  const staffId = req.user?.id;
+  if (!staffId) throw new ApiError(401, "Not authorized");
+
+  const updated = await doctorModel.findByIdAndUpdate(
+    staffId,
+    { deletionRequested: true, deletionRequestedAt: new Date() },
+    { new: true }
+  );
+  if (!updated) throw new ApiError(404, "Staff not found");
+
+  await notifyAdmin(
+    "🗑️ Account Deletion Requested",
+    `${updated.name || "A partner"} requested account deletion.`,
+    "Partner",
+    String(staffId)
+  );
+
+  return res.status(200).json(new ApiResponse(200, "Account deletion requested. Our team will process it shortly.", {}));
 });
 

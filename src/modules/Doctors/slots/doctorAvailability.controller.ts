@@ -31,7 +31,8 @@ export const createDoctorAvailability = asyncHandler(async (req, res) => {
 
 export const getDoctorAvailabilitybyDoctorId = asyncHandler(async (req, res) => {
   const { doctorId } = req.params
-  const doctorAvailability = await doctorAvailabilityModel.find({ doctorId: new mongoose.Schema.Types.ObjectId(doctorId as string) })
+  // Let Mongoose cast the string param to an ObjectId for the query.
+  const doctorAvailability = await doctorAvailabilityModel.find({ doctorId })
   return res.status(200).json(new ApiResponse(200, "Doctor availability", doctorAvailability))
 })
 

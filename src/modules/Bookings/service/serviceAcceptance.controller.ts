@@ -10,6 +10,7 @@ import { Patient } from "../../Authentication/patient.model.js";
 import DoctorModel from "../../Doctors/doctor.model.js";
 import { enqueuePush } from "../../../queues/communicationQueue.js";
 import { emitToRoom } from "../../../socket.js";
+import { notifyAdmin } from "../../Notifications/notification.controller.js";
 
 // Partner accepts a service request
 export const createServiceAcceptance = asyncHandler(async (req, res) => {
@@ -112,6 +113,11 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
     const serviceRequestDetails = await serviceRequestModel.findById(requestId);
     if (!serviceRequestDetails) throw new ApiError(404, "Service Request not found");
 
+    // Authorization: only the partner this booking is actually assigned to may reject it.
+    if (serviceRequestDetails.assignedProviderId?.toString() !== providerId) {
+        throw new ApiError(403, "This booking is not assigned to you");
+    }
+
     const providerDetails = await DoctorModel.findById(providerId);
     
     const payload = {
@@ -133,5 +139,31 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
 
     const createRejected = new serviceAcceptanceModal(parsed.data);
     await createRejected.save();
+
+    // Send the service request back to admin for re-assignment
+    await serviceRequestModel.findByIdAndUpdate(requestId, {
+        $set: { status: "RETURNED_TO_ADMIN" },
+        $unset: { assignedProviderId: "" }
+    });
+
+    // Notify admin (socket) that the booking was returned
+    try {
+        emitToRoom("admin", "booking_returned", {
+            bookingId: requestId,
+            providerId,
+            reason: req.body.reason || "Partner rejected"
+        });
+    } catch (e) {
+        console.error("[Socket] booking_returned emit error:", e);
+    }
+
+    // Persistent admin bell alert — needs re-assignment
+    await notifyAdmin(
+        "↩️ Booking Returned to Admin",
+        `${providerDetails?.name || "A partner"} rejected a booking. It needs re-assignment.`,
+        "ServiceRequest",
+        String(requestId)
+    );
+
     return res.status(201).json(new ApiResponse(201, "Rejected the request", createRejected));
 });

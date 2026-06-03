@@ -8,6 +8,9 @@ import {
   sendPartnerWelcomeEmail,
   sendPartnerApprovalEmail,
   sendPartnerRejectionEmail,
+  sendRefundConfirmationEmail,
+  sendServiceCompletedEmail,
+  sendPayoutStatusEmail,
 } from "../utils/email.js";
 import { getQueueRedisConnection } from "./redisConnection.js";
 
@@ -17,7 +20,10 @@ type EmailJob =
   | { kind: "partner_approved"; data: Parameters<typeof sendPartnerApprovalEmail>[0] }
   | { kind: "partner_rejected"; data: Parameters<typeof sendPartnerRejectionEmail>[0] }
   | { kind: "appointment"; data: Parameters<typeof sendAppointmentConfirmationEmail>[0] }
-  | { kind: "wallet_topup"; data: Parameters<typeof sendWalletTopupEmail>[0] };
+  | { kind: "wallet_topup"; data: Parameters<typeof sendWalletTopupEmail>[0] }
+  | { kind: "refund"; data: { email: string; fullName: string; amount: number | string; serviceName: string; bookingId: string } }
+  | { kind: "service_completed"; data: { email: string; fullName: string; serviceName: string; partnerName: string; amount: number | string; date: string } }
+  | { kind: "payout_update"; data: { email: string; fullName: string; amount: number | string; status: string; adminNote?: string } };
 
 type SmsJob = {
   mobileNumber: string;
@@ -73,6 +79,9 @@ export async function enqueueEmail(payload: EmailJob) {
     if (payload.kind === "partner_rejected") await sendPartnerRejectionEmail(payload.data);
     if (payload.kind === "appointment") await sendAppointmentConfirmationEmail(payload.data);
     if (payload.kind === "wallet_topup") await sendWalletTopupEmail(payload.data);
+    if (payload.kind === "refund") await sendRefundConfirmationEmail(payload.data.email, payload.data.fullName, payload.data.amount, payload.data.serviceName, payload.data.bookingId);
+    if (payload.kind === "service_completed") await sendServiceCompletedEmail(payload.data.email, payload.data.fullName, payload.data.serviceName, payload.data.partnerName, payload.data.amount, payload.data.date);
+    if (payload.kind === "payout_update") await sendPayoutStatusEmail(payload.data.email, payload.data.fullName, payload.data.amount, payload.data.status, payload.data.adminNote);
     return;
   }
 

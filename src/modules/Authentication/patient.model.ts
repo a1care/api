@@ -13,7 +13,9 @@ export interface PatientDocument extends Document {
   dateOfBirth: Date;
   fcmToken: string;
   isRegistered: boolean;
-  primaryAddressId: mongoose.Schema.Types.ObjectId
+  primaryAddressId: mongoose.Schema.Types.ObjectId;
+  referralCode?: string;
+  referredBy?: mongoose.Schema.Types.ObjectId;
 }
 
 const PatientSchema = new Schema<PatientDocument>(
@@ -69,7 +71,18 @@ const PatientSchema = new Schema<PatientDocument>(
     primaryAddressId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "patient_addresses"
-    }
+    },
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Patient",
+    },
   },
   {
     timestamps: true

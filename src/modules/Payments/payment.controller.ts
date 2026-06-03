@@ -519,6 +519,12 @@ export const payWithWallet = asyncHandler(async (req, res) => {
 export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) throw new ApiError(404, "Order not found");
+
+    // Ownership guard — a user may only read their own order (admins may read any).
+    const isOwner = String(order.userId) === String(req.user?.id);
+    const isAdmin = req.user?.role === "admin" || req.user?.role === "super_admin";
+    if (!isOwner && !isAdmin) throw new ApiError(403, "Access denied");
+
     return res.status(200).json(new ApiResponse(200, "Order fetched", order));
 });
 

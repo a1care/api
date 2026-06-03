@@ -91,6 +91,52 @@ const ServiceRequestSchema = new Schema(
     price: {
       type: Number,
       required: true
+    },
+
+    paymentMode: {
+      type: String,
+      enum: ["ONLINE", "OFFLINE", "COD"],
+      default: "COD"
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["PENDING", "COMPLETED", "FAILED"],
+      default: "PENDING"
+    },
+    notes: {
+      type: String,
+      default: ""
+    },
+    commissionPercentage: {
+      type: Number,
+      default: 0
+    },
+    commissionAmount: {
+      type: Number,
+      default: 0
+    },
+    partnerEarning: {
+      type: Number,
+      default: 0
+    },
+    broadcastedAt: {
+      type: Date
+    },
+    urgency: {
+      type: String,
+      enum: ["NORMAL", "URGENT", "CRITICAL"],
+      default: "NORMAL"
+    },
+    isGatewayPayment: {
+      type: Boolean,
+      default: false
+    },
+    couponCode: {
+      type: String
+    },
+    discountAmount: {
+      type: Number,
+      default: 0
     }
   },
   {
