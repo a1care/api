@@ -224,6 +224,105 @@ export const sendWalletTopupEmail = async (data: { email: string; fullName: stri
     return sendEmail({ to: data.email, subject: `Wallet Updated: Success ₹${data.amount} - A1Care 24/7`, html: baseTemplate("Wallet Credit", body) });
 };
 
+export const sendRefundConfirmationEmail = async (
+    email: string,
+    fullName: string,
+    amount: number | string,
+    serviceName: string,
+    bookingId: string
+) => {
+    const body = `
+        <div style="text-align:center; margin-bottom:35px;">
+            <div style="width:70px; height:70px; background-color:#ECFDF5; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">💰</div>
+            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#065F46;">Refund Processed</h2>
+            <p style="color:#64748B;font-size:15px;">Your refund is on its way back to you.</p>
+        </div>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">We've processed a refund for your booking <strong>${serviceName}</strong>. The amount has been credited back to your A1Care wallet.</p>
+        <div style="background-color:#ecfdf5;padding:24px;border-radius:16px;margin-bottom:30px;border:1px solid #10b981;">
+            <p style="margin:0 0 10px;font-size:11px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.1em;">Refund Amount</p>
+            <p style="margin:0 0 12px;font-size:26px;font-weight:900;color:#065f46;">₹${amount}</p>
+            <p style="margin:0;font-size:12px;color:#065f46;font-family:monospace;">Booking ID: ${bookingId}</p>
+        </div>
+        <p style="margin-bottom:20px;">If you have any questions about this refund, please reach out to our support team.</p>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Team A1Care 24/7</p>
+    `;
+    return sendEmail({ to: email, subject: `Refund Processed: ₹${amount} - A1Care 24/7`, html: baseTemplate("Refund Processed", body) });
+};
+
+export const sendServiceCompletedEmail = async (
+    email: string,
+    fullName: string,
+    serviceName: string,
+    partnerName: string,
+    amount: number | string,
+    date: string
+) => {
+    const body = `
+        <div style="text-align:center; margin-bottom:35px;">
+            <div style="width:70px; height:70px; background-color:#EFF6FF; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">🎉</div>
+            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#0D2E6E;">Service Completed</h2>
+            <p style="color:#64748B;font-size:15px;">We hope you had a great experience!</p>
+        </div>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">Your service <strong>${serviceName}</strong> has been marked as completed. Thank you for choosing A1Care.</p>
+        <div style="background-color:#F8FAFC;padding:32px;border-radius:24px;margin-bottom:30px;border:1px solid #E2E8F0;">
+            <div style="margin-bottom:18px;">
+                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Service</p>
+                <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#0D2E6E;">${serviceName}</p>
+            </div>
+            <div style="margin-bottom:18px; display:table; width:100%;">
+                <div style="display:table-cell; width:50%;">
+                    <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Provider</p>
+                    <p style="margin:4px 0 0; font-size:15px; font-weight:700;">${partnerName}</p>
+                </div>
+                <div style="display:table-cell; width:50%;">
+                    <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Date</p>
+                    <p style="margin:4px 0 0; font-size:15px; font-weight:700;">${date}</p>
+                </div>
+            </div>
+            <div style="border-top:1px solid #E2E8F0; padding-top:18px;">
+                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Amount</p>
+                <p style="margin:4px 0 0; font-size:18px; font-weight:900; color:#0D2E6E;">₹${amount}</p>
+            </div>
+        </div>
+        <div style="text-align:center; padding-top:10px;">
+            <a href="#" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:16px 32px;border-radius:14px;text-decoration:none;font-weight:800;font-size:15px;">Rate Your Experience →</a>
+        </div>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;text-align:center;">Best regards,<br/>Team A1Care 24/7</p>
+    `;
+    return sendEmail({ to: email, subject: `Service Completed: ${serviceName} - A1Care 24/7`, html: baseTemplate("Service Completed", body) });
+};
+
+export const sendPayoutStatusEmail = async (
+    email: string,
+    fullName: string,
+    amount: number | string,
+    status: string,
+    adminNote?: string
+) => {
+    const isApproved = /complete|approve|paid|success/i.test(status);
+    const accent = isApproved ? "#059669" : /reject|fail|declin/i.test(status) ? "#e11d48" : "#1A6FDB";
+    const accentBg = isApproved ? "#ecfdf5" : /reject|fail|declin/i.test(status) ? "#fff1f2" : "#EFF6FF";
+    const body = `
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:${accent};">Payout ${status}</h2>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">Here is an update on your payout request with A1Care.</p>
+        <div style="background-color:${accentBg};padding:24px;border-radius:16px;margin-bottom:24px;border:1px solid ${accent};">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.1em;">Amount</p>
+            <p style="margin:0 0 12px;font-size:26px;font-weight:900;color:${accent};">₹${amount}</p>
+            <p style="margin:0;font-size:13px;font-weight:700;color:${accent};">Status: ${status}</p>
+        </div>
+        ${adminNote ? `<div style="background-color:#F8FAFC;padding:20px;border-radius:14px;margin-bottom:24px;border:1px solid #E2E8F0;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.08em;">Note</p>
+            <p style="margin:0;font-size:14px;color:#475569;">${adminNote}</p>
+        </div>` : ""}
+        <p style="margin-bottom:20px;">You can view your full earnings and payout history in the A1Care Partner app.</p>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
+    `;
+    return sendEmail({ to: email, subject: `Payout Update: ${status} ₹${amount} - A1Care 24/7`, html: baseTemplate("Payout Update", body) });
+};
+
 export const sendOTPFallbackEmail = async (data: { email: string; otp: string }) => {
     const body = `
         <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Verification Code</h2>

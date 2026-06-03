@@ -93,6 +93,10 @@ export default function ProfileScreen() {
             router.push("/bank_details");
         } else if (path === "raise-ticket") {
             router.push("/raise_ticket");
+        } else if (path === "my-tickets") {
+            router.push("/my_tickets");
+        } else if (path === "knowledge-base") {
+            router.push("/knowledge_base");
         } else if (path === "faq") {
             router.push("/faq");
         } else if (path === "privacy") {
@@ -249,6 +253,20 @@ export default function ProfileScreen() {
                         title="Raise Ticket"
                         subtitle="Report an issue or get assistance"
                         onPress={() => handleNavigation("raise-ticket")}
+                    />
+
+                    <MenuLink
+                        icon={<MaterialCommunityIcons name="format-list-checks" size={22} color="#15803D" />}
+                        title="My Tickets"
+                        subtitle="Track your support requests"
+                        onPress={() => handleNavigation("my-tickets")}
+                    />
+
+                    <MenuLink
+                        icon={<MaterialCommunityIcons name="book-open-variant" size={22} color="#15803D" />}
+                        title="Knowledge Base"
+                        subtitle="Guides and how-tos"
+                        onPress={() => handleNavigation("knowledge-base")}
                     />
 
                     <MenuLink

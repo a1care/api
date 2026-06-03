@@ -12,11 +12,17 @@ import { readConfigStore } from "../Admin/admin.controller.js";
 import HospitalBooking from "./hospitalBooking.model.js";
 import { getActiveCommissionRate } from "../PartnerSubscription/subscription.controller.js";
 import { emitToRoom } from "../../socket.js";
+import { validateCoupon, consumeCoupon } from "../Coupons/coupon.controller.js";
+import { notifyAdmin } from "../Notifications/notification.controller.js";
+import { applyReferralReward } from "../Referral/referral.controller.js";
 
 
 export const createDoctorAppointment = asyncHandler(async (req, res) => {
     const patientId = req.user?.id;
     if (!patientId) throw new ApiError(401, "Not authorized");
+
+    // Only patients may create bookings — a partner/staff token must not create a phantom patient booking.
+    if (req.user?.role !== "Patient") throw new ApiError(403, "Only patients can create bookings");
 
     const { doctorId } = req.params;
     if (!doctorId) throw new ApiError(400, "Doctor ID is required");
@@ -26,11 +32,34 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
     if (!totalAmount && doctor) totalAmount = doctor.consultationFee;
     if (totalAmount === undefined || totalAmount === null) throw new ApiError(400, "Consultation fee not found");
 
+    const baseAmount = Number(totalAmount);
+
+    // ── Coupon: VALIDATE ONLY here. Consume only after booking + payment succeed
+    //    so a failed payment never burns the customer's coupon. ──
+    let appliedCouponCode: string | undefined;
+    let discountAmount = 0;
+    let couponToConsume: { couponId: string; usageLimit: number; usagePerUser: number } | null = null;
+    if (req.body.couponCode) {
+        const couponResult = await validateCoupon(
+            req.body.couponCode,
+            patientId,
+            baseAmount,
+            "DOCTOR"
+        );
+        discountAmount = couponResult.discountAmount;
+        appliedCouponCode = couponResult.couponCode;
+        couponToConsume = { couponId: couponResult.couponId, usageLimit: couponResult.usageLimit, usagePerUser: couponResult.usagePerUser };
+    }
+
+    totalAmount = Math.max(0, baseAmount - discountAmount);
+
     const payload = {
         ...req.body,
         doctorId,
         patientId,
         totalAmount,
+        couponCode: appliedCouponCode,
+        discountAmount,
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
     };
 
@@ -44,12 +73,47 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         try {
             await processPaymentFromWallet(patientId, totalAmount, `Booking for Dr. ${payload.doctorId}`);
         } catch (error: any) {
+            await notifyAdmin(
+                "⚠️ Appointment Payment Failed",
+                `A wallet payment of ₹${totalAmount} for a doctor consultation failed.`,
+                "Wallet",
+                String(patientId)
+            );
             throw new ApiError(400, error.message || "Payment failed");
         }
     }
 
     const newAppointment = new doctorAppointmentModel(parsed.data);
-    await newAppointment.save();
+    try {
+        await newAppointment.save();
+    } catch (saveErr: any) {
+        // Wallet already debited above — refund if persisting the appointment fails.
+        if (payload.paymentMode === "ONLINE" && totalAmount > 0) {
+            await creditWalletAtomic(patientId, totalAmount, `REFUND:BOOKING_SAVE_FAILED:${patientId}:${Date.now()}`);
+        }
+        console.error("[Appointment] save failed after payment — refunded:", saveErr);
+        throw new ApiError(500, "Could not create your appointment. Any amount charged has been refunded to your wallet.");
+    }
+
+    // ── Consume the coupon now that payment + booking both succeeded ──
+    if (couponToConsume) {
+        try {
+            await consumeCoupon(couponToConsume.couponId, patientId, couponToConsume.usageLimit, couponToConsume.usagePerUser);
+        } catch (couponErr: any) {
+            // Lost a race for the last redemption — undo booking & refund.
+            await doctorAppointmentModel.findByIdAndDelete(newAppointment._id);
+            if (payload.paymentMode === "ONLINE" && totalAmount > 0) {
+                await creditWalletAtomic(patientId, totalAmount, `REFUND:COUPON_RACE:${newAppointment._id}`);
+            }
+            throw new ApiError(400, couponErr?.message || "This coupon can no longer be used");
+        }
+    }
+
+    // Reward the referrer if a referral code was supplied (parity with service bookings)
+    if (req.body.referralCode) {
+        try { await applyReferralReward(patientId, req.body.referralCode, String(newAppointment._id)); }
+        catch (e) { console.error("[Referral] reward error:", e); }
+    }
 
     // ── New: Send Confirmation Email ─────────────────────────────────────
     try {
@@ -139,6 +203,7 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     if (!isPatient && !isDoctor) throw new ApiError(403, "Not allowed to modify this appointment");
 
     // Auto-refund if a paid appointment is cancelled.
+    let didRefund = false;
     if (
         status === "Cancelled" &&
         existing.status !== "Cancelled" &&
@@ -147,6 +212,7 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     ) {
         const refundDescription = `REFUND:APPOINTMENT:${id}`;
         await creditWalletAtomic(String(existing.patientId), Number(existing.totalAmount || 0), refundDescription);
+        didRefund = true;
     }
 
     let updateData: any = { status };
@@ -220,6 +286,43 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
             } catch (e) {
                 console.error("[Email] Status update email error:", e);
             }
+        }
+    }
+
+    // ── Refund confirmation email (only if money was actually returned) ──
+    if (didRefund && patient?.email) {
+        try {
+            await enqueueEmail({
+                kind: "refund",
+                data: {
+                    email: patient.email,
+                    fullName: patient.name || "Customer",
+                    amount: Number(existing.totalAmount || 0),
+                    serviceName: `Consultation with Dr. ${doctorName}`,
+                    bookingId: String(id),
+                },
+            });
+        } catch (e) {
+            console.error("[Email] appointment refund email error:", e);
+        }
+    }
+
+    // ── Service completed email ──
+    if (status === "Completed" && existing.status !== "Completed" && patient?.email) {
+        try {
+            await enqueueEmail({
+                kind: "service_completed",
+                data: {
+                    email: patient.email,
+                    fullName: patient.name || "Customer",
+                    serviceName: `Consultation with Dr. ${doctorName}`,
+                    partnerName: `Dr. ${doctorName}`,
+                    amount: Number(appointment.totalAmount || 0),
+                    date: appointment.date ? new Date(appointment.date).toDateString() : new Date().toDateString(),
+                },
+            });
+        } catch (e) {
+            console.error("[Email] appointment completed email error:", e);
         }
     }
 

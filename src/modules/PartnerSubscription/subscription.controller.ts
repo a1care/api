@@ -64,9 +64,11 @@ export const subscribe = async (req: Request, res: Response) => {
         const endDate = new Date();
         endDate.setDate(startDate.getDate() + plan.validityDays);
 
-        // Cancel any existing active subscriptions first (optional, depends on business logic)
+        // Cancel any existing Active OR Pending subscriptions first, so a partner who taps
+        // Subscribe multiple times (or whose payment is slow) doesn't accumulate duplicate
+        // pending records that could all later activate.
         await PartnerSubscription.updateMany(
-            { partnerId, status: "Active" },
+            { partnerId, status: { $in: ["Active", "Pending"] } },
             { status: "Cancelled" }
         );
 

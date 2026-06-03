@@ -31,13 +31,20 @@ export const createDoctorAvailability = asyncHandler(async (req, res) => {
 
 export const getDoctorAvailabilitybyDoctorId = asyncHandler(async (req, res) => {
   const { doctorId } = req.params
-  const doctorAvailability = await doctorAvailabilityModel.find({ doctorId: new mongoose.Schema.Types.ObjectId(doctorId as string) })
+  // Let Mongoose cast the string param to an ObjectId for the query.
+  const doctorAvailability = await doctorAvailabilityModel.find({ doctorId })
   return res.status(200).json(new ApiResponse(200, "Doctor availability", doctorAvailability))
 })
 
 // block timings
 export const blockTiming = asyncHandler(async (req, res) => {
   const { doctorId } = req.params
+
+  // A partner may only block their OWN schedule (doctorId comes from the URL).
+  if (String(doctorId) !== String(req.user?.id)) {
+    throw new ApiError(403, "You can only block your own schedule");
+  }
+
   const payload = {
     ...req.body,
     date: new Date(req.body.date),

@@ -26,14 +26,41 @@ import staffEarningsRoutes from './modules/Earnings/earnings.routes.js'
 import paymentRoutes from './modules/Payments/payment.routes.js'
 import agoraRoutes from './modules/Agora/agora.routes.js'
 import healthPackageRoutes from './modules/HealthPackages/healthPackage.routes.js'
+import couponRoutes from './modules/Coupons/coupon.routes.js'
+import referralRoutes from './modules/Referral/referral.routes.js'
 const PORT = process.env.PORT || 3000
 
 const app = express()
-app.use(cors())
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// CORS only affects browser clients (admin panel / web). Native mobile apps send no
+// Origin header and are unaffected. Lock browser origins to our own domains.
+app.use(cors({
+    origin: [
+        "https://admin.a1carehospital.in",
+        "https://a1carehospital.in",
+        /\.a1carehospital\.in$/,
+        ...(process.env.NODE_ENV !== "production" ? ["http://localhost:5173", "http://localhost:3000"] : []),
+    ],
+    credentials: true,
+}));
+
+// Cap request body size so a huge payload can't be fully buffered before rejection.
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 import { readConfigStore } from "./modules/Admin/admin.controller.js";
+
+// Cache the maintenance flag in-memory so we don't read the config store on every
+// request. Busted immediately when an admin toggles maintenance (see invalidateMaintenanceCache).
+let _maintenanceCached: boolean | null = null;
+let _maintenanceCacheAt = 0;
+const MAINTENANCE_TTL_MS = 30_000;
+
+export const invalidateMaintenanceCache = () => {
+    _maintenanceCached = null;
+    _maintenanceCacheAt = 0;
+};
+
 const maintenanceMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     // Bypass for admin routes and health checks
     if (req.url.startsWith("/api/admin") || req.url === "/api/health" || req.url.startsWith("/api/common/config")) {
@@ -41,8 +68,13 @@ const maintenanceMiddleware = async (req: Request, res: Response, next: NextFunc
     }
 
     try {
-        const config = await readConfigStore();
-        if (config.system?.maintenanceMode) {
+        const now = Date.now();
+        if (_maintenanceCached === null || now - _maintenanceCacheAt > MAINTENANCE_TTL_MS) {
+            const config = await readConfigStore();
+            _maintenanceCached = config.system?.maintenanceMode ?? false;
+            _maintenanceCacheAt = now;
+        }
+        if (_maintenanceCached) {
             return res.status(503).json({
                 success: false,
                 message: "System is under maintenance. Please try again later.",
@@ -137,6 +169,12 @@ app.use('/api/nurse/earnings', staffEarningsRoutes)
 app.use('/api/ambulance/earnings', staffEarningsRoutes)
 app.use('/api/agora', agoraRoutes)
 app.use('/api/health-packages', healthPackageRoutes)
+
+//coupons
+app.use('/api/coupons', couponRoutes)
+
+//referrals
+app.use('/api/referral', referralRoutes)
 
 import { getPublicAppConfig } from "./modules/Admin/admin.controller.js";
 app.get("/api/common/config/:appKey", getPublicAppConfig);

@@ -16,6 +16,8 @@ export interface DoctorAppointmentDocument extends Document {
   commissionAmount?: number;
   partnerEarning?: number;
   serviceName?: string;
+  couponCode?: string;
+  discountAmount?: number;
 }
 
 const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
@@ -86,6 +88,13 @@ const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
     },
     serviceName: {
       type: String
+    },
+    couponCode: {
+      type: String
+    },
+    discountAmount: {
+      type: Number,
+      default: 0
     }
   },
   {

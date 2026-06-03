@@ -12,11 +12,17 @@ import { HealthPackageModel } from "../../HealthPackages/healthPackage.model.js"
 import HospitalBooking from "../hospitalBooking.model.js";
 import { getActiveCommissionRate } from "../../PartnerSubscription/subscription.controller.js";
 import { emitToRoom } from "../../../socket.js";
+import { validateCoupon, consumeCoupon } from "../../Coupons/coupon.controller.js";
+import { applyReferralReward } from "../../Referral/referral.controller.js";
+import { notifyAdmin } from "../../Notifications/notification.controller.js";
 
 
 export const createServiceRequest = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, "Not authorized");
+
+    // Only patients may create bookings — a partner/staff token must not create a phantom patient booking.
+    if (req.user?.role !== "Patient") throw new ApiError(403, "Only patients can create bookings");
 
     let childSvc = null;
     let healthPkg = null;
@@ -29,8 +35,21 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
 
     if (!childSvc && !healthPkg) throw new ApiError(404, "Service or Package not found");
 
-    const finalPrice = childSvc?.price ?? healthPkg?.price ?? 0;
+    const basePrice = childSvc?.price ?? healthPkg?.price ?? 0;
     const bookingName = childSvc?.name ?? healthPkg?.name ?? "Service";
+
+    // ── Optional coupon: VALIDATE ONLY here (consume after the booking is saved &
+    //    payment confirmed, so a failed payment never burns the customer's coupon) ──
+    let discountAmount = 0;
+    let appliedCouponCode: string | undefined;
+    let couponToConsume: { couponId: string; usageLimit: number; usagePerUser: number } | null = null;
+    if (req.body.couponCode) {
+        const applied = await validateCoupon(req.body.couponCode, userId, basePrice, "SERVICE");
+        discountAmount = applied.discountAmount;
+        appliedCouponCode = applied.couponCode;
+        couponToConsume = { couponId: applied.couponId, usageLimit: applied.usageLimit, usagePerUser: applied.usagePerUser };
+    }
+    const finalPrice = Math.max(0, basePrice - discountAmount);
 
     // Backward compatibility for live app payloads where scheduledSlot endTime equals startTime.
     // Normalize to a default 30-minute slot to avoid validation failure.
@@ -52,8 +71,13 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         scheduledSlot: normalizeScheduledSlot(req.body?.scheduledSlot),
         userId,
         price: finalPrice,
+        couponCode: appliedCouponCode,
+        discountAmount,
         bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
         fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
+        // SECURITY: an ONLINE booking is always paid from the wallet below; the wallet is
+        // funded via the verified gateway top-up flow (/wallet/initiate + /wallet/response).
+        // The client-trustable isGatewayPayment field has been removed entirely.
         paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
         status: "PENDING",
     };
@@ -64,16 +88,58 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Validation failed: " + (parsed.error as any).errors.map((e: any) => `${e.path?.join('.') || ''}: ${e.message}`).join(', '));
     }
 
-    if (payload.paymentMode === 'ONLINE' && !payload.isGatewayPayment) {
+    if (payload.paymentMode === 'ONLINE') {
         try {
             await processPaymentFromWallet(userId, finalPrice, `Booking for ${bookingName}`);
         } catch (error: any) {
+            await notifyAdmin(
+                "⚠️ Booking Payment Failed",
+                `A wallet payment of ₹${finalPrice} for "${bookingName}" failed.`,
+                "Wallet",
+                String(userId)
+            );
             throw new ApiError(400, error.message || "Payment from wallet failed");
         }
     }
 
     const newServiceRequest = new serviceRequestModel(payload);
-    await newServiceRequest.save();
+    try {
+        await newServiceRequest.save();
+    } catch (saveErr: any) {
+        // The wallet was already debited above — if persisting the booking fails we must
+        // refund so the patient never loses money for a booking that doesn't exist.
+        if (payload.paymentMode === "ONLINE" && finalPrice > 0) {
+            await creditWalletAtomic(userId, finalPrice, `REFUND:BOOKING_SAVE_FAILED:${userId}:${Date.now()}`);
+        }
+        console.error("[Booking] save failed after payment — refunded:", saveErr);
+        throw new ApiError(500, "Could not create your booking. Any amount charged has been refunded to your wallet.");
+    }
+
+    // ── Consume the coupon now that payment + booking both succeeded ──
+    if (couponToConsume) {
+        try {
+            await consumeCoupon(couponToConsume.couponId, userId, couponToConsume.usageLimit, couponToConsume.usagePerUser);
+        } catch (couponErr: any) {
+            // Lost a race for the last redemption — undo the booking & refund so we don't
+            // leave a discounted booking against a coupon that was never charged. Any paid
+            // amount (wallet OR gateway) is refunded to the patient's wallet, consistent
+            // with how every other refund in the app is issued.
+            await serviceRequestModel.findByIdAndDelete(newServiceRequest._id);
+            if (payload.paymentMode === "ONLINE" && finalPrice > 0) {
+                await creditWalletAtomic(userId, finalPrice, `REFUND:COUPON_RACE:${newServiceRequest._id}`);
+            }
+            throw new ApiError(400, couponErr?.message || "This coupon can no longer be used");
+        }
+    }
+
+    // NOTE (by design): a coupon and a referral code may both be applied to the same
+    // booking. They affect different parties — the coupon discounts THIS customer's price,
+    // the referral rewards a DIFFERENT user (the referrer). They are independent acquisition
+    // costs and do not compound against the same amount, so stacking is intentionally allowed.
+    if (req.body.referralCode) {
+        try { await applyReferralReward(userId, req.body.referralCode, String(newServiceRequest._id)); }
+        catch (e) { console.error("[Referral] reward error:", e); }
+    }
 
     // ── Send Confirmation Email ─────────────────────────────────────────────
     try {
@@ -187,7 +253,14 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     const isAssignedProvider = existing.assignedProviderId?.toString() === requesterId.toString();
     if (!isPatient && !isAssignedProvider) throw new ApiError(403, "Not allowed to update this booking");
 
+    // Guard: cannot cancel a booking already in progress / completed / cancelled
+    const NON_CANCELLABLE = ["IN_PROGRESS", "COMPLETED", "CANCELLED"];
+    if (status === "CANCELLED" && NON_CANCELLABLE.includes(existing.status)) {
+        throw new ApiError(400, `Cannot cancel a booking that is already ${existing.status}`);
+    }
+
     // Auto-refund if a paid service booking is cancelled.
+    let didRefund = false;
     if (
         status === "CANCELLED" &&
         existing.status !== "CANCELLED" &&
@@ -196,6 +269,7 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     ) {
         const refundDescription = `REFUND:SERVICE:${id}`;
         await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), refundDescription);
+        didRefund = true;
     }
 
     let updateData: any = { status };
@@ -271,6 +345,49 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
             } catch (e) {
                 console.error("[Email] Status update email error:", e);
             }
+        }
+    }
+
+    // ── Refund confirmation email (only if money was actually returned) ──
+    if (didRefund && patientFull?.email) {
+        try {
+            await enqueueEmail({
+                kind: "refund",
+                data: {
+                    email: patientFull.email,
+                    fullName: patientFull.name || "Customer",
+                    amount: Number(existing.price || 0),
+                    serviceName,
+                    bookingId: String(id),
+                },
+            });
+        } catch (e) {
+            console.error("[Email] service refund email error:", e);
+        }
+    }
+
+    // ── Service completed email ──
+    if (status === "COMPLETED" && existing.status !== "COMPLETED" && patientFull?.email) {
+        try {
+            let partnerName = "A1Care Provider";
+            if (booking.assignedProviderId) {
+                const DoctorMdl = (await import("../../Doctors/doctor.model.js")).default;
+                const provider = await DoctorMdl.findById(booking.assignedProviderId).select("name");
+                if (provider?.name) partnerName = provider.name;
+            }
+            await enqueueEmail({
+                kind: "service_completed",
+                data: {
+                    email: patientFull.email,
+                    fullName: patientFull.name || "Customer",
+                    serviceName,
+                    partnerName,
+                    amount: Number(booking.price || 0),
+                    date: new Date().toDateString(),
+                },
+            });
+        } catch (e) {
+            console.error("[Email] service completed email error:", e);
         }
     }
 

@@ -70,3 +70,103 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
 
     return res.json(new ApiResponse(200, "Unified feed fetched", feed));
 });
+
+/**
+ * GET /appointment/provider/booking/:id?type=Doctor|Service
+ * Full detail for a single booking the partner is assigned to (ownership-checked).
+ * Returns patient contact, schedule, payment, address and a status timeline.
+ */
+export const getProviderBookingDetail = asyncHandler(async (req, res) => {
+    const providerId = req.user?.id;
+    if (!providerId) throw new ApiError(401, "Provider ID missing");
+
+    const { id } = req.params;
+    const type = String(req.query.type || "").trim();
+
+    if (type === "Doctor") {
+        const appt: any = await DoctorAppointment.findById(id)
+            .populate("patientId", "name mobileNumber profileImage email")
+            .populate("doctorId", "name specialization");
+        if (!appt) throw new ApiError(404, "Booking not found");
+        if (String(appt.doctorId?._id ?? appt.doctorId) !== String(providerId)) {
+            throw new ApiError(403, "This booking is not assigned to you");
+        }
+        return res.json(new ApiResponse(200, "Booking detail", {
+            _id: appt._id,
+            bookingType: "Doctor",
+            status: appt.status,
+            patient: {
+                name: appt.patientId?.name || "Patient",
+                mobile: appt.patientId?.mobileNumber || null,
+                profileImage: appt.patientId?.profileImage || null,
+            },
+            serviceName: "Doctor Consultation",
+            date: appt.date,
+            timeSlot: `${appt.startingTime} - ${appt.endingTime}`,
+            paymentMode: appt.paymentMode || "ONLINE",
+            paymentStatus: appt.paymentStatus,
+            totalAmount: appt.totalAmount,
+            discountAmount: appt.discountAmount || 0,
+            couponCode: appt.couponCode || null,
+            partnerEarning: appt.partnerEarning ?? null,
+            address: { label: "At Hospital / Online Consultation", coords: null },
+            notes: null,
+            createdAt: appt.createdAt,
+            updatedAt: appt.updatedAt,
+        }));
+    }
+
+    // Default: Service request
+    const svc: any = await ServiceRequest.findById(id)
+        .populate("userId", "name mobileNumber profileImage email")
+        .populate("childServiceId")
+        .populate("addressId");
+    if (!svc) throw new ApiError(404, "Booking not found");
+    if (String(svc.assignedProviderId ?? "") !== String(providerId)) {
+        throw new ApiError(403, "This booking is not assigned to you");
+    }
+
+    const a = svc.addressId;
+    const addr = a
+        ? (a.address ||
+           [a.houseNo, a.addressLine1, a.street, a.landmark, a.city, a.state, a.pincode]
+              .filter(Boolean)
+              .join(", "))
+        : null;
+    // Prefer the saved address's own coords, else the booking's ad-hoc location.
+    const addrCoords =
+        a?.location?.lat && a?.location?.lng
+            ? { lat: a.location.lat, lng: a.location.lng }
+            : (svc.location?.lat && svc.location?.lng ? { lat: svc.location.lat, lng: svc.location.lng } : null);
+
+    return res.json(new ApiResponse(200, "Booking detail", {
+        _id: svc._id,
+        bookingType: "Service",
+        status: svc.status,
+        patient: {
+            name: svc.userId?.name || "Patient",
+            mobile: svc.userId?.mobileNumber || null,
+            profileImage: svc.userId?.profileImage || null,
+        },
+        serviceName: svc.childServiceId?.name || "Service",
+        date: svc.scheduledSlot?.startTime || svc.createdAt,
+        timeSlot: svc.scheduledSlot?.startTime
+            ? new Date(svc.scheduledSlot.startTime).toLocaleString()
+            : "As scheduled",
+        paymentMode: svc.paymentMode || "ONLINE",
+        paymentStatus: svc.paymentStatus,
+        totalAmount: svc.price,
+        discountAmount: svc.discountAmount || 0,
+        couponCode: svc.couponCode || null,
+        partnerEarning: svc.partnerEarning ?? null,
+        address: {
+            label: addr || "Patient location",
+            coords: addrCoords,
+        },
+        notes: svc.notes || null,
+        fulfillmentMode: svc.fulfillmentMode,
+        urgency: svc.urgency || null,
+        createdAt: svc.createdAt,
+        updatedAt: svc.updatedAt,
+    }));
+});

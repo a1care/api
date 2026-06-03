@@ -3,6 +3,8 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import TicketModel from "./ticket.model.js";
+import { notifyAdmin } from "../Notifications/notification.controller.js";
+import { escapeRegex } from "../../utils/escapeRegex.js";
 
 export const createTicket = asyncHandler(async (req, res) => {
     const staffId = req.user?.id;
@@ -17,6 +19,13 @@ export const createTicket = asyncHandler(async (req, res) => {
         description,
         priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium"
     });
+
+    await notifyAdmin(
+        "🎫 New Support Ticket",
+        `A partner raised a ticket: "${subject}"`,
+        "Ticket",
+        String(newTicket._id)
+    );
 
     return res.status(201).json(new ApiResponse(201, "Ticket created successfully", newTicket));
 });
@@ -50,6 +59,12 @@ export const createPatientTicket = asyncHandler(async (req, res) => {
             priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium"
         });
         console.log("[createPatientTicket] Ticket created:", newTicket._id);
+        await notifyAdmin(
+            "🎫 New Support Ticket",
+            `A customer raised a ticket: "${subject}"`,
+            "Ticket",
+            String(newTicket._id)
+        );
         return res.status(201).json(new ApiResponse(201, "Ticket created successfully", newTicket));
     } catch (err) {
         console.error("[createPatientTicket] Database error:", err);
@@ -75,7 +90,7 @@ export const getAllTickets = asyncHandler(async (req, res) => {
     }
 
     if (search && search !== "") {
-        const s = new RegExp(search as string, 'i');
+        const s = new RegExp(escapeRegex(search), 'i');
         const searchConditions: any[] = [
             { subject: s },
             { description: s }

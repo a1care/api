@@ -1,6 +1,6 @@
 import express from 'express'
 import { createDoctorAppointment, getAppointmentsByPatientId, getPendingAppointmentbyProviderId, updateDoctorAppointmentStatus, getConsultationCredentials, getAppointmentById } from './doctorAppointment.controller.js'
-import { getProviderUnifiedFeed } from './unifiedBooking.controller.js'
+import { getProviderUnifiedFeed, getProviderBookingDetail } from './unifiedBooking.controller.js'
 import { protect } from '../../middlewares/protect.js'
 import { updateLocation, getLocation } from './location.controller.js';
 import { getMessagesByTicket, sendMessage } from '../Tickets/message.controller.js';
@@ -8,6 +8,7 @@ import { getMessagesByTicket, sendMessage } from '../Tickets/message.controller.
 const router = express.Router()
 
 router.get('/provider/feed', protect, getProviderUnifiedFeed)
+router.get('/provider/booking/:id', protect, getProviderBookingDetail)
 router.post('/booking/:doctorId', protect, createDoctorAppointment)
 router.patch('/status/:id', protect, updateDoctorAppointmentStatus)
 router.get('/patient/appointments', protect, getAppointmentsByPatientId)

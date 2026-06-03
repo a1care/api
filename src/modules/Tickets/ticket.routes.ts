@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../../middlewares/protect.js';
+import { protectAdmin } from '../../middlewares/protectAdmin.js';
 import { createTicket, getAllTickets, getMyTickets, updateTicketStatus, createPatientTicket, getMyPatientTickets } from './ticket.controller.js';
 import { getMessagesByTicket, sendMessage } from './message.controller.js';
 
@@ -18,7 +19,7 @@ router.get('/messages/:ticketId', protect, getMessagesByTicket);
 router.post('/messages/send', protect, sendMessage);
 
 // admin routes
-router.get('/all', getAllTickets); // would ideally protect admin 
-router.put('/status/:id', updateTicketStatus); // would ideally protect admin
+router.get('/all', protectAdmin, getAllTickets);
+router.put('/status/:id', protectAdmin, updateTicketStatus);
 
 export default router;

@@ -31,8 +31,10 @@ export const errorHandler = (
     });
   }
 
+  // Never leak raw internal error details to clients in production.
+  const isDev = process.env.NODE_ENV === "development";
   const message =
-    err instanceof Error ? err.message : "Internal Server Error";
+    isDev && err instanceof Error ? err.message : "Internal Server Error";
 
   console.error("Unexpected Error:", err);
 

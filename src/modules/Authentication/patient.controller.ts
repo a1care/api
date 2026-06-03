@@ -47,6 +47,15 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
     );
   }
 
+  // Per-phone throttle (complements the per-IP express-rate-limit) so one number can't
+  // be flooded with SMS from rotating IPs.
+  const attemptKey = `otp:attempts:patient:${cleanMobile}`;
+  const attempts = await RedisClient.get(attemptKey);
+  if (Number(attempts || 0) >= 5) {
+    throw new ApiError(429, "Too many OTP requests for this number. Try again in 10 minutes.");
+  }
+  await RedisClient.setEx(attemptKey, 600, String(Number(attempts || 0) + 1));
+
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -90,7 +99,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       }
 
       const token = jwt.sign(
-        { mobileNumber: patient.mobileNumber, userId: patient._id },
+        { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0 },
         process.env.JWT_SECRET as string,
         { expiresIn: "7d" }
       );
@@ -150,7 +159,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
     // 4. Generate your own custom JWT Token
     const token = jwt.sign(
-      { mobileNumber: patient.mobileNumber, userId: patient._id },
+      { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0 },
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }
     )
@@ -177,6 +186,11 @@ export const updateProfile = asyncHandler(async (req, res) => {
   // 2. Get patient id from auth middleware
   const patientId = req.user?.id
 
+  // Capture prior registration state BEFORE the update so the welcome email
+  // only fires on the first time the patient completes registration.
+  const priorPatient = await Patient.findById(patientId).select("isRegistered referralCode");
+  const wasNotRegistered = !priorPatient?.isRegistered;
+
   // 3. Update profile
   const updatedPatient = await Patient.findByIdAndUpdate(
     { _id: patientId },
@@ -202,8 +216,26 @@ export const updateProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Patient not found");
   }
 
-  // 5. Send Welcome Email if registering for first time
-  if (updatedPatient.email && !parsed.data.isRegistered) {
+  // 4b. Auto-generate a referral code on first profile completion
+  if (!updatedPatient.referralCode) {
+    try {
+      const { randomBytes } = await import("crypto");
+      let code = "";
+      let exists = true;
+      do {
+        code = randomBytes(3).toString("hex").toUpperCase();
+        exists = !!(await Patient.findOne({ referralCode: code }));
+      } while (exists);
+      // Targeted update — avoids re-running full-document validators via .save()
+      await Patient.findByIdAndUpdate(patientId, { referralCode: code });
+      updatedPatient.referralCode = code; // reflect in the response payload
+    } catch (e) {
+      console.error("[Referral] code generation error:", e);
+    }
+  }
+
+  // 5. Send Welcome Email only on the first time the patient completes registration
+  if (updatedPatient.email && wasNotRegistered) {
     try {
       await enqueueEmail({
         kind: "welcome",
@@ -222,4 +254,26 @@ export const updateProfile = asyncHandler(async (req, res) => {
     success: true,
     data: updatedPatient
   });
+});
+
+// Dedicated FCM token update (so app restarts don't require a full profile update)
+export const updatePatientFcmToken = asyncHandler(async (req, res) => {
+  const patientId = req.user?.id;
+  const { fcmToken } = req.body;
+  if (!fcmToken) throw new ApiError(400, "FCM Token is required");
+  await Patient.findByIdAndUpdate(patientId, { fcmToken });
+  return res.status(200).json(new ApiResponse(200, "FCM Token updated", {}));
+});
+
+// Patient self-service account deletion request — surfaces in the admin Deletion
+// Requests queue (admin finalises via /admin/deletion-approve/:id).
+export const requestPatientDeletion = asyncHandler(async (req, res) => {
+  const patientId = req.user?.id;
+  if (!patientId) throw new ApiError(401, "Unauthorized");
+  await Patient.findByIdAndUpdate(patientId, {
+    deletionRequested: true,
+    deletionRequestedAt: new Date(),
+    fcmToken: "",
+  });
+  return res.status(200).json(new ApiResponse(200, "Deletion request submitted. Admin will review within 48 hours.", {}));
 });

@@ -91,8 +91,29 @@ export const requestPayout = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Please update your bank details first");
     }
 
-    // Double check balance (Server side)
-    // Re-verify balance logic... (omitted for brevity but recommended for strict systems)
+    // Server-side balance verification (prevents withdrawing more than earned)
+    const [apptEarnings, serviceEarnings, totalWithdrawn] = await Promise.all([
+        doctorAppointmentModel.aggregate([
+            { $match: { doctorId: new mongoose.Types.ObjectId(staffId), status: "Completed", paymentStatus: "COMPLETED" } },
+            { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$totalAmount", 0.8] }] } } } }
+        ]),
+        serviceRequestModel.aggregate([
+            { $match: { assignedProviderId: new mongoose.Types.ObjectId(staffId), status: "COMPLETED" } },
+            { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", 0.8] }] } } } }
+        ]),
+        Payout.aggregate([
+            { $match: { staffId: new mongoose.Types.ObjectId(staffId), status: { $in: ["PENDING", "COMPLETED"] } } },
+            { $group: { _id: null, sum: { $sum: "$amount" } } }
+        ])
+    ]);
+
+    const totalEarned = (apptEarnings[0]?.sum || 0) + (serviceEarnings[0]?.sum || 0);
+    const alreadyWithdrawn = totalWithdrawn[0]?.sum || 0;
+    const availableBalance = totalEarned - alreadyWithdrawn;
+
+    if (amount > availableBalance) {
+        throw new ApiError(400, `Insufficient balance. Available: ₹${availableBalance.toFixed(2)}`);
+    }
 
     const payout = await Payout.create({
         staffId,
