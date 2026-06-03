@@ -62,6 +62,20 @@ export const sendChatMessage = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, "Message sent", saved));
 });
 
+/** Mark all messages in a booking chat as read by the caller. */
+export const markChatRead = asyncHandler(async (req, res) => {
+    const { bookingId } = req.params;
+    if (!bookingId) throw new ApiError(400, "Booking ID Required");
+
+    await assertBookingParticipant(bookingId, req.user?.id);
+
+    await ChatMessage.updateMany(
+        { bookingId, readBy: { $ne: req.user?.id } },
+        { $push: { readBy: req.user?.id } }
+    );
+    return res.status(200).json(new ApiResponse(200, "Marked as read", null));
+});
+
 export const saveChatMessage = async (data: any) => {
     try {
         const { bookingId, senderId, senderType, message, type = "text" } = data;

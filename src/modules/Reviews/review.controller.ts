@@ -59,6 +59,9 @@ export const addReview = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid booking type");
     }
 
+    // Who is leaving the review — only patient reviews affect public rating averages.
+    const reviewerType = req.user?.role === "Patient" ? "patient" : "partner";
+
     const review = await ReviewModel.create({
         userId,
         doctorId,
@@ -67,13 +70,15 @@ export const addReview = asyncHandler(async (req, res) => {
         bookingType,
         rating,
         comment,
-        status: "Active"
+        status: "Active",
+        reviewerType
     });
 
-    // Update Average Rating
+    // Update Average Rating — patient reviews only, so partner→customer feedback never
+    // contaminates the provider/service public stars.
     if (bookingType === "Doctor" && doctorId) {
         const stats = await ReviewModel.aggregate([
-            { $match: { doctorId: new mongoose.Types.ObjectId(doctorId), status: "Active" } },
+            { $match: { doctorId: new mongoose.Types.ObjectId(doctorId), status: "Active", reviewerType: "patient" } },
             { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } }
         ]);
 
@@ -86,7 +91,7 @@ export const addReview = asyncHandler(async (req, res) => {
     } else if (bookingType === "Service" && childServiceId) {
         // Similarly for childService if it has a rating field
         const stats = await ReviewModel.aggregate([
-            { $match: { childServiceId: new mongoose.Types.ObjectId(childServiceId), status: "Active" } },
+            { $match: { childServiceId: new mongoose.Types.ObjectId(childServiceId), status: "Active", reviewerType: "patient" } },
             { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } }
         ]);
 

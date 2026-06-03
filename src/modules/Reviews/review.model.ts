@@ -9,6 +9,7 @@ export interface ReviewDocument extends Document {
     rating: number;
     comment: string;
     status: "Pending" | "Active" | "Hidden";
+    reviewerType: "patient" | "partner";
 }
 
 const ReviewSchema = new Schema<ReviewDocument>(
@@ -49,6 +50,14 @@ const ReviewSchema = new Schema<ReviewDocument>(
             type: String,
             enum: ["Pending", "Active", "Hidden"],
             default: "Active",
+        },
+        // Who submitted the review. Only "patient" reviews count toward public provider/
+        // service rating averages; "partner" reviews (partner rating the customer) are
+        // visible in admin but excluded from public stars.
+        reviewerType: {
+            type: String,
+            enum: ["patient", "partner"],
+            default: "patient",
         },
     },
     {

@@ -97,6 +97,14 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
     );
   }
 
+  // Per-phone throttle (complements the per-IP rate limiter).
+  const attemptKey = `otp:attempts:staff:${cleanMobile}`;
+  const attempts = await RedisClient.get(attemptKey);
+  if (Number(attempts || 0) >= 5) {
+    throw new ApiError(429, "Too many OTP requests for this number. Try again in 10 minutes.");
+  }
+  await RedisClient.setEx(attemptKey, 600, String(Number(attempts || 0) + 1));
+
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 

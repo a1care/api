@@ -17,6 +17,7 @@ export default function BookingFeedbackScreen() {
 
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
+    const [submitted, setSubmitted] = useState(false);
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -29,7 +30,7 @@ export default function BookingFeedbackScreen() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            router.replace("/(tabs)/bookings");
+            setSubmitted(true);
         },
         onError: (err: any) => {
             Alert.alert("Couldn't submit", err?.response?.data?.message || "Please try again.");
@@ -43,6 +44,34 @@ export default function BookingFeedbackScreen() {
         }
         mutation.mutate();
     };
+
+    if (submitted) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.successWrap}>
+                    <LinearGradient colors={["#ECFDF5", "#D1FAE5"]} style={styles.iconBox}>
+                        <MaterialCommunityIcons name="star-check" size={64} color={PRIMARY} />
+                    </LinearGradient>
+                    <Text style={styles.title}>Thanks for your feedback!</Text>
+                    <Text style={styles.subtitle}>Your rating helps keep the A1Care community safe and reliable.</Text>
+
+                    <View style={styles.successBtns}>
+                        {bookingId ? (
+                            <TouchableOpacity
+                                style={styles.outlineBtn}
+                                onPress={() => router.replace({ pathname: "/booking_detail" as any, params: { bookingId: String(bookingId), bookingType } })}
+                            >
+                                <Text style={styles.outlineText}>View Booking</Text>
+                            </TouchableOpacity>
+                        ) : null}
+                        <TouchableOpacity style={styles.submitBtn} onPress={() => router.replace("/(tabs)/bookings")}>
+                            <Text style={styles.submitText}>Done</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -103,4 +132,8 @@ const styles = StyleSheet.create({
     submitText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
     skipBtn: { paddingVertical: 12 },
     skipText: { color: "#94A3B8", fontSize: 15, fontWeight: "700" },
+    successWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28, gap: 14 },
+    successBtns: { width: "100%", gap: 12, marginTop: 18 },
+    outlineBtn: { width: "100%", height: 54, borderRadius: 16, borderWidth: 1.5, borderColor: PRIMARY, justifyContent: "center", alignItems: "center" },
+    outlineText: { color: PRIMARY, fontSize: 16, fontWeight: "800" },
 });

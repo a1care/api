@@ -7,6 +7,7 @@ export interface IChatMessage extends Document {
   message: string;
   type: "text" | "image" | "file";
   timestamp: Date;
+  readBy: mongoose.Types.ObjectId[];
 }
 
 const ChatMessageSchema = new Schema<IChatMessage>(
@@ -34,10 +35,13 @@ const ChatMessageSchema = new Schema<IChatMessage>(
         enum: ["text", "image", "file"], 
         default: "text" 
     },
-    timestamp: { 
-        type: Date, 
-        default: Date.now 
-    }
+    timestamp: {
+        type: Date,
+        default: Date.now
+    },
+    readBy: [{
+        type: Schema.Types.ObjectId
+    }]
   },
   { timestamps: true }
 );

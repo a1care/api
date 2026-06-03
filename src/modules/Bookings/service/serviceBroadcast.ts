@@ -57,9 +57,13 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
   // 2. Filter partners by Radius
   const partnersInRadius: any[] = [];
   
+  // Exclude partners whose stored location is stale (app killed/offline) so dead
+  // partners don't fill the broadcast list with out-of-date coordinates.
+  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
+
   if (userLat && userLng) {
     for (const partner of activePartners) {
-        const partnerLoc = await Location.findOne({ userId: partner._id });
+        const partnerLoc = await Location.findOne({ userId: partner._id, updatedAt: { $gte: staleThreshold } });
         if (partnerLoc && partnerLoc.latitude && partnerLoc.longitude) {
             const distance = calculateDistance(userLat, userLng, partnerLoc.latitude, partnerLoc.longitude);
             const radius = partner.serviceRadius || 0;

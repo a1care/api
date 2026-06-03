@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,12 +12,13 @@ import {
     Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { partnerBookingService } from '../lib/bookings';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/auth';
+import { api } from '../lib/api';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https://api.a1carehospital.in';
 
@@ -85,6 +86,14 @@ export default function BookingChatScreen() {
         if (!typedMessage.trim() || mutation.isPending) return;
         mutation.mutate(typedMessage);
     };
+
+    // Mark this chat's messages as read whenever the screen gains focus.
+    useFocusEffect(
+        useCallback(() => {
+            if (!id) return;
+            api.patch(`/chat/${id}/read`).catch(() => { });
+        }, [id])
+    );
 
     useEffect(() => {
         if (chatMessages.length > 0) {
