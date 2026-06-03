@@ -40,7 +40,7 @@ export default function RaiseTicketScreen() {
             Alert.alert("Ticket Raised", "Our support team will look into it shortly.");
             setForm({ subject: "", description: "", priority: "Medium" });
             queryClient.invalidateQueries({ queryKey: ["profileTickets"] });
-            router.replace("/support_tickets");
+            router.replace("/my_tickets");
         },
         onError: () => {
             Alert.alert("Error", "Failed to raise ticket. Please try again.");

@@ -1,76 +1,106 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { api } from "../lib/api";
 
 const PRIMARY = "#2D935C";
 
 export default function BookingFeedbackScreen() {
     const router = useRouter();
-    const { name, amount } = useLocalSearchParams<{ id?: string; type?: string; name?: string; amount?: string }>();
-    const earned = Number(amount || 0);
+    const queryClient = useQueryClient();
+    const { bookingId, patientName, type } = useLocalSearchParams<{ bookingId?: string; patientName?: string; type?: string }>();
+    const bookingType = type === "Doctor" ? "Doctor" : "Service";
+
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+
+    const mutation = useMutation({
+        mutationFn: async () => {
+            return api.post("/reviews/add", {
+                bookingId,
+                bookingType,
+                rating,
+                comment: comment.trim() || undefined,
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            router.replace("/(tabs)/bookings");
+        },
+        onError: (err: any) => {
+            Alert.alert("Couldn't submit", err?.response?.data?.message || "Please try again.");
+        },
+    });
+
+    const submit = () => {
+        if (rating < 1) {
+            Alert.alert("Add a rating", "Please tap a star to rate before submitting.");
+            return;
+        }
+        mutation.mutate();
+    };
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
                 <LinearGradient colors={["#ECFDF5", "#D1FAE5"]} style={styles.iconBox}>
-                    <MaterialCommunityIcons name="check-decagram" size={72} color={PRIMARY} />
+                    <MaterialCommunityIcons name="check-decagram" size={64} color={PRIMARY} />
                 </LinearGradient>
 
-                <Text style={styles.title}>Service Completed!</Text>
+                <Text style={styles.title}>Job Complete 🎉</Text>
                 <Text style={styles.subtitle}>
-                    Great work{ name ? ` with ${name}` : "" }. This job has been marked complete and added to your earnings.
+                    How was your experience{patientName ? ` with ${patientName}` : ""}? Your feedback helps keep A1Care safe.
                 </Text>
 
-                <View style={styles.summaryCard}>
-                    <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Job value</Text>
-                        <Text style={styles.summaryValue}>₹{earned}</Text>
-                    </View>
-                    <View style={styles.divider} />
-                    <View style={styles.summaryRow}>
-                        <View style={styles.statusPill}>
-                            <MaterialCommunityIcons name="star-circle" size={16} color="#0369A1" />
-                            <Text style={styles.statusPillText}>Completed</Text>
-                        </View>
-                        <Text style={styles.summaryHint}>Settled to your wallet</Text>
-                    </View>
+                {/* Stars */}
+                <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                        <TouchableOpacity key={n} onPress={() => setRating(n)} activeOpacity={0.7} style={styles.starBtn}>
+                            <Ionicons name={n <= rating ? "star" : "star-outline"} size={44} color={n <= rating ? "#F59E0B" : "#CBD5E1"} />
+                        </TouchableOpacity>
+                    ))}
                 </View>
-            </View>
+                {rating > 0 ? <Text style={styles.ratingLabel}>{["", "Poor", "Fair", "Good", "Great", "Excellent"][rating]}</Text> : null}
 
-            <View style={styles.footer}>
-                <TouchableOpacity
-                    style={styles.primaryBtn}
-                    onPress={() => router.replace({ pathname: "/(tabs)/bookings" as any, params: { status: "Completed" } })}
-                >
-                    <Text style={styles.primaryBtnText}>Back to Jobs</Text>
+                {/* Comment */}
+                <TextInput
+                    style={styles.input}
+                    placeholder="Add a comment (optional)…"
+                    placeholderTextColor="#94A3B8"
+                    value={comment}
+                    onChangeText={setComment}
+                    multiline
+                    numberOfLines={4}
+                />
+
+                <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={mutation.isPending}>
+                    {mutation.isPending ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitText}>Submit Rating</Text>}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.replace("/(tabs)/earnings" as any)}>
-                    <Text style={styles.secondaryBtnText}>View Earnings</Text>
+
+                <TouchableOpacity style={styles.skipBtn} onPress={() => router.replace("/(tabs)/bookings")}>
+                    <Text style={styles.skipText}>Skip</Text>
                 </TouchableOpacity>
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#FFFFFF", justifyContent: "space-between" },
-    content: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 16 },
-    iconBox: { width: 140, height: 140, borderRadius: 70, justifyContent: "center", alignItems: "center", marginBottom: 8 },
-    title: { fontSize: 28, fontWeight: "900", color: "#1E293B", textAlign: "center" },
-    subtitle: { fontSize: 15, color: "#64748B", textAlign: "center", lineHeight: 22, fontWeight: "500" },
-    summaryCard: { width: "100%", backgroundColor: "#F8FAFC", borderRadius: 24, padding: 22, marginTop: 16, gap: 14, borderWidth: 1, borderColor: "#F1F5F9" },
-    summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    summaryLabel: { fontSize: 14, color: "#64748B", fontWeight: "700" },
-    summaryValue: { fontSize: 22, color: "#1E293B", fontWeight: "900" },
-    divider: { height: 1, backgroundColor: "#E2E8F0" },
-    statusPill: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F0F9FF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-    statusPillText: { fontSize: 12, fontWeight: "800", color: "#0369A1" },
-    summaryHint: { fontSize: 12, color: "#94A3B8", fontWeight: "600" },
-    footer: { padding: 24, gap: 12 },
-    primaryBtn: { height: 54, backgroundColor: PRIMARY, borderRadius: 16, justifyContent: "center", alignItems: "center" },
-    primaryBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
-    secondaryBtn: { height: 54, backgroundColor: "#F1F5F9", borderRadius: 16, justifyContent: "center", alignItems: "center" },
-    secondaryBtnText: { color: "#475569", fontSize: 16, fontWeight: "800" },
+    container: { flex: 1, backgroundColor: "#FFFFFF" },
+    scroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 28, gap: 14 },
+    iconBox: { width: 120, height: 120, borderRadius: 60, justifyContent: "center", alignItems: "center", marginBottom: 6 },
+    title: { fontSize: 26, fontWeight: "900", color: "#1E293B", textAlign: "center" },
+    subtitle: { fontSize: 15, color: "#64748B", textAlign: "center", lineHeight: 22, fontWeight: "500", marginBottom: 8 },
+    starsRow: { flexDirection: "row", gap: 6, marginTop: 8 },
+    starBtn: { padding: 4 },
+    ratingLabel: { fontSize: 15, fontWeight: "800", color: "#B45309" },
+    input: { width: "100%", minHeight: 110, backgroundColor: "#F8FAFC", borderRadius: 18, borderWidth: 1, borderColor: "#E2E8F0", padding: 16, fontSize: 15, color: "#1E293B", textAlignVertical: "top", marginTop: 12 },
+    submitBtn: { width: "100%", height: 54, backgroundColor: PRIMARY, borderRadius: 16, justifyContent: "center", alignItems: "center", marginTop: 8 },
+    submitText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+    skipBtn: { paddingVertical: 12 },
+    skipText: { color: "#94A3B8", fontSize: 15, fontWeight: "700" },
 });

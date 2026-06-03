@@ -9,7 +9,8 @@ const PRIMARY = "#2D935C";
 
 export default function ServiceDetailScreen() {
     const router = useRouter();
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const params = useLocalSearchParams<{ serviceId?: string; id?: string }>();
+    const id = params.serviceId || params.id;
 
     const { data: svc, isLoading, isError, refetch } = useQuery({
         queryKey: ["service-detail", id],

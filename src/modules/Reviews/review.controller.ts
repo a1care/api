@@ -32,11 +32,14 @@ export const addReview = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Review already submitted for this booking");
     }
 
-    // Verify the caller actually owns this booking and it has been completed —
-    // otherwise anyone could manufacture reviews for any doctor/service.
+    // Verify the caller was a participant of this completed booking — either the patient
+    // (rating the provider) or the assigned provider (rating the customer). Otherwise
+    // anyone could manufacture reviews for any doctor/service.
     if (bookingType === "Doctor") {
         const appt = await doctorAppointmentModel.findById(bookingId);
-        if (!appt || String(appt.patientId) !== String(userId)) {
+        if (!appt) throw new ApiError(404, "Booking not found");
+        const participants = [String(appt.patientId), String(appt.doctorId)];
+        if (!participants.includes(String(userId))) {
             throw new ApiError(403, "You can only review your own bookings");
         }
         if (appt.status !== "Completed") {
@@ -44,7 +47,9 @@ export const addReview = asyncHandler(async (req, res) => {
         }
     } else if (bookingType === "Service") {
         const svc = await serviceRequestModel.findById(bookingId);
-        if (!svc || String(svc.userId) !== String(userId)) {
+        if (!svc) throw new ApiError(404, "Booking not found");
+        const participants = [String(svc.userId), String(svc.assignedProviderId ?? "")];
+        if (!participants.includes(String(userId))) {
             throw new ApiError(403, "You can only review your own bookings");
         }
         if (svc.status !== "COMPLETED") {

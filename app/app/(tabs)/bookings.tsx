@@ -191,7 +191,7 @@ export default function BookingsScreen() {
                 ) : (
                     bookings.map((b: any) => (
                         <View key={b._id} style={styles.card}>
-                            <TouchableOpacity activeOpacity={0.7} style={styles.cardInfo} onPress={() => router.push({ pathname: '/booking_detail' as any, params: { id: b._id, type: b.bookingType } })}>
+                            <TouchableOpacity activeOpacity={0.7} style={styles.cardInfo} onPress={() => router.push({ pathname: '/booking_detail' as any, params: { bookingId: b._id, bookingType: b.bookingType } })}>
                                 <View style={styles.cardHeader}>
                                     <View>
                                         <Text style={styles.patientName}>{b.patientName || "Guest Patient"}</Text>
@@ -286,7 +286,7 @@ export default function BookingsScreen() {
                                                         status: b.bookingType === 'Doctor' ? "Completed" : "COMPLETED",
                                                         bookingType: b.bookingType
                                                     });
-                                                    router.push({ pathname: '/booking_feedback' as any, params: { id: b._id, type: b.bookingType, name: b.patientName || 'Patient', amount: String(b.totalAmount || 0) } });
+                                                    router.push({ pathname: '/booking_feedback' as any, params: { bookingId: b._id, patientName: b.patientName || 'Patient', type: b.bookingType } });
                                                 } catch { /* error handled by mutation onError */ }
                                             }}
                                         >

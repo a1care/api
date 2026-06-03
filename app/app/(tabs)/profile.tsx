@@ -94,7 +94,7 @@ export default function ProfileScreen() {
         } else if (path === "raise-ticket") {
             router.push("/raise_ticket");
         } else if (path === "my-tickets") {
-            router.push("/support_tickets");
+            router.push("/my_tickets");
         } else if (path === "knowledge-base") {
             router.push("/knowledge_base");
         } else if (path === "faq") {

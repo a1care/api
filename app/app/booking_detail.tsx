@@ -22,8 +22,9 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 export default function BookingDetailScreen() {
     const router = useRouter();
     const queryClient = useQueryClient();
-    const { id, type } = useLocalSearchParams<{ id: string; type?: string }>();
-    const bookingType = (type === "Doctor" ? "Doctor" : "Service") as "Doctor" | "Service";
+    const params = useLocalSearchParams<{ bookingId?: string; id?: string; bookingType?: string; type?: string }>();
+    const id = params.bookingId || params.id;
+    const bookingType = ((params.bookingType || params.type) === "Doctor" ? "Doctor" : "Service") as "Doctor" | "Service";
 
     const { data: booking, isLoading, isError, refetch } = useQuery({
         queryKey: ["booking-detail", id],
@@ -38,7 +39,7 @@ export default function BookingDetailScreen() {
             queryClient.invalidateQueries({ queryKey: ["booking-detail", id] });
             queryClient.invalidateQueries({ queryKey: ["homeStats"] });
             if (status === "Completed" || status === "COMPLETED") {
-                router.replace({ pathname: "/booking_feedback" as any, params: { id: String(id), type: bookingType, name: booking?.patient?.name || "Patient", amount: String(booking?.totalAmount || 0) } });
+                router.replace({ pathname: "/booking_feedback" as any, params: { bookingId: String(id), patientName: booking?.patient?.name || "Patient", type: bookingType } });
             } else {
                 refetch();
             }
