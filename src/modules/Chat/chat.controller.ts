@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -60,6 +61,39 @@ export const sendChatMessage = asyncHandler(async (req, res) => {
     if (!saved) throw new ApiError(500, "Failed to send message");
 
     return res.status(201).json(new ApiResponse(201, "Message sent", saved));
+});
+
+/** Total unread chat messages across all bookings the caller participates in. */
+export const getUnreadChatCount = asyncHandler(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) throw new ApiError(401, "Unauthorized");
+
+    const [serviceBookings, appts] = await Promise.all([
+        serviceRequestModel.find({ $or: [{ userId }, { assignedProviderId: userId }] }).select("_id").lean(),
+        doctorAppointmentModel.find({ $or: [{ patientId: userId }, { doctorId: userId }] }).select("_id").lean(),
+    ]);
+
+    const bookingIds = [
+        ...serviceBookings.map((b: any) => b._id),
+        ...appts.map((b: any) => b._id),
+    ];
+
+    const me = new mongoose.Types.ObjectId(userId);
+    // One pass: per-booking unread counts (also gives the grand total). Used for the
+    // home-bell badge AND per-card dots on the bookings tab.
+    const grouped = await ChatMessage.aggregate([
+        { $match: { bookingId: { $in: bookingIds }, senderId: { $ne: me }, readBy: { $ne: me } } },
+        { $group: { _id: "$bookingId", count: { $sum: 1 } } },
+    ]);
+
+    const byBooking: Record<string, number> = {};
+    let count = 0;
+    for (const g of grouped) {
+        byBooking[String(g._id)] = g.count;
+        count += g.count;
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Unread chat count", { count, byBooking }));
 });
 
 /** Mark all messages in a booking chat as read by the caller. */

@@ -1045,6 +1045,8 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
   if (nextStatus === "Rejected") {
     updateDoc.rejectionReason = String(rejectionReason).trim();
     updateDoc.rejectedAt = new Date();
+    // Invalidate any existing partner sessions by bumping their token version.
+    updateDoc.$inc = { tokenVersion: 1 };
   }
   if (nextStatus === "Active") {
     updateDoc.rejectionReason = "";
@@ -1056,6 +1058,14 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 
   const user = await Doctor.findByIdAndUpdate(id, updateDoc, { new: true });
   if (!user) throw new ApiError(404, "User not found");
+
+  // Bust the cached token version so the bump takes effect immediately (not after TTL).
+  if (nextStatus === "Rejected") {
+    try {
+      const RedisClient = (await import("../../configs/redisConnect.js")).default;
+      await RedisClient.del(`tv:staff:${id}`);
+    } catch { /* non-fatal */ }
+  }
 
   if (user.email && user.name) {
     if (nextStatus === "Active") {
@@ -1817,6 +1827,26 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
     serviceRequestModel.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])
   ]);
 
+  // ── Commission ledger — what A1Care actually keeps vs. gross booking revenue ──
+  const [apptCommission, svcCommission, payoutsSettledAgg, pendingPayouts] = await Promise.all([
+    doctorAppointmentModel.aggregate([
+      { $match: { status: "Completed", paymentStatus: "COMPLETED" } },
+      { $group: { _id: null, total: { $sum: "$commissionAmount" } } }
+    ]),
+    serviceRequestModel.aggregate([
+      { $match: { status: "COMPLETED", paymentStatus: "COMPLETED" } },
+      { $group: { _id: null, total: { $sum: "$commissionAmount" } } }
+    ]),
+    Payout.aggregate([
+      { $match: { status: "COMPLETED" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]),
+    Payout.countDocuments({ status: "PENDING" })
+  ]);
+
+  const totalCommissionEarned = (apptCommission[0]?.total || 0) + (svcCommission[0]?.total || 0);
+  const payoutsSettled = payoutsSettledAgg[0]?.total || 0;
+
   return res.status(200).json(new ApiResponse(200, "Dashboard overview fetched", {
     kpis: {
       patients,
@@ -1829,6 +1859,12 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
         total: totalRevenue,
         month: monthRevenue,
         today: todayRevenue
+      },
+      commission: {
+        earned: totalCommissionEarned,          // A1Care's cut from completed bookings
+        payoutsSettled,                          // amount already paid out to partners
+        pendingPayouts,                          // count of payout requests awaiting action
+        netRetained: totalCommissionEarned - payoutsSettled
       }
     },
     bookings: {

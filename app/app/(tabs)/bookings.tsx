@@ -62,6 +62,17 @@ export default function BookingsScreen() {
         }
     });
 
+    // Per-booking unread chat counts → green dot on the chat button of cards with unread.
+    const { data: unreadByBooking = {} } = useQuery<Record<string, number>>({
+        queryKey: ["unread_chats_by_booking"],
+        queryFn: async () => {
+            const res = await api.get("/chat/unread/count");
+            return res.data?.data?.byBooking || {};
+        },
+        enabled: !!user?._id,
+        refetchInterval: 30000,
+    });
+
     const updateStatusMutation = useMutation({
         mutationFn: ({ id, status, bookingType }: { id: string, status: string, bookingType: 'Doctor' | 'Service' }) => 
             partnerBookingService.updateStatus(id, status, bookingType),
@@ -297,7 +308,7 @@ export default function BookingsScreen() {
 
                                 {b.status !== "Pending" && b.status !== "Broadcasted" && (
                                     <View style={styles.commsRow}>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={styles.commBtn}
                                             onPress={() => router.push({
                                                 pathname: '/booking_chat' as any,
@@ -305,6 +316,7 @@ export default function BookingsScreen() {
                                             })}
                                         >
                                             <MessageCircle size={22} color="#2D935C" />
+                                            {unreadByBooking[b._id] > 0 && <View style={styles.chatDot} />}
                                         </TouchableOpacity>
 
                                         {(b.status === "Confirmed" || b.status === "ACCEPTED" || b.status === "IN_PROGRESS") && (
@@ -371,4 +383,5 @@ const styles = StyleSheet.create({
     declineBtn: { width: 50, height: 50, backgroundColor: "#FEF2F2", borderRadius: 16, alignItems: "center", justifyContent: "center" },
     commsRow: { flexDirection: 'row', gap: 10 },
     commBtn: { width: 50, height: 50, backgroundColor: '#F0FDF4', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    chatDot: { position: 'absolute', top: 10, right: 10, width: 11, height: 11, borderRadius: 6, backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFF' },
 });

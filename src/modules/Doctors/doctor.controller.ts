@@ -150,7 +150,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       }
 
       const token = jwt.sign(
-        { staffId: staff._id },
+        { staffId: staff._id, tv: staff.tokenVersion || 0 },
         process.env.JWT_SECRET!,
         { expiresIn: "7d" }
       );
@@ -209,7 +209,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
     // 4. Generate the JWT Token for the rest of the app
     const token = jwt.sign(
-      { staffId: staff._id },
+      { staffId: staff._id, tv: staff.tokenVersion || 0 },
       process.env.JWT_SECRET!,
       { expiresIn: "7d" }
     );

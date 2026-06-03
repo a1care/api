@@ -225,6 +225,19 @@ export default function HomeScreen() {
         refetchInterval: 30000,
     });
 
+    // Unread chat messages count
+    const { data: unreadChats = 0 } = useQuery({
+        queryKey: ["unread_chats"],
+        queryFn: async () => {
+            const res = await api.get("/chat/unread/count");
+            return res.data?.data?.count || 0;
+        },
+        enabled: !!user?._id,
+        refetchInterval: 30000,
+    });
+
+    const totalUnread = unreadCount + unreadChats;
+
     const stats = useMemo(() => {
         const completed = bookings.filter((b: any) => b.status === "Completed").length;
         const earnings = bookings
@@ -311,7 +324,7 @@ export default function HomeScreen() {
                         </View>
                         <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push("/notifications")}>
                             <Ionicons name="notifications-outline" size={24} color="#1E293B" />
-                            {unreadCount > 0 && <View style={styles.badgeDot} />}
+                            {totalUnread > 0 && <View style={styles.badgeDot} />}
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.profileBtn} onPress={() => router.push("/profile_edit")}>
                             {staffData?.profileImage || user?.profileImage ? (

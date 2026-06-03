@@ -99,7 +99,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       }
 
       const token = jwt.sign(
-        { mobileNumber: patient.mobileNumber, userId: patient._id },
+        { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0 },
         process.env.JWT_SECRET as string,
         { expiresIn: "7d" }
       );
@@ -159,7 +159,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
     // 4. Generate your own custom JWT Token
     const token = jwt.sign(
-      { mobileNumber: patient.mobileNumber, userId: patient._id },
+      { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0 },
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }
     )
