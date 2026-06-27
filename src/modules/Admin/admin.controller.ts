@@ -1572,11 +1572,16 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       const partner = await DoctorMdl.findById(assignedProviderId).select("fcmToken name");
       const serviceName = (booking as any).childServiceId?.name || "Service";
 
+      console.log(`[Rapido] Assigning booking ${booking._id} to partner ${assignedProviderId} (${partner?.name})`);
+
       // Schedule auto-unassign after 5 minutes
       await schedulePartnerAcceptanceTimeout(String(booking._id), String(assignedProviderId));
 
+      const roomName = `partner:${String(assignedProviderId)}`;
+      console.log(`[Rapido] Emitting booking:assignment_request to room: ${roomName}`);
+
       // Real-time popup on partner's device
-      emitToRoom(`partner:${String(assignedProviderId)}`, "booking:assignment_request", {
+      emitToRoom(roomName, "booking:assignment_request", {
         bookingId: String(booking._id),
         serviceName,
         patientName: (booking as any).userId?.name || "Patient",
