@@ -15,6 +15,9 @@ import { emitToRoom } from "../../socket.js";
 import { validateCoupon, consumeCoupon } from "../Coupons/coupon.controller.js";
 import { notifyAdmin } from "../Notifications/notification.controller.js";
 import { applyReferralReward } from "../Referral/referral.controller.js";
+import { cancelAppointmentReminder } from "../../queues/bookingQueue.js";
+import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
+import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
 
 
 export const createDoctorAppointment = asyncHandler(async (req, res) => {
@@ -69,7 +72,51 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Validation failed! ${parsed.error}`);
     }
 
-    if (payload.paymentMode === 'ONLINE') {
+    // ── Slot conflict: same doctor, same date+time, not cancelled ───────────
+    const conflict = await doctorAppointmentModel.findOne({
+        doctorId,
+        date: parsed.data.date,
+        startingTime: parsed.data.startingTime,
+        status: { $nin: ["Cancelled", "CANCELLED"] },
+    });
+    if (conflict) {
+        throw new ApiError(409, "This time slot is already booked. Please choose a different time.");
+    }
+
+    // ── Doctor availability check ────────────────────────────────────────────
+    const apptDate = new Date(parsed.data.date);
+    const weekDay = apptDate.getDay(); // 0=Sun … 6=Sat
+
+    const availability = await DoctorAvailability.findOne({ doctorId });
+    if (availability) {
+        if (!availability.weekDays.includes(weekDay)) {
+            throw new ApiError(400, "The doctor is not available on this day. Please pick another date.");
+        }
+        // Simple HH:MM string comparison (both sides are "HH:MM" format)
+        const apptStart = parsed.data.startingTime;
+        if (apptStart < availability.startingTime || apptStart >= availability.endingTime) {
+            throw new ApiError(400, `The doctor is only available between ${availability.startingTime} and ${availability.endingTime}.`);
+        }
+    }
+
+    // ── Block time check (specific date or weekday block) ────────────────────
+    const blockForDate = await DoctorBlockTime.findOne({
+        doctorId,
+        $or: [
+            { date: apptDate },
+            { weekDays: weekDay },
+        ],
+    });
+    if (blockForDate) {
+        const apptStart = parsed.data.startingTime;
+        const overlapsBock =
+            apptStart >= blockForDate.startingTime && apptStart < blockForDate.endingTime;
+        if (overlapsBock) {
+            throw new ApiError(400, `The doctor is unavailable at this time (${blockForDate.reason}). Please choose another slot.`);
+        }
+    }
+
+    if (payload.paymentMode === 'WALLET') {
         try {
             await processPaymentFromWallet(patientId, totalAmount, `Booking for Dr. ${payload.doctorId}`);
         } catch (error: any) {
@@ -88,7 +135,7 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         await newAppointment.save();
     } catch (saveErr: any) {
         // Wallet already debited above — refund if persisting the appointment fails.
-        if (payload.paymentMode === "ONLINE" && totalAmount > 0) {
+        if (payload.paymentMode === "WALLET" && totalAmount > 0) {
             await creditWalletAtomic(patientId, totalAmount, `REFUND:BOOKING_SAVE_FAILED:${patientId}:${Date.now()}`);
         }
         console.error("[Appointment] save failed after payment — refunded:", saveErr);
@@ -102,7 +149,7 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         } catch (couponErr: any) {
             // Lost a race for the last redemption — undo booking & refund.
             await doctorAppointmentModel.findByIdAndDelete(newAppointment._id);
-            if (payload.paymentMode === "ONLINE" && totalAmount > 0) {
+            if (payload.paymentMode === "WALLET" && totalAmount > 0) {
                 await creditWalletAtomic(patientId, totalAmount, `REFUND:COUPON_RACE:${newAppointment._id}`);
             }
             throw new ApiError(400, couponErr?.message || "This coupon can no longer be used");
@@ -152,6 +199,17 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         }
     } catch (e) {
         console.error("[Push] doctor appointment push error:", e);
+    }
+
+    // Schedule 24-hour reminder push for both doctor and patient
+    try {
+        const apptTimestamp = new Date(`${parsed.data.date} ${parsed.data.startingTime}`).getTime();
+        if (!Number.isNaN(apptTimestamp)) {
+            const { scheduleAppointmentReminder } = await import("../../queues/bookingQueue.js");
+            await scheduleAppointmentReminder(String(newAppointment._id), apptTimestamp);
+        }
+    } catch (e) {
+        console.error("[Reminder] schedule error:", e);
     }
 
     return res.status(201).json(new ApiResponse(201, "Appointment booked", newAppointment));
@@ -246,9 +304,10 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         CANCELLED: { title: "❌ Appointment Cancelled", body: `Your appointment with Dr. ${doctorName} has been cancelled.` },
     };
 
-    // Sync with HospitalBooking if it exists
+    // Sync with HospitalBooking if it exists; also cancel the reminder job
     if (status === "Cancelled" || status === "CANCELLED") {
         await HospitalBooking.findOneAndUpdate({ bookingId: id }, { status: "CANCELLED" });
+        cancelAppointmentReminder(String(id)).catch(() => {});
     }
 
     // Real-time status push to booking room
@@ -329,49 +388,6 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, "Appointment status updated", appointment));
 });
 
-/**
- * GET /api/doctor-appointment/consultation/:id/token
- * Allows the assigned patient or doctor to get ZegoCloud video call credentials for their consultation session.
- */
-export const getConsultationCredentials = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user?.id;
-    if (!userId) throw new ApiError(401, "Not authorized");
-
-    const appointment = await doctorAppointmentModel.findById(id).populate("doctorId").populate("patientId");
-    if (!appointment) throw new ApiError(404, "Appointment not found");
-
-    const isPatient = (appointment.patientId as any)?._id.toString() === userId.toString();
-    const isDoctor = (appointment.doctorId as any)?._id.toString() === userId.toString();
-
-    if (!isPatient && !isDoctor) {
-        throw new ApiError(403, "You are not an authorized participant for this consultation");
-    }
-
-    if (appointment.status !== "Confirmed" && appointment.status !== "Completed") {
-        throw new ApiError(400, "Consultation room is only available for active appointments");
-    }
-
-    // Read system settings for Zego config
-    const store = await readConfigStore();
-    const zego = store.system?.zego;
-    if (!zego?.appId || !zego?.serverSecret) {
-        throw new ApiError(500, "ZegoCloud video calling is not configured by the admin yet");
-    }
-
-    // Determine user role details
-    const user = isPatient ? (appointment.patientId as any) : (appointment.doctorId as any);
-    const userName = user?.name || "User";
-
-    // Create a consultation payload
-    return res.status(200).json(new ApiResponse(200, "Zego credentials retrieved", {
-        appId: Number(zego.appId),
-        appSign: zego.serverSecret,
-        roomId: (appointment as any)._id.toString(),
-        userId: userId.toString(),
-        userName: userName
-    }));
-});
 
 export const getAppointmentById = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -385,3 +401,77 @@ export const getAppointmentById = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Appointment fetched", appointment));
 });
+
+/**
+ * Called by the booking worker 24 hours before an appointment.
+ * Pushes reminder to both the patient and the doctor.
+ */
+export const markAppointmentCashCollected = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const doctorId = req.user?.id;
+    if (!doctorId) throw new ApiError(401, "Not authorized");
+
+    const appt = await doctorAppointmentModel.findById(id);
+    if (!appt) throw new ApiError(404, "Appointment not found");
+    if (appt.doctorId.toString() !== doctorId) throw new ApiError(403, "Not your appointment");
+    if (appt.paymentMode !== "OFFLINE") throw new ApiError(400, "Only cash appointments can be marked as collected");
+    if (appt.paymentStatus === "COMPLETED") throw new ApiError(400, "Cash already marked as collected");
+
+    await doctorAppointmentModel.findByIdAndUpdate(id, { paymentStatus: "COMPLETED" });
+
+    const patient = await Patient.findById(appt.patientId).select("fcmToken name").lean();
+    if (patient) {
+        enqueuePush({
+            recipientId: appt.patientId as mongoose.Types.ObjectId,
+            recipientType: "patient",
+            fcmToken: (patient as any).fcmToken ?? null,
+            title: "Payment Received",
+            body: "Your cash payment for the consultation has been confirmed. Thank you!",
+            data: { screen: `/booking/${id}` },
+            refType: "DoctorAppointment",
+            refId: new mongoose.Types.ObjectId(id as string),
+        }).catch(() => {});
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Cash collection confirmed", null));
+});
+
+export async function runAppointmentReminder(appointmentId: string): Promise<void> {
+    const appointment = await doctorAppointmentModel
+        .findById(appointmentId)
+        .populate("doctorId", "name fcmToken")
+        .populate("patientId", "name fcmToken");
+
+    if (!appointment || !["Pending", "Confirmed"].includes(appointment.status)) return;
+
+    const patient = appointment.patientId as any;
+    const doctor = appointment.doctorId as any;
+    const dateStr = appointment.date ? new Date(appointment.date).toDateString() : "tomorrow";
+    const timeStr = appointment.startingTime || "your scheduled time";
+
+    if (patient?.fcmToken) {
+        await enqueuePush({
+            recipientId: patient._id,
+            recipientType: "patient",
+            fcmToken: patient.fcmToken,
+            title: "⏰ Appointment Reminder",
+            body: `You have a consultation with Dr. ${doctor?.name ?? "your doctor"} tomorrow (${dateStr}) at ${timeStr}.`,
+            data: { screen: `/doctor/appointment/${appointmentId}` },
+            refType: "DoctorAppointment",
+            refId: new mongoose.Types.ObjectId(appointmentId),
+        });
+    }
+
+    if (doctor?.fcmToken) {
+        await enqueuePush({
+            recipientId: doctor._id,
+            recipientType: "Partner",
+            fcmToken: doctor.fcmToken,
+            title: "📅 Appointment Tomorrow",
+            body: `Reminder: consultation with ${patient?.name ?? "a patient"} on ${dateStr} at ${timeStr}.`,
+            data: { bookingId: appointmentId, screen: "bookings" },
+            refType: "DoctorAppointment",
+            refId: new mongoose.Types.ObjectId(appointmentId),
+        });
+    }
+}

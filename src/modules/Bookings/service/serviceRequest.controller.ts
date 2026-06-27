@@ -15,6 +15,7 @@ import { emitToRoom } from "../../../socket.js";
 import { validateCoupon, consumeCoupon } from "../../Coupons/coupon.controller.js";
 import { applyReferralReward } from "../../Referral/referral.controller.js";
 import { notifyAdmin } from "../../Notifications/notification.controller.js";
+import { scheduleBroadcastToAll } from "../../../queues/bookingQueue.js";
 
 
 export const createServiceRequest = asyncHandler(async (req, res) => {
@@ -75,10 +76,10 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         discountAmount,
         bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
         fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
-        // SECURITY: an ONLINE booking is always paid from the wallet below; the wallet is
-        // funded via the verified gateway top-up flow (/wallet/initiate + /wallet/response).
-        // The client-trustable isGatewayPayment field has been removed entirely.
-        paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
+        // WALLET: deducted immediately below.
+        // ONLINE: paid via Razorpay gateway — fulfillOrder() marks it COMPLETED after verification.
+        // COD/OFFLINE: collected on delivery, starts PENDING.
+        paymentStatus: req.body.paymentMode === 'WALLET' ? 'COMPLETED' : 'PENDING',
         status: "PENDING",
     };
 
@@ -88,7 +89,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Validation failed: " + (parsed.error as any).errors.map((e: any) => `${e.path?.join('.') || ''}: ${e.message}`).join(', '));
     }
 
-    if (payload.paymentMode === 'ONLINE') {
+    if (payload.paymentMode === 'WALLET') {
         try {
             await processPaymentFromWallet(userId, finalPrice, `Booking for ${bookingName}`);
         } catch (error: any) {
@@ -108,7 +109,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     } catch (saveErr: any) {
         // The wallet was already debited above — if persisting the booking fails we must
         // refund so the patient never loses money for a booking that doesn't exist.
-        if (payload.paymentMode === "ONLINE" && finalPrice > 0) {
+        if (payload.paymentMode === "WALLET" && finalPrice > 0) {
             await creditWalletAtomic(userId, finalPrice, `REFUND:BOOKING_SAVE_FAILED:${userId}:${Date.now()}`);
         }
         console.error("[Booking] save failed after payment — refunded:", saveErr);
@@ -125,7 +126,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
             // amount (wallet OR gateway) is refunded to the patient's wallet, consistent
             // with how every other refund in the app is issued.
             await serviceRequestModel.findByIdAndDelete(newServiceRequest._id);
-            if (payload.paymentMode === "ONLINE" && finalPrice > 0) {
+            if (payload.paymentMode === "WALLET" && finalPrice > 0) {
                 await creditWalletAtomic(userId, finalPrice, `REFUND:COUPON_RACE:${newServiceRequest._id}`);
             }
             throw new ApiError(400, couponErr?.message || "This coupon can no longer be used");
@@ -166,6 +167,13 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         .populate("childServiceId")
         .populate("healthPackageId")
         .populate("addressId");
+
+    // Trigger broadcast to nearby partners after a short delay so admin can also
+    // manually assign before partners see it. Fire-and-forget — never block the response.
+    scheduleBroadcastToAll(String(newServiceRequest._id)).catch(e =>
+        console.error("[Booking] broadcast schedule error:", e)
+    );
+
     return res.status(201).json(new ApiResponse(201, "Service booked", serviceRequest));
 });
 
@@ -392,4 +400,39 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json(new ApiResponse(200, "Status updated", booking));
+});
+
+/**
+ * PATCH /api/service/booking/:id/cash
+ * Partner confirms they collected cash for an OFFLINE payment booking.
+ * Can only be called by the assigned provider.
+ */
+export const markServiceCashCollected = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const providerId = req.user?.id;
+    if (!providerId) throw new ApiError(401, "Not authorized");
+
+    const booking = await serviceRequestModel.findById(id);
+    if (!booking) throw new ApiError(404, "Booking not found");
+    if (booking.assignedProviderId?.toString() !== providerId) throw new ApiError(403, "Not your booking");
+    if ((booking as any).paymentMode !== "OFFLINE") throw new ApiError(400, "Only cash bookings can be marked as collected");
+    if ((booking as any).paymentStatus === "COMPLETED") throw new ApiError(400, "Cash already marked as collected");
+
+    await serviceRequestModel.findByIdAndUpdate(id, { paymentStatus: "COMPLETED" });
+
+    const patient = await Patient.findById(booking.userId).select("fcmToken name email").lean();
+    if (patient) {
+        enqueuePush({
+            recipientId: booking.userId as mongoose.Types.ObjectId,
+            recipientType: "patient",
+            fcmToken: (patient as any).fcmToken ?? null,
+            title: "Payment Received",
+            body: "Your cash payment has been confirmed. Thank you!",
+            data: { screen: `/booking/${id}` },
+            refType: "ServiceRequest",
+            refId: new mongoose.Types.ObjectId(id as string),
+        }).catch(() => {});
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Cash collection confirmed", null));
 });
