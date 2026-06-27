@@ -32,7 +32,7 @@ import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
 import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
 import Payout from "../Earnings/payout.model.js";
-import { enqueueEmail } from "../../queues/communicationQueue.js";
+import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
 
 const ENV_ADMIN_ID = "env-super-admin";
 const APP_KEYS = ["user_app", "provider_app"] as const;
@@ -1425,6 +1425,25 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
       },
       { upsert: true }
     );
+    // Notify the doctor/partner that their appointment has been confirmed by admin
+    try {
+      const doctor = booking.doctorId as any;
+      const patient = booking.patientId as any;
+      if (doctor?._id) {
+        await enqueuePush({
+          recipientId: doctor._id,
+          recipientType: "Partner",
+          fcmToken: doctor.fcmToken,
+          title: "Appointment Confirmed ✅",
+          body: `Your appointment with ${patient?.name || "a patient"} has been confirmed. Please be ready on the scheduled date.`,
+          data: { bookingId: String(booking._id), bookingType: "Doctor", screen: "bookings" },
+          refType: "DoctorAppointment",
+          refId: booking._id,
+        });
+      }
+    } catch (e) {
+      console.error("[Push] doctor appointment confirm notify error:", e);
+    }
   } else if (normalizedStatus === "Cancelled") {
     // Sync cancel state with HospitalBooking if it exists
     await HospitalBooking.findOneAndUpdate({ bookingId: booking._id }, { status: "CANCELLED" });
@@ -1485,8 +1504,15 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
   }
 
   const updatePayload: any = { status };
-  if (assignedProviderId && ["ACCEPTED", "CONFIRMED", "Confirmed"].includes(status)) {
+  const isDirectAssign = assignedProviderId && ["ACCEPTED", "CONFIRMED", "Confirmed", "PARTNER_ASSIGNED"].includes(status);
+  if (isDirectAssign) {
     updatePayload.assignedProviderId = assignedProviderId;
+  }
+  // Rapido-style: when admin assigns a partner, set 5-min acceptance deadline
+  const isNewAssignment = assignedProviderId && status === "PARTNER_ASSIGNED";
+  if (isNewAssignment) {
+    updatePayload.acceptanceDeadline = new Date(Date.now() + 5 * 60 * 1000);
+    updatePayload.status = "PARTNER_ASSIGNED";
   }
 
   const booking = await serviceRequestModel
@@ -1534,6 +1560,48 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       }
     } catch (e) {
       console.error("[Email] service refund email error:", e);
+    }
+  }
+
+  // ── Rapido-style: emit socket to partner + schedule 5-min acceptance timeout ──
+  if (isNewAssignment) {
+    try {
+      const { schedulePartnerAcceptanceTimeout } = await import("../../queues/bookingQueue.js");
+      const { emitToRoom } = await import("../../socket.js");
+      const DoctorMdl = (await import("../Doctors/doctor.model.js")).default;
+      const partner = await DoctorMdl.findById(assignedProviderId).select("fcmToken name");
+      const serviceName = (booking as any).childServiceId?.name || "Service";
+
+      // Schedule auto-unassign after 5 minutes
+      await schedulePartnerAcceptanceTimeout(String(booking._id), String(assignedProviderId));
+
+      // Real-time popup on partner's device
+      emitToRoom(`partner:${String(assignedProviderId)}`, "booking:assignment_request", {
+        bookingId: String(booking._id),
+        serviceName,
+        patientName: (booking as any).userId?.name || "Patient",
+        location: (booking as any).location?.address || "Location not provided",
+        amount: (booking as any).price || 0,
+        acceptanceDeadline: updatePayload.acceptanceDeadline,
+        scheduledTime: (booking as any).scheduledTime,
+      });
+
+      // Push notification (for when app is in background)
+      if (partner?.fcmToken) {
+        const { enqueuePush } = await import("../../queues/communicationQueue.js");
+        await enqueuePush({
+          recipientId: partner._id as any,
+          recipientType: "partner",
+          fcmToken: partner.fcmToken,
+          title: "🚨 New Job — Accept Now!",
+          body: `${serviceName} request near you. You have 5 minutes to accept.`,
+          data: { screen: `/bookings`, type: "JOB_ASSIGNED", bookingId: String(booking._id) },
+          refType: "ServiceRequest",
+          refId: booking._id as any,
+        });
+      }
+    } catch (e) {
+      console.error("[Rapido] assignment socket/queue error:", e);
     }
   }
 

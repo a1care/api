@@ -17,6 +17,22 @@ new Worker(
       if (serviceRequestId) await runBroadcastToAll(serviceRequestId);
       return;
     }
+    if (job.name === "broadcast_timeout") {
+      const { serviceRequestId } = job.data as { serviceRequestId: string };
+      if (serviceRequestId) {
+        const { runBroadcastTimeout } = await import("../modules/Bookings/service/serviceBroadcast.js");
+        await runBroadcastTimeout(serviceRequestId);
+      }
+      return;
+    }
+    if (job.name === "appointment_reminder") {
+      const { appointmentId } = job.data as { appointmentId: string };
+      if (appointmentId) {
+        const { runAppointmentReminder } = await import("../modules/Bookings/doctorAppointment.controller.js");
+        await runAppointmentReminder(appointmentId);
+      }
+      return;
+    }
   },
   { connection }
 );

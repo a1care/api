@@ -1,7 +1,7 @@
 import * as z from 'zod'
 
 export const patientValidation = z.object({
-    mobileNumber: z.number().optional(),
+    mobileNumber: z.string().optional(),
     name: z.string().optional(),
     email: z.email().optional(),
     // profileImage:z.string() ,

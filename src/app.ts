@@ -89,12 +89,12 @@ const maintenanceMiddleware = async (req: Request, res: Response, next: NextFunc
 
 app.use(maintenanceMiddleware);
 
-app.use((req, res, next) => {
-    console.log(`\n🔍 [Incoming Request] ${new Date().toISOString()}`);
-    console.log(`📡 ${req.method} ${req.originalUrl || req.url}`);
-    console.log(`📦 Body Size: ${req.body ? JSON.stringify(req.body).length : 0} bytes`);
-    next();
-});
+if (process.env.NODE_ENV !== "production") {
+    app.use((req, _res, next) => {
+        console.log(`[${req.method}] ${req.originalUrl || req.url}`);
+        next();
+    });
+}
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/api/health", (req, res) => {

@@ -75,11 +75,17 @@ const ServiceRequestSchema = new Schema(
       ref: "Role"
     },
 
+    acceptanceDeadline: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: [
         "PENDING",
         "BROADCASTED",
+        "PARTNER_ASSIGNED",
         "ACCEPTED",
         "RETURNED_TO_ADMIN",
         "IN_PROGRESS",

@@ -38,8 +38,8 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
 
-  // Static test number — always use fixed OTP, skip SMS
-  if (cleanMobile === STATIC_TEST_MOBILE) {
+  // Static test number — only active in non-production when explicitly enabled
+  if (cleanMobile === STATIC_TEST_MOBILE && process.env.NODE_ENV !== "production" && process.env.ALLOW_TEST_OTP === "true") {
     await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, STATIC_TEST_OTP);
     console.log(`[Patient OTP] Static test number — OTP bypassed for ${cleanMobile}`);
     return res.status(200).json(
@@ -69,7 +69,7 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
     console.error("[Patient OTP Send Failed]", result.message);
   }
 
-  console.log(`[Patient OTP] Sent ${otp} to ${cleanMobile}`);
+  if (process.env.NODE_ENV !== "production") console.log(`[Patient OTP] Sent to ${cleanMobile}`);;
 
   return res.status(200).json(
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
@@ -116,8 +116,8 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
   try {
     // 1. Verify the secure Firebase Token
-    const admin = (await import('../../configs/fcmConfig.js')) as any;
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { default: firebaseAdmin } = await import('firebase-admin');
+    const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
 
     // 2. Extract verified data
     const firebasePhone = decodedToken.phone_number;
@@ -174,7 +174,6 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
 export const updateProfile = asyncHandler(async (req, res) => {
   // 1. Validate input
-  console.log("this is the body we are getting..", req.body)
   const parsed = patientValidation.safeParse(req.body);
   if (!parsed.success) {
     throw new ApiError(

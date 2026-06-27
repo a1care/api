@@ -39,7 +39,7 @@ export const sendAlotsSms = async (mobileNumber: string, otp: string | number) =
     };
 
     try {
-        console.log(`[AlotsSMS] Sending OTP ${otp} to ${targetNumber}...`);
+        if (process.env.NODE_ENV !== "production") console.log(`[AlotsSMS] Sending OTP to ${targetNumber}...`);
         const response = await fetch('https://alots.io/api/v1/sms/mt', {
             method: 'POST',
             headers: {

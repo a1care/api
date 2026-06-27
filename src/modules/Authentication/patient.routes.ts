@@ -16,9 +16,18 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+// Limit OTP verification to prevent brute-force of the 6-digit code
+const otpVerifyLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes (matches OTP expiry)
+  max: 5,
+  message: { success: false, message: "Too many verification attempts. Please request a new OTP." },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
 router.get('/profile' , protect , getPatientDetailsById)
 router.post('/send-otp' , otpLimiter, sentOtpForPatient)
-router.post('/verify-otp' , verifyOtpForPatient)
+router.post('/verify-otp' , otpVerifyLimiter, verifyOtpForPatient)
 router.put('/profile', protect , UploadProfileImage,attachFileUrl, updateProfile)
 router.patch('/fcm-token', protect, updatePatientFcmToken)
 router.post('/request-deletion', protect, requestPatientDeletion)

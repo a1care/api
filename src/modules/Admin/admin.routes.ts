@@ -120,8 +120,8 @@ adminRoutes.post(
   uploadAppManagementAsset
 );
 
-adminRoutes.get("/system-config", protectAdmin, getSystemConfig);
-adminRoutes.put("/system-config", protectAdmin, updateSystemConfig);
+adminRoutes.get("/system-config", protectAdmin, requireAdminRole(["super_admin"]), getSystemConfig);
+adminRoutes.put("/system-config", protectAdmin, requireAdminRole(["super_admin"]), updateSystemConfig);
 
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
 adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);

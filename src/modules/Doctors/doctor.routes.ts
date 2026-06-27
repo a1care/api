@@ -19,9 +19,18 @@ const otpLimiter = rateLimit({
     legacyHeaders: false,
 })
 
+// Limit OTP verification to prevent brute-force of the 6-digit code
+const otpVerifyLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 5,
+    message: { success: false, message: "Too many verification attempts. Please request a new OTP." },
+    standardHeaders: true,
+    legacyHeaders: false,
+})
+
 // authentication routes
 router.post("/auth/send-otp", otpLimiter, sendOtpForStaff)
-router.post("/auth/verify-otp", verifyOtp)
+router.post("/auth/verify-otp", otpVerifyLimiter, verifyOtp)
 router.get("/auth/details", protect, getStaffDetials)
 router.post("/auth/otp/status", checkOtpStatus)
 router.put("/auth/register", protect, registerStaff)
@@ -48,6 +57,6 @@ router.get('/slots/:doctorId/:date', protect, availableSlotByDoctorId)
 
 // a partner's own stored weekly availability
 router.get('/slot/availability/:doctorId', protect, getDoctorAvailabilitybyDoctorId)
-router.get('/staff/role/', getStaffByRoleId)
+router.get('/staff/role/', protect, getStaffByRoleId)
 
 export default router

@@ -10,25 +10,32 @@ import Doctor from "../Doctors/doctor.model.js";
 import { getMessaging } from "../../configs/fcmConfig.js";
 
 export const getMessagesByTicket = asyncHandler(async (req, res) => {
-    const { ticketId, bookingId } = req.query;
+    const ticketId = (req.params.ticketId || req.query.ticketId) as string | undefined;
+    const bookingId = req.query.bookingId as string | undefined;
     const userId = req.user?.id;
+    const role = req.user?.role;
+    const isAdmin = role === 'admin' || role === 'super_admin';
 
-    // Ownership: only a participant of the ticket/booking may read the thread.
+    // Ownership: only a participant of the ticket/booking may read the thread (admins bypass).
     if (ticketId) {
         const ticket = await Ticket.findById(ticketId).select("staffId userId").lean();
         if (!ticket) throw new ApiError(404, "Ticket not found");
-        const allowed = [String(ticket.staffId || ""), String(ticket.userId || "")].filter(Boolean);
-        if (!allowed.includes(String(userId))) throw new ApiError(403, "Access denied");
+        if (!isAdmin) {
+            const allowed = [String(ticket.staffId || ""), String(ticket.userId || "")].filter(Boolean);
+            if (!allowed.includes(String(userId))) throw new ApiError(403, "Access denied");
+        }
     } else if (bookingId) {
         const appt: any = await Appointment.findById(bookingId).select("patientId doctorId").lean();
         const sr: any = appt ? null : await serviceRequestModel.findById(bookingId).select("userId assignedProviderId").lean();
         const doc = appt || sr;
         if (!doc) throw new ApiError(404, "Booking not found");
-        const allowed = [
-            String(doc.patientId || doc.userId || ""),
-            String(doc.doctorId || doc.assignedProviderId || ""),
-        ].filter(Boolean);
-        if (!allowed.includes(String(userId))) throw new ApiError(403, "Access denied");
+        if (!isAdmin) {
+            const allowed = [
+                String(doc.patientId || doc.userId || ""),
+                String(doc.doctorId || doc.assignedProviderId || ""),
+            ].filter(Boolean);
+            if (!allowed.includes(String(userId))) throw new ApiError(403, "Access denied");
+        }
     } else {
         throw new ApiError(400, "ticketId or bookingId is required");
     }
@@ -43,9 +50,9 @@ export const sendMessage = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
     const role = req.user?.role;
 
-    // Sender identity is derived from the verified JWT (protect sets role to 'Patient'
-    // or 'Staff' only). 'Staff' = Partner app, 'User' = Patient app.
-    const senderType: 'User' | 'Staff' = role === 'Staff' ? 'Staff' : 'User';
+    // Sender identity is derived from the verified JWT.
+    // 'Staff' = Partner app, 'User' = Patient app, 'Admin' = admin panel.
+    const senderType: 'User' | 'Staff' | 'Admin' = (role === 'Staff' || role === 'admin' || role === 'super_admin') ? (role === 'Staff' ? 'Staff' : 'Admin') : 'User';
 
     let recipientId: string | undefined;
     let title = "New Message";
@@ -53,9 +60,10 @@ export const sendMessage = asyncHandler(async (req, res) => {
     if (ticketId) {
         const ticket = await Ticket.findById(ticketId).lean();
         if (!ticket) throw new ApiError(404, "Ticket not found");
-        // Tickets are Partner <-> Admin; admin reads from the inbox, so no direct push recipient.
-        recipientId = undefined;
-        title = `Support: ${ticket.subject}`;
+        // Push to ticket creator (partner/patient) when admin replies; no push going the other way.
+        const creatorId = String((ticket as any).userId || "");
+        recipientId = senderType === 'Admin' && creatorId ? creatorId : undefined;
+        title = `Support: ${(ticket as any).subject}`;
     } else if (bookingId) {
         const appointment = await Appointment.findById(bookingId).lean();
         if (!appointment) throw new ApiError(404, "Appointment not found");
@@ -98,7 +106,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
             if (recipient?.fcmToken) {
                 const messaging = getMessaging();
                 if (messaging) {
-                    await messaging.send({
+                    messaging.send({
                         notification: {
                             title: title,
                             body: message.slice(0, 100),

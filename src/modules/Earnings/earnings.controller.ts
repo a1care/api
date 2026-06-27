@@ -54,9 +54,10 @@ export const getEarningsSummary = asyncHandler(async (req, res) => {
         }
     ]);
 
-    // 3. Payouts (Withdrawn so far)
+    // 3. Payouts — include both PENDING and COMPLETED so the balance shown matches
+    // the server-side validation in requestPayout (which also blocks on PENDING).
     const totalWithdrawn = await Payout.aggregate([
-        { $match: { staffId: new mongoose.Types.ObjectId(staffId), status: "COMPLETED" } },
+        { $match: { staffId: new mongoose.Types.ObjectId(staffId), status: { $in: ["PENDING", "APPROVED", "COMPLETED"] } } },
         { $group: { _id: null, sum: { $sum: "$amount" } } }
     ]);
 
@@ -102,7 +103,7 @@ export const requestPayout = asyncHandler(async (req, res) => {
             { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", 0.8] }] } } } }
         ]),
         Payout.aggregate([
-            { $match: { staffId: new mongoose.Types.ObjectId(staffId), status: { $in: ["PENDING", "COMPLETED"] } } },
+            { $match: { staffId: new mongoose.Types.ObjectId(staffId), status: { $in: ["PENDING", "APPROVED", "COMPLETED"] } } },
             { $group: { _id: null, sum: { $sum: "$amount" } } }
         ])
     ]);

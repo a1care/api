@@ -62,6 +62,19 @@ export const createOrder = asyncHandler(async (req, res) => {
     if (!amount || amount <= 0) throw new ApiError(400, "Invalid amount");
     if (!["WALLET_TOPUP", "BOOKING"].includes(type)) throw new ApiError(400, "Invalid order type");
 
+    // For BOOKING orders, verify the amount against the actual booking price to prevent tampering
+    if (type === "BOOKING" && referenceId) {
+        const appt = await DoctorAppointment.findById(referenceId).select("totalAmount paymentStatus").lean();
+        const sr = appt ? null : await ServiceRequest.findById(referenceId).select("price paymentStatus").lean();
+        const booking = appt || sr;
+        if (!booking) throw new ApiError(404, "Booking not found");
+        if ((booking as any).paymentStatus === "COMPLETED") throw new ApiError(400, "Booking already paid");
+        const expectedAmount = Number((booking as any).totalAmount ?? (booking as any).price ?? 0);
+        if (expectedAmount > 0 && Math.abs(Number(amount) - expectedAmount) > 0.01) {
+            throw new ApiError(400, "Amount does not match booking price");
+        }
+    }
+
     const uuidParts = uuidv4().split("-");
     const prefix = uuidParts[0] || "random";
     const txnId = `OR-${prefix.slice(0, 6)}-${Date.now()}`;
@@ -177,13 +190,16 @@ import ServiceRequest from "../Bookings/service/serviceRequest.model.js";
  * Internal helper to fulfill an order and its associated reference (e.g., Booking).
  */
 const fulfillOrder = async (order: any, response: any, service: any) => {
-    if (order.status === OrderStatus.SUCCESS) return;
+    // Atomic idempotency: prevents double-credit if gateway sends duplicate callbacks
+    const updated = await Order.findOneAndUpdate(
+        { _id: (order as any)._id, status: { $ne: OrderStatus.SUCCESS } },
+        { $set: { status: OrderStatus.SUCCESS } },
+        { new: true }
+    );
+    if (!updated) return; // Already fulfilled
+    order = updated;
 
     console.log(`🎁 [Fulfillment] Starting for Order: ${order.txnId} (Type: ${order.type})`);
-
-    // 1. Mark Order as Success
-    order.status = OrderStatus.SUCCESS;
-    await order.save();
 
     if (service && typeof service.logEvent === 'function') {
         await service.logEvent(order.txnId, "PAYMENT_FULFILLED", "INFO", "Order marked as Success", response);
@@ -275,7 +291,7 @@ export const initiateRazorpay = asyncHandler(async (req, res) => {
             contact: (patient.mobileNumber?.toString() || "").replace(/[^0-9]/g, "").slice(-10)
         }
     };
-    console.log("📤 [Razorpay] Returning to frontend:", JSON.stringify(responseData, null, 2));
+    if (process.env.NODE_ENV !== "production") console.log("📤 [Razorpay] Order initiated:", (order as any)._id?.toString());
     return res.status(200).json(new ApiResponse(200, "Razorpay initiated", responseData));
 });
 
@@ -371,9 +387,7 @@ export const handleWebhook = asyncHandler(async (req, res) => {
  * Handles the visible Redirect from Easebuzz (Synchronous).
  */
 export const handleGatewayResponse = asyncHandler(async (req, res) => {
-    console.log(`\n📥 [Easebuzz Gateway Response Entry] Method: ${req.method}`);
-    console.log(`Body:`, JSON.stringify(req.body, null, 2));
-    console.log(`Query:`, JSON.stringify(req.query, null, 2));
+    if (process.env.NODE_ENV !== "production") console.log(`[Gateway Response] ${req.method} received`);
 
     const response = req.method === "POST" ? req.body : req.query;
     const ezService = await getEasebuzzService();

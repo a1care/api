@@ -88,10 +88,9 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
 
-  // Static test number — always use fixed OTP, skip SMS
-  if (cleanMobile === "8309470360") {
+  // Static test number — only active in non-production when explicitly enabled
+  if (cleanMobile === "8309470360" && process.env.NODE_ENV !== "production" && process.env.ALLOW_TEST_OTP === "true") {
     await RedisClient.setEx(`otp:staff:${cleanMobile}`, 600, "123456");
-    console.log(`[OTP] Static test number — OTP bypassed for ${cleanMobile}`);
     return res.status(200).json(
       new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
     );
@@ -120,7 +119,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
     // but in production we'd want to handle this.
   }
 
-  console.log(`[OTP] Sent ${otp} to ${cleanMobile}`);
+  if (process.env.NODE_ENV !== "production") console.log(`[OTP] Sent to ${cleanMobile}`);
 
   return res.status(200).json(
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
@@ -129,7 +128,6 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 
 //verify otp for staff 
 export const verifyOtp = asyncHandler(async (req, res) => {
-  console.log("[Partner Verify] Request Body:", req.body);
   const { idToken, mobileNumber, otp } = req.body;
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
 
@@ -169,8 +167,8 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   try {
     // 1. Verify the secure Firebase Token
-    const admin = (await import('../../configs/fcmConfig.js')) as any;
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { default: firebaseAdmin } = await import('firebase-admin');
+    const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
     
     // 2. Extract verified data
     const firebasePhone = decodedToken.phone_number;
@@ -238,7 +236,6 @@ export const getStaffDetials = asyncHandler(async (req, res) => {
 // otp status check 
 export const checkOtpStatus = asyncHandler(async (req, res) => {
   const { otpSessionId } = req.body
-  console.log("this is the session id", otpSessionId)
   if (!otpSessionId) throw new ApiError(401, "No session found");
 
   const otpSession = await RedisClient.get(`otp:${otpSessionId}`)

@@ -5,6 +5,9 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import TicketModel from "./ticket.model.js";
 import { notifyAdmin } from "../Notifications/notification.controller.js";
 import { escapeRegex } from "../../utils/escapeRegex.js";
+import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
+import DoctorModel from "../Doctors/doctor.model.js";
+import { Patient } from "../Authentication/patient.model.js";
 
 export const createTicket = asyncHandler(async (req, res) => {
     const staffId = req.user?.id;
@@ -27,6 +30,20 @@ export const createTicket = asyncHandler(async (req, res) => {
         String(newTicket._id)
     );
 
+    const partner = await DoctorModel.findById(staffId).select("email name").lean();
+    if (partner?.email) {
+        enqueueEmail({
+            kind: "ticket_receipt",
+            data: {
+                email: partner.email,
+                fullName: partner.name || "Partner",
+                subject,
+                ticketId: String(newTicket._id).slice(-8).toUpperCase(),
+                priority: newTicket.priority,
+            },
+        }).catch(() => {});
+    }
+
     return res.status(201).json(new ApiResponse(201, "Ticket created successfully", newTicket));
 });
 
@@ -40,36 +57,40 @@ export const getMyTickets = asyncHandler(async (req, res) => {
 
 export const createPatientTicket = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
-    console.log("[createPatientTicket] userId:", userId);
-    console.log("[createPatientTicket] body:", req.body);
-
     if (!userId) throw new ApiError(401, "Not authorized to access");
 
     const { subject, description, priority } = req.body;
-    if (!subject || !description) {
-        console.error("[createPatientTicket] Validation failed: missing subject or description");
-        throw new ApiError(400, "Subject and description are required");
+    if (!subject || !description) throw new ApiError(400, "Subject and description are required");
+
+    const newTicket = await TicketModel.create({
+        userId: new mongoose.Types.ObjectId(userId),
+        subject,
+        description,
+        priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium"
+    });
+
+    await notifyAdmin(
+        "🎫 New Support Ticket",
+        `A customer raised a ticket: "${subject}"`,
+        "Ticket",
+        String(newTicket._id)
+    );
+
+    const patient = await Patient.findById(userId).select("email name").lean();
+    if (patient?.email) {
+        enqueueEmail({
+            kind: "ticket_receipt",
+            data: {
+                email: patient.email,
+                fullName: patient.name || "Customer",
+                subject,
+                ticketId: String(newTicket._id).slice(-8).toUpperCase(),
+                priority: newTicket.priority,
+            },
+        }).catch(() => {});
     }
 
-    try {
-        const newTicket = await TicketModel.create({
-            userId: new mongoose.Types.ObjectId(userId),
-            subject,
-            description,
-            priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium"
-        });
-        console.log("[createPatientTicket] Ticket created:", newTicket._id);
-        await notifyAdmin(
-            "🎫 New Support Ticket",
-            `A customer raised a ticket: "${subject}"`,
-            "Ticket",
-            String(newTicket._id)
-        );
-        return res.status(201).json(new ApiResponse(201, "Ticket created successfully", newTicket));
-    } catch (err) {
-        console.error("[createPatientTicket] Database error:", err);
-        throw new ApiError(500, "Could not save ticket to database");
-    }
+    return res.status(201).json(new ApiResponse(201, "Ticket created successfully", newTicket));
 });
 
 export const getMyPatientTickets = asyncHandler(async (req, res) => {
@@ -150,6 +171,43 @@ export const updateTicketStatus = asyncHandler(async (req, res) => {
     );
 
     if (!updatedTicket) throw new ApiError(404, "Ticket not found");
+
+    // Notify the ticket creator when ticket is resolved or closed
+    if (status === "Resolved" || status === "Closed") {
+        const ticketId = String(updatedTicket._id).slice(-8).toUpperCase();
+        const pushTitle = status === "Resolved" ? "Ticket Resolved ✅" : "Ticket Closed";
+        const pushBody = `Your support ticket #${ticketId} has been ${status.toLowerCase()}.`;
+
+        if (updatedTicket.staffId) {
+            const partner = await DoctorModel.findById(updatedTicket.staffId).select("fcmToken email name").lean();
+            if (partner) {
+                enqueuePush({
+                    recipientId: updatedTicket.staffId as mongoose.Types.ObjectId,
+                    recipientType: "partner",
+                    fcmToken: (partner as any).fcmToken ?? null,
+                    title: pushTitle,
+                    body: pushBody,
+                    data: { screen: `/ticket/${id}` },
+                    refType: "Ticket",
+                    refId: new mongoose.Types.ObjectId(id),
+                }).catch(() => {});
+            }
+        } else if (updatedTicket.userId) {
+            const patient = await Patient.findById(updatedTicket.userId).select("fcmToken email name").lean();
+            if (patient) {
+                enqueuePush({
+                    recipientId: updatedTicket.userId as mongoose.Types.ObjectId,
+                    recipientType: "patient",
+                    fcmToken: (patient as any).fcmToken ?? null,
+                    title: pushTitle,
+                    body: pushBody,
+                    data: { screen: `/ticket/${id}` },
+                    refType: "Ticket",
+                    refId: new mongoose.Types.ObjectId(id),
+                }).catch(() => {});
+            }
+        }
+    }
 
     return res.status(200).json(new ApiResponse(200, "Ticket status updated", updatedTicket));
 });

@@ -1,5 +1,5 @@
 import express from 'express'
-import { createDoctorAppointment, getAppointmentsByPatientId, getPendingAppointmentbyProviderId, updateDoctorAppointmentStatus, getConsultationCredentials, getAppointmentById } from './doctorAppointment.controller.js'
+import { createDoctorAppointment, getAppointmentsByPatientId, getPendingAppointmentbyProviderId, updateDoctorAppointmentStatus, getAppointmentById, markAppointmentCashCollected } from './doctorAppointment.controller.js'
 import { getProviderUnifiedFeed, getProviderBookingDetail } from './unifiedBooking.controller.js'
 import { protect } from '../../middlewares/protect.js'
 import { updateLocation, getLocation } from './location.controller.js';
@@ -13,12 +13,14 @@ router.post('/booking/:doctorId', protect, createDoctorAppointment)
 router.patch('/status/:id', protect, updateDoctorAppointmentStatus)
 router.get('/patient/appointments', protect, getAppointmentsByPatientId)
 router.get('/provider/appointments', protect, getPendingAppointmentbyProviderId)
-router.get('/consultation/:id/token', protect, getConsultationCredentials)
 router.get('/:id', protect, getAppointmentById)
 
 // Live Tracking
 router.post('/location/update', protect, updateLocation);
 router.get('/location/:userId', protect, getLocation);
+
+// Mark OFFLINE appointment cash as collected
+router.patch('/cash/:id', protect, markAppointmentCashCollected)
 
 // Booking Chat
 router.get('/messages', protect, getMessagesByTicket);

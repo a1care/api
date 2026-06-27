@@ -79,9 +79,9 @@ const baseTemplate = (title: string, body: string) => `
                                 📍 Hitech City, Hyderabad, India
                             </p>
                             <div style="margin-top:20px; border-top:1px solid #E2E8F0; padding-top:20px;">
-                                <a href="#" style="color:#1A6FDB;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Terms</a>
-                                <a href="#" style="color:#1A6FDB;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Privacy</a>
-                                <a href="#" style="color:#1A6FDB;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Support</a>
+                                <a href="https://a1care.in/terms" style="color:#1A6FDB;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Terms</a>
+                                <a href="https://a1care.in/privacy" style="color:#1A6FDB;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Privacy</a>
+                                <a href="https://a1care.in/support" style="color:#1A6FDB;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Support</a>
                             </div>
                         </td>
                     </tr>
@@ -98,7 +98,7 @@ export const sendWelcomeEmail = async (data: { email: string; fullName: string }
             <div style="width:80px; height:80px; background-color:#EFF6FF; border-radius:40px; display:inline-block; line-height:80px; font-size:40px; margin-bottom:30px;">👋</div>
             <h2 style="font-size:26px;font-weight:900;margin-bottom:15px;color:#0F172A;letter-spacing:-0.02e;">Welcome, ${data.fullName}!</h2>
             <p style="font-size:16px;color:#64748B;line-height:26px;margin-bottom:40px;">You are now part of the A1Care community. We're here to provide professional medical care right at your doorstep, whenever you need it.</p>
-            <a href="#" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:18px 40px;border-radius:18px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 10px 20px rgba(26,111,219,0.2);">Get Started Now</a>
+            <a href="https://a1care.in/download" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:18px 40px;border-radius:18px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 10px 20px rgba(26,111,219,0.2);">Get Started Now</a>
             <p style="margin-top:50px;font-size:14px;color:#94A3B8;font-style:italic;">Best regards,<br/>Team A1Care 24/7</p>
         </div>
     `;
@@ -112,7 +112,7 @@ export const sendPartnerWelcomeEmail = async (data: { email: string; fullName: s
         <p style="margin-bottom:20px;">We're thrilled to have you join us as a healthcare partner. A1Care 24/7 is on a mission to bring high-quality healthcare directly to patients' homes, and your expertise is key to making that happen.</p>
         <p style="margin-bottom:20px;">Your profile is currently under review. Once verified, you'll be able to receive and manage service requests, track your earnings, and grow your practice with us.</p>
         <p style="margin-bottom:30px;">Download the A1Care Partner app to stay updated on your status and start receiving bookings once you're active.</p>
-        <a href="#" style="display:inline-block;background-color:${EMAIL_PRIMARY_COLOR};color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Go to Partner App</a>
+        <a href="https://a1care.in/partner" style="display:inline-block;background-color:${EMAIL_PRIMARY_COLOR};color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Go to Partner App</a>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
     return sendEmail({ to: data.email, subject: "Welcome to A1Care Partner - Let's Grow Together", html: baseTemplate("Welcome Partner", body) });
@@ -124,7 +124,7 @@ export const sendPartnerApprovalEmail = async (data: { email: string; fullName: 
         <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
         <p style="margin-bottom:20px;">Great news. Your A1Care partner profile and documents have been verified successfully.</p>
         <p style="margin-bottom:20px;">You can now go online in the A1Care Partner app and start receiving eligible booking requests.</p>
-        <a href="#" style="display:inline-block;background-color:#059669;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Open Partner App</a>
+        <a href="https://a1care.in/partner" style="display:inline-block;background-color:#059669;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Open Partner App</a>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
     return sendEmail({ to: data.email, subject: "A1Care Partner KYC Approved", html: baseTemplate("Partner Approved", body) });
@@ -140,7 +140,7 @@ export const sendPartnerRejectionEmail = async (data: { email: string; fullName:
             <p style="margin:0;font-size:15px;color:#881337;font-weight:600;">${data.reason}</p>
         </div>
         <p style="margin-bottom:20px;">Please update the required details or re-upload the correct documents in the A1Care Partner app. Our team will review your profile again after resubmission.</p>
-        <a href="#" style="display:inline-block;background-color:#e11d48;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Update Application</a>
+        <a href="https://a1care.in/partner" style="display:inline-block;background-color:#e11d48;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Update Application</a>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
     return sendEmail({ to: data.email, subject: "A1Care Partner KYC Update Required", html: baseTemplate("Partner KYC Update Required", body) });
@@ -204,7 +204,7 @@ export const sendAppointmentConfirmationEmail = async (data: {
             </div>
         </div>
         <div style="text-align:center; padding-top:20px;">
-            <a href="#" style="font-size:14px; font-weight:700; color:#1A6FDB; text-decoration:none;">Manage Booking in App →</a>
+            <a href="https://a1care.in/download" style="font-size:14px; font-weight:700; color:#1A6FDB; text-decoration:none;">Manage Booking in App →</a>
         </div>
     `;
     return sendEmail({ to: data.email, subject: `Appointment Confirmed: ${data.serviceName} - A1Care 24/7`, html: baseTemplate("Booking Confirmed", body) });
@@ -287,7 +287,7 @@ export const sendServiceCompletedEmail = async (
             </div>
         </div>
         <div style="text-align:center; padding-top:10px;">
-            <a href="#" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:16px 32px;border-radius:14px;text-decoration:none;font-weight:800;font-size:15px;">Rate Your Experience →</a>
+            <a href="https://a1care.in/download" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:16px 32px;border-radius:14px;text-decoration:none;font-weight:800;font-size:15px;">Rate Your Experience →</a>
         </div>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;text-align:center;">Best regards,<br/>Team A1Care 24/7</p>
     `;
@@ -321,6 +321,40 @@ export const sendPayoutStatusEmail = async (
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
     return sendEmail({ to: email, subject: `Payout Update: ${status} ₹${amount} - A1Care 24/7`, html: baseTemplate("Payout Update", body) });
+};
+
+export const sendTicketReceiptEmail = async (data: {
+    email: string;
+    fullName: string;
+    subject: string;
+    ticketId: string;
+    priority: string;
+}) => {
+    const body = `
+        <div style="text-align:center; margin-bottom:35px;">
+            <div style="width:70px; height:70px; background-color:#EFF6FF; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">🎫</div>
+            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#0D2E6E;">Support Ticket Received</h2>
+            <p style="color:#64748B;font-size:15px;">We've got your message and will respond shortly.</p>
+        </div>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="margin-bottom:20px;">Thank you for reaching out. Your support ticket has been created and our team is reviewing it.</p>
+        <div style="background-color:#F8FAFC;padding:32px;border-radius:24px;margin-bottom:30px;border:1px solid #E2E8F0;">
+            <div style="margin-bottom:18px;">
+                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Ticket ID</p>
+                <p style="margin:4px 0 0; font-size:13px; font-weight:700; color:#0D2E6E; font-family:monospace;">#${data.ticketId}</p>
+            </div>
+            <div style="margin-bottom:18px;">
+                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Subject</p>
+                <p style="margin:4px 0 0; font-size:15px; font-weight:700; color:#1E293B;">${data.subject}</p>
+            </div>
+            <div style="display:inline-block; padding:6px 16px; border-radius:20px; background-color:${data.priority === 'Critical' ? '#FEF2F2' : data.priority === 'High' ? '#FFF7ED' : '#F0FDF4'}; border:1px solid ${data.priority === 'Critical' ? '#FECACA' : data.priority === 'High' ? '#FED7AA' : '#BBF7D0'};">
+                <p style="margin:0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:${data.priority === 'Critical' ? '#DC2626' : data.priority === 'High' ? '#EA580C' : '#16A34A'};">Priority: ${data.priority}</p>
+            </div>
+        </div>
+        <p style="margin-bottom:20px;color:#64748B;">Our typical response time is within 24 hours. You can track your ticket status in the app.</p>
+        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Support Team, A1Care 24/7</p>
+    `;
+    return sendEmail({ to: data.email, subject: `Support Ticket #${data.ticketId} Received – A1Care 24/7`, html: baseTemplate("Support Ticket", body) });
 };
 
 export const sendOTPFallbackEmail = async (data: { email: string; otp: string }) => {

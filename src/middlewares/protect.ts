@@ -23,12 +23,14 @@ async function getStoredTokenVersion(kind: "patient" | "staff", id: string): Pro
   let version: number | null = null;
   try {
     if (kind === "patient") {
-      const p = await Patient.findById(id).select("tokenVersion").lean();
-      if (!p) return null;
+      const p = await Patient.findById(id).select("tokenVersion deletedAt deletionRequested").lean();
+      if (!p) return -1; // User not found — force rejection
+      if ((p as any).deletedAt || (p as any).deletionRequested) return -1; // Account deleted/pending deletion
       version = (p as any).tokenVersion ?? 0;
     } else {
-      const d = await DoctorModel.findById(id).select("tokenVersion").lean();
-      if (!d) return null;
+      const d = await DoctorModel.findById(id).select("tokenVersion deletedAt deletionRequested").lean();
+      if (!d) return -1; // User not found — force rejection
+      if ((d as any).deletedAt || (d as any).deletionRequested) return -1; // Account deleted/pending deletion
       version = (d as any).tokenVersion ?? 0;
     }
   } catch {
@@ -70,6 +72,9 @@ export const protect = asyncHandler(
     // Fails open only on infra errors (stored version unresolved), never on a real mismatch.
     const kind: "patient" | "staff" = decoded.userId ? "patient" : "staff";
     const storedVersion = await getStoredTokenVersion(kind, String(id));
+    if (storedVersion === -1) {
+      throw new ApiError(401, "Account not found. Please register again.");
+    }
     if (storedVersion !== null && (decoded.tv ?? 0) !== storedVersion) {
       throw new ApiError(401, "Session expired. Please log in again.");
     }

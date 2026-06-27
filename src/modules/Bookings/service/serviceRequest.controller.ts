@@ -436,3 +436,44 @@ export const markServiceCashCollected = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, "Cash collection confirmed", null));
 });
+
+// ── Rapido-style: auto-unassign if partner doesn't accept within 5 min ──
+export async function runPartnerAcceptanceTimeout(serviceRequestId: string, partnerId: string) {
+    const booking = await serviceRequestModel.findById(serviceRequestId)
+        .populate("assignedProviderId", "name fcmToken")
+        .lean();
+    if (!booking) return;
+
+    // Only act if still PARTNER_ASSIGNED to the same partner (not yet accepted/rejected)
+    if ((booking as any).status !== "PARTNER_ASSIGNED") return;
+    if ((booking as any).assignedProviderId?._id?.toString() !== partnerId) return;
+
+    const partnerName = (booking as any).assignedProviderId?.name || "Provider";
+
+    // Reset booking to PENDING
+    await serviceRequestModel.findByIdAndUpdate(serviceRequestId, {
+        status: "PENDING",
+        assignedProviderId: null,
+        assignedRoleId: null,
+        acceptanceDeadline: null,
+    });
+
+    // Notify admin via push
+    const { notifyAdmin } = await import("../../Notifications/notification.controller.js");
+    await notifyAdmin(
+        "⚠️ Provider Did Not Accept",
+        `${partnerName} did not accept booking #${String(serviceRequestId).slice(-6).toUpperCase()}. Please reassign.`,
+        "ServiceRequest",
+        serviceRequestId
+    );
+
+    // Emit socket event to admin room
+    const { emitToRoom } = await import("../../../socket.js");
+    emitToRoom("admin", "booking:partner_timeout", {
+        bookingId: serviceRequestId,
+        partnerName,
+        message: `${partnerName} did not accept the booking within 5 minutes.`,
+    });
+
+    console.log(`[Acceptance Timeout] Booking ${serviceRequestId} returned to PENDING — ${partnerName} did not accept.`);
+}

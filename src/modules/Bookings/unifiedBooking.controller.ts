@@ -16,15 +16,15 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
     const provider = await Doctor.findById(providerId);
     if (!provider) throw new ApiError(404, "Provider not found");
 
-    const { status } = req.query; // status mapping needed
-    
+    const { status } = req.query;
+
     // Status mapping for DoctorAppointment
-    const daStatus = (status === 'Pending') ? ["Pending"] : 
+    const daStatus = (status === 'Pending') ? ["Pending"] :
                    (status === 'Confirmed') ? ["Confirmed"] :
                    (status === 'Completed') ? ["Completed"] :
                    (status === 'Cancelled') ? ["Cancelled"] : ["Pending", "Confirmed"];
 
-    // Status mapping for ServiceRequest
+    // Status mapping for assigned ServiceRequests
     const srStatus = (status === 'Pending') ? ["ACCEPTED"] :
                     (status === 'Confirmed') ? ["ACCEPTED", "IN_PROGRESS"] :
                     (status === 'Completed') ? ["COMPLETED"] :
@@ -36,11 +36,34 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
         status: { $in: daStatus }
     }).populate("patientId", "name mobileNumber profileImage");
 
-    // 2. Fetch Assigned Service Requests
+    // 2. Fetch Assigned Service Requests (direct assignments)
     const assignedServices = await ServiceRequest.find({
         assignedProviderId: providerId,
         status: { $in: srStatus }
     }).populate("userId", "name mobileNumber profileImage").populate("childServiceId");
+
+    // 3. Fetch BROADCASTED bookings (Pending tab only) — open to any eligible partner
+    let broadcastedServices: any[] = [];
+    if (status === 'Pending') {
+        const partnerRoleId = provider.roleId;
+        const roleMatchQuery = partnerRoleId
+            ? { $or: [{ "childServiceId.allowedRoleIds": partnerRoleId }, { assignedProviderId: { $exists: false } }] }
+            : {};
+        broadcastedServices = await ServiceRequest.find({
+            status: "BROADCASTED",
+            ...roleMatchQuery,
+        }).populate("userId", "name mobileNumber profileImage")
+          .populate("childServiceId")
+          .lean();
+        // Filter: show only bookings for services that allow this partner's role (or have no role restriction)
+        if (partnerRoleId) {
+            broadcastedServices = broadcastedServices.filter((s: any) => {
+                const allowed = (s.childServiceId as any)?.allowedRoleIds;
+                if (!allowed || allowed.length === 0) return true;
+                return allowed.some((r: any) => r.toString() === partnerRoleId.toString());
+            });
+        }
+    }
 
     // Transform all to a common format
     const feed = [
@@ -51,8 +74,10 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             serviceType: "Doctor Consultation",
             status: a.status,
             date: a.date,
-            timeSlot: `${a.startingTime} - ${a.endingTime}`,
-            totalAmount: a.totalAmount,
+            timeSlot: `${(a as any).startingTime} - ${(a as any).endingTime}`,
+            totalAmount: (a as any).totalAmount,
+            paymentMode: (a as any).paymentMode || "ONLINE",
+            paymentStatus: (a as any).paymentStatus || "PENDING",
             location: { address: "At Hospital / Online" }
         })),
         ...assignedServices.map(s => ({
@@ -61,10 +86,25 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             patientName: (s.userId as any)?.name,
             serviceType: (s.childServiceId as any)?.name || "Service",
             status: s.status,
-            date: new Date(), // Service requests usually don't have a fixed date in model yet?
+            date: (s as any).scheduledSlot?.startTime || (s as any).createdAt,
             timeSlot: "As scheduled",
             totalAmount: s.price,
-            location: { address: "Patient Home / Location" }
+            paymentMode: (s as any).paymentMode || "ONLINE",
+            paymentStatus: (s as any).paymentStatus || "PENDING",
+            location: { address: (s as any).location?.address || "Patient Location" }
+        })),
+        ...broadcastedServices.map((s: any) => ({
+            _id: s._id,
+            bookingType: "Service",
+            patientName: s.userId?.name || "Patient",
+            serviceType: s.childServiceId?.name || "Service",
+            status: s.status,
+            date: s.scheduledSlot?.startTime || s.createdAt,
+            timeSlot: "As scheduled",
+            totalAmount: s.price,
+            paymentMode: s.paymentMode || "ONLINE",
+            paymentStatus: s.paymentStatus || "PENDING",
+            location: { address: s.location?.address || "Patient Location" }
         })),
     ];
 
