@@ -1683,6 +1683,17 @@ export const getHospitalBookings = asyncHandler(async (req, res) => {
 
   if (status && status !== "All") query.status = status;
 
+  // DB-level patient name search for hospital bookings
+  if (search && search !== "") {
+    const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const matchedPatients = await Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean();
+    const searchOr: any[] = [];
+    if (matchedPatients.length) searchOr.push({ patientId: { $in: matchedPatients.map((p: any) => p._id) } });
+    if (rx.test("")) { /* skip empty */ } else searchOr.push({ serviceName: rx }, { status: rx });
+    if (/^[0-9a-fA-F]{24}$/.test(String(search))) searchOr.push({ _id: search });
+    if (searchOr.length) query.$or = searchOr;
+  }
+
   // Stats aggregation for Hospital Bookings
   const [statsData] = await HospitalBooking.aggregate([
     {
@@ -1698,12 +1709,14 @@ export const getHospitalBookings = asyncHandler(async (req, res) => {
   ]);
   const stats = statsData || { all: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
 
-  const total = await HospitalBooking.countDocuments(query);
-  const bookings = await HospitalBooking.find(query)
-    .populate("patientId", "name mobileNumber")
-    .sort({ acceptedAt: -1 })
-    .skip(skip)
-    .limit(Number(limit));
+  const [total, bookings] = await Promise.all([
+    HospitalBooking.countDocuments(query),
+    HospitalBooking.find(query)
+      .populate("patientId", "name mobileNumber")
+      .sort({ acceptedAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+  ]);
 
   let formatted = bookings.map(b => {
     const obj = b.toObject() as any;
@@ -1719,13 +1732,7 @@ export const getHospitalBookings = asyncHandler(async (req, res) => {
     };
   });
 
-  if (search && search !== "") {
-    const s = (search as string).toLowerCase();
-    formatted = formatted.filter(b =>
-      (b.patientId?.name?.toLowerCase() || "").includes(s) ||
-      (b.serviceName?.toLowerCase() || "").includes(s) ||
-      (b._id || "").toLowerCase().includes(s)
-    );
+  if (false) { // search now handled at DB level above
   }
 
   res.status(200).json(new ApiResponse(200, "Hospital accepted bookings fetched", {
