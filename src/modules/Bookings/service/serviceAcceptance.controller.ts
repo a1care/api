@@ -215,9 +215,10 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
 // Partner explicitly rejects a PARTNER_ASSIGNED booking
 export const rejectAssignment = asyncHandler(async (req, res) => {
     const providerId = req.user?.id;
-    const { serviceRequestId } = req.params;
+    const { serviceRequestId } = req.params as { serviceRequestId: string };
 
     if (!providerId) throw new ApiError(401, "Unauthorized");
+    if (!serviceRequestId) throw new ApiError(400, "serviceRequestId is required");
 
     const booking = await serviceRequestModel
         .findById(serviceRequestId)

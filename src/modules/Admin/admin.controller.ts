@@ -1432,13 +1432,13 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
       if (doctor?._id) {
         await enqueuePush({
           recipientId: doctor._id,
-          recipientType: "Partner",
+          recipientType: "partner",
           fcmToken: doctor.fcmToken,
           title: "Appointment Confirmed ✅",
           body: `Your appointment with ${patient?.name || "a patient"} has been confirmed. Please be ready on the scheduled date.`,
           data: { bookingId: String(booking._id), bookingType: "Doctor", screen: "bookings" },
           refType: "DoctorAppointment",
-          refId: booking._id,
+          refId: new mongoose.Types.ObjectId(String(booking._id)),
         });
       }
     } catch (e) {

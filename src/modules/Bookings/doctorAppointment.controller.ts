@@ -465,7 +465,7 @@ export async function runAppointmentReminder(appointmentId: string): Promise<voi
     if (doctor?.fcmToken) {
         await enqueuePush({
             recipientId: doctor._id,
-            recipientType: "Partner",
+            recipientType: "partner",
             fcmToken: doctor.fcmToken,
             title: "📅 Appointment Tomorrow",
             body: `Reminder: consultation with ${patient?.name ?? "a patient"} on ${dateStr} at ${timeStr}.`,
