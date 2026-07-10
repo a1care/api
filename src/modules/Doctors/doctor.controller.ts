@@ -88,8 +88,8 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
 
-  // Static test number — only active in non-production when explicitly enabled
-  if (cleanMobile === "8309470360" && process.env.NODE_ENV !== "production" && process.env.ALLOW_TEST_OTP === "true") {
+  // Static test number — bypass OTP when ALLOW_TEST_OTP env var is set
+  if (cleanMobile === "8309470360" && process.env.ALLOW_TEST_OTP === "true") {
     await RedisClient.setEx(`otp:staff:${cleanMobile}`, 600, "123456");
     return res.status(200).json(
       new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })

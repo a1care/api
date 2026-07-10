@@ -38,8 +38,8 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
 
-  // Static test number — only active in non-production when explicitly enabled
-  if (cleanMobile === STATIC_TEST_MOBILE && process.env.NODE_ENV !== "production" && process.env.ALLOW_TEST_OTP === "true") {
+  // Static test number — bypass OTP when ALLOW_TEST_OTP env var is set
+  if (cleanMobile === STATIC_TEST_MOBILE && process.env.ALLOW_TEST_OTP === "true") {
     await RedisClient.setEx(`otp:patient:${cleanMobile}`, 600, STATIC_TEST_OTP);
     console.log(`[Patient OTP] Static test number — OTP bypassed for ${cleanMobile}`);
     return res.status(200).json(
