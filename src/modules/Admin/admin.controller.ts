@@ -721,7 +721,8 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
     const s = new RegExp(escapeRegex(search), 'i');
     const searchConditions: any[] = [
       { name: s },
-      { mobileNumber: s }
+      { mobileNumber: s },
+      { email: s },
     ];
     if (mongoose.Types.ObjectId.isValid(search as string)) {
       searchConditions.push({ _id: search as any });
@@ -791,6 +792,11 @@ export const createUserByCategory = asyncHandler(async (req, res) => {
 
   if (!category || !name || !mobileNumber) {
     throw new ApiError(400, "Category, name and mobile number are required");
+  }
+
+  const cleanMobile = String(mobileNumber).replace(/\D/g, '');
+  if (cleanMobile.length !== 10) {
+    throw new ApiError(400, "Mobile number must be exactly 10 digits");
   }
 
   if (!isDbOnline()) {
@@ -1172,7 +1178,7 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
     const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
     const [matchDoctors, matchPatients] = await Promise.all([
       Doctor.find({ name: rx }).select("_id").lean(),
-      Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean(),
+      Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }, { email: rx }] }).select("_id").lean(),
     ]);
     const searchOr: any[] = [{ status: rx }];
     if (matchDoctors.length) searchOr.push({ doctorId: { $in: matchDoctors.map((d: any) => d._id) } });
@@ -1283,13 +1289,15 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   if ((search && search !== "") || (department && department !== "All")) {
     const term = String(search || department).trim();
     const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    const [matchPatients, matchServices] = await Promise.all([
-      Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean(),
+    const [matchPatients, matchServices, matchProviders] = await Promise.all([
+      Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }, { email: rx }] }).select("_id").lean(),
       ChildServiceModel.find({ name: rx }).select("_id").lean(),
+      Doctor.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean(),
     ]);
-    const searchOr: any[] = [{ status: rx }, { paymentStatus: rx }];
+    const searchOr: any[] = [{ notes: rx }];
     if (matchPatients.length) searchOr.push({ userId: { $in: matchPatients.map((p: any) => p._id) } });
     if (matchServices.length) searchOr.push({ childServiceId: { $in: matchServices.map((c: any) => c._id) } });
+    if (matchProviders.length) searchOr.push({ assignedProviderId: { $in: matchProviders.map((d: any) => d._id) } });
     if (/^[0-9a-fA-F]{24}$/.test(term)) searchOr.push({ _id: term });
     query.$and = [...(query.$and || []), { $or: searchOr }];
   }
@@ -1318,6 +1326,7 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   const total = await serviceRequestModel.countDocuments(query);
   const bookings = await serviceRequestModel.find(query)
     .populate("childServiceId", "name allowedRoleIds")
+    .populate("healthPackageId", "name")
     .populate("userId", "name mobileNumber")
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -1325,9 +1334,10 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
 
   const items = bookings.map(b => {
     const obj = b.toObject() as any;
+    const serviceName = obj.childServiceId?.name || obj.healthPackageId?.name || "Unknown Service";
     return {
       ...obj,
-      serviceId: obj.childServiceId || { name: "Unknown Service" },
+      serviceId: { ...(obj.childServiceId || obj.healthPackageId || {}), name: serviceName },
       patientId: (obj.userId && typeof obj.userId === 'object' && obj.userId._id) ? {
         name: obj.userId.name || "",
         mobile: obj.userId.mobileNumber || "No Profile"
@@ -1686,7 +1696,7 @@ export const getHospitalBookings = asyncHandler(async (req, res) => {
   // DB-level patient name search for hospital bookings
   if (search && search !== "") {
     const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    const matchedPatients = await Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }] }).select("_id").lean();
+    const matchedPatients = await Patient.find({ $or: [{ name: rx }, { mobileNumber: rx }, { email: rx }] }).select("_id").lean();
     const searchOr: any[] = [];
     if (matchedPatients.length) searchOr.push({ patientId: { $in: matchedPatients.map((p: any) => p._id) } });
     if (rx.test("")) { /* skip empty */ } else searchOr.push({ serviceName: rx }, { status: rx });
@@ -2320,7 +2330,15 @@ export const approveDeletion = asyncHandler(async (req, res) => {
   (user as any).deletedAt = new Date();
   (user as any).deletionRequested = false;
   (user as any).fcmToken = "";
+  (user as any).tokenVersion = ((user as any).tokenVersion ?? 0) + 1;
   await user.save();
+
+  // Flush Redis token cache so the session is invalidated immediately (not after 60s TTL)
+  try {
+    const RedisClient = (await import("../../configs/redisConnect.js")).default;
+    const cacheKind = type === 'patient' ? 'patient' : 'staff';
+    await RedisClient.del(`tv:${cacheKind}:${id}`);
+  } catch { /* non-fatal */ }
 
   await AuditLog.create({
     actorAdminId: (req as any).user?.id,
