@@ -65,7 +65,21 @@ export const initFCM = async (): Promise<void> => {
         // file not found — fall through to env-vars
     }
 
-    // Option B: individual env-vars (CI/CD / hosting without file access)
+    // Option B: FIREBASE_SERVICE_ACCOUNT env var (full JSON string)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            fcmApp = admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+            });
+            console.log("[FCM] Initialized from FIREBASE_SERVICE_ACCOUNT env var.");
+            return;
+        } catch (err: any) {
+            console.log(`[FCM] Option B failed: ${err.message}`);
+        }
+    }
+
+    // Option C: individual env-vars (CI/CD / hosting without file access)
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
