@@ -5,6 +5,31 @@ import { ApiError } from "../../utils/ApiError.js";
 import DoctorAppointment from "./doctorAppointment.model.js";
 import ServiceRequest from "./service/serviceRequest.model.js";
 import Doctor from "../Doctors/doctor.model.js";
+import PartnerLocation from "./location.model.js";
+import { calculateDistance } from "../../utils/geo.js";
+import { getActiveCommissionRate } from "../PartnerSubscription/subscription.controller.js";
+import serviceAcceptanceModal from "./service/serviceAcceptance.model.js";
+
+const formatTimeSlot = (startTime?: Date | string, endTime?: Date | string) => {
+    if (!startTime) return "As scheduled";
+    const start = new Date(startTime);
+    const end = endTime ? new Date(endTime) : null;
+    
+    const formatTime = (d: Date) => {
+        let hours = d.getHours();
+        const minutes = d.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const minStr = minutes < 10 ? '0' + minutes : minutes;
+        return `${hours}:${minStr} ${ampm}`;
+    };
+
+    if (end) {
+        return `${formatTime(start)} - ${formatTime(end)}`;
+    }
+    return formatTime(start);
+};
 
 /**
  * Merges Doctor Appointments and Service Requests into a single feed for the Partner.
@@ -13,57 +38,110 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
     const providerId = req.user?.id;
     if (!providerId) throw new ApiError(401, "Provider ID missing");
 
-    const provider = await Doctor.findById(providerId);
+    const [provider, partnerLoc, rejected] = await Promise.all([
+        Doctor.findById(providerId),
+        PartnerLocation.findOne({ userId: providerId }),
+        serviceAcceptanceModal.find({
+            providerId,
+            status: "REJECTED"
+        }).select("serviceRequestId").lean()
+    ]);
     if (!provider) throw new ApiError(404, "Provider not found");
 
     const { status } = req.query;
+    const isOnline = partnerLoc ? partnerLoc.isOnline : true;
+    const rejectedIds = rejected.map(r => r.serviceRequestId?.toString()).filter(Boolean);
 
     // Status mapping for DoctorAppointment
     const daStatus = (status === 'Pending') ? ["Pending"] :
                    (status === 'Confirmed') ? ["Confirmed"] :
                    (status === 'Completed') ? ["Completed"] :
-                   (status === 'Cancelled') ? ["Cancelled"] : ["Pending", "Confirmed"];
+                   (status === 'Cancelled') ? ["Cancelled"] :
+                   (status === 'Missing') ? [] :
+                   (status === 'all') ? ["Pending", "Confirmed", "Completed", "Cancelled"] :
+                   ["Pending", "Confirmed"];
 
     // Status mapping for assigned ServiceRequests
-    const srStatus = (status === 'Pending') ? ["ACCEPTED"] :
+    let srStatus = (status === 'Pending') ? ["ACCEPTED", "PARTNER_ASSIGNED"] :
                     (status === 'Confirmed') ? ["ACCEPTED", "IN_PROGRESS"] :
                     (status === 'Completed') ? ["COMPLETED"] :
-                    (status === 'Cancelled') ? ["CANCELLED"] : ["ACCEPTED", "IN_PROGRESS"];
+                    (status === 'Cancelled') ? ["CANCELLED"] :
+                    (status === 'Missing') ? [] :
+                    (status === 'all') ? ["ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED", "COMPLETED", "CANCELLED"] :
+                    ["ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED"];
 
-    // 1. Fetch Doctor Appointments
-    const appointments = await DoctorAppointment.find({
-        doctorId: providerId,
-        status: { $in: daStatus }
-    }).populate("patientId", "name mobileNumber profileImage");
-
-    // 2. Fetch Assigned Service Requests (direct assignments)
-    const assignedServices = await ServiceRequest.find({
-        assignedProviderId: providerId,
-        status: { $in: srStatus }
-    }).populate("userId", "name mobileNumber profileImage").populate("childServiceId");
-
-    // 3. Fetch BROADCASTED bookings (Pending tab only) — open to any eligible partner
-    let broadcastedServices: any[] = [];
-    if (status === 'Pending') {
-        const partnerRoleId = provider.roleId;
-        const roleMatchQuery = partnerRoleId
-            ? { $or: [{ "childServiceId.allowedRoleIds": partnerRoleId }, { assignedProviderId: { $exists: false } }] }
-            : {};
-        broadcastedServices = await ServiceRequest.find({
-            status: "BROADCASTED",
-            ...roleMatchQuery,
-        }).populate("userId", "name mobileNumber profileImage")
-          .populate("childServiceId")
-          .lean();
-        // Filter: show only bookings for services that allow this partner's role (or have no role restriction)
-        if (partnerRoleId) {
-            broadcastedServices = broadcastedServices.filter((s: any) => {
-                const allowed = (s.childServiceId as any)?.allowedRoleIds;
-                if (!allowed || allowed.length === 0) return true;
-                return allowed.some((r: any) => r.toString() === partnerRoleId.toString());
-            });
-        }
+    if (!isOnline) {
+        srStatus = srStatus.filter(s => s !== "PARTNER_ASSIGNED");
     }
+
+    const commissionPct = await getActiveCommissionRate(providerId);
+    const earningRatio = (100 - commissionPct) / 100;
+
+    // Fetch all booking sources concurrently!
+    const [appointments, assignedServices, broadcastedServices, rejectedServices] = await Promise.all([
+        DoctorAppointment.find({
+            doctorId: providerId,
+            status: { $in: daStatus }
+        }).populate("patientId", "name mobileNumber profileImage"),
+
+        ServiceRequest.find({
+            assignedProviderId: providerId,
+            status: { $in: srStatus }
+        }).populate("userId", "name mobileNumber profileImage").populate("childServiceId").populate("addressId"),
+
+        (isOnline && (status === 'Pending' || status === 'Missing' || status === 'all' || !status)) ? (async () => {
+            const partnerRoleId = provider.roleId;
+
+            let timeQuery: any = {};
+            if (isOnline && status === 'Missing') {
+                if (partnerLoc && partnerLoc.lastOfflineAt && partnerLoc.lastOnlineAt) {
+                    timeQuery.createdAt = {
+                        $gte: partnerLoc.lastOfflineAt,
+                        $lte: partnerLoc.lastOnlineAt
+                    };
+                } else {
+                    timeQuery._id = null;
+                }
+            }
+
+            let services = await ServiceRequest.find({
+                _id: { $nin: rejectedIds },
+                status: "BROADCASTED",
+                ...timeQuery
+            })
+                .populate("userId", "name mobileNumber profileImage")
+                .populate("childServiceId")
+                .populate("addressId")
+                .lean();
+
+            if (partnerRoleId) {
+                services = services.filter((s) => {
+                    const allowed = (s.childServiceId as any)?.allowedRoleIds;
+                    if (!allowed || allowed.length === 0)
+                        return true;
+                    return allowed.some((r: any) => r.toString() === partnerRoleId.toString());
+                });
+            }
+
+            if (partnerLoc && partnerLoc.latitude && partnerLoc.longitude) {
+                const radius = provider.serviceRadius || 50;
+                services = services.filter((s: any) => {
+                    const addr = s.addressId;
+                    const bookingLat = addr?.location?.lat ?? s.location?.lat;
+                    const bookingLng = addr?.location?.lng ?? s.location?.lng;
+                    if (!bookingLat || !bookingLng)
+                        return true;
+                    const distance = calculateDistance(bookingLat, bookingLng, partnerLoc.latitude, partnerLoc.longitude);
+                    return distance <= radius;
+                });
+            }
+            return services;
+        })() : Promise.resolve([]),
+
+        (status === 'Cancelled' || !status) ? ServiceRequest.find({
+            _id: { $in: rejectedIds }
+        }).populate("userId", "name mobileNumber profileImage").populate("childServiceId").populate("addressId").lean() : Promise.resolve([])
+    ]);
 
     // Transform all to a common format
     const feed = [
@@ -76,9 +154,11 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             date: a.date,
             timeSlot: `${(a as any).startingTime} - ${(a as any).endingTime}`,
             totalAmount: (a as any).totalAmount,
+            partnerEarning: (a as any).partnerEarning || ((a as any).totalAmount * earningRatio),
             paymentMode: (a as any).paymentMode || "ONLINE",
             paymentStatus: (a as any).paymentStatus || "PENDING",
-            location: { address: "At Hospital / Online" }
+            location: { address: "At Hospital / Online" },
+            createdAt: (a as any).createdAt
         })),
         ...assignedServices.map(s => ({
             _id: s._id,
@@ -87,24 +167,54 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             serviceType: (s.childServiceId as any)?.name || "Service",
             status: s.status,
             date: (s as any).scheduledSlot?.startTime || (s as any).createdAt,
-            timeSlot: "As scheduled",
+            timeSlot: (s as any).scheduledSlot?.startTime ? formatTimeSlot((s as any).scheduledSlot.startTime, (s as any).scheduledSlot.endTime) : "As scheduled",
             totalAmount: s.price,
+            partnerEarning: (s as any).partnerEarning || (s.price * earningRatio),
             paymentMode: (s as any).paymentMode || "ONLINE",
             paymentStatus: (s as any).paymentStatus || "PENDING",
-            location: { address: (s as any).location?.address || "Patient Location" }
+            location: { address: (s.addressId as any)?.address || (s as any).location?.address || "Patient Location" },
+            createdAt: (s as any).createdAt,
+            acceptanceDeadline: (s as any).acceptanceDeadline
         })),
-        ...broadcastedServices.map((s: any) => ({
+        ...broadcastedServices.map((s: any) => {
+            let finalStatus = s.status;
+            if (partnerLoc && partnerLoc.lastOfflineAt && partnerLoc.lastOnlineAt) {
+                const created = new Date(s.createdAt);
+                if (created >= new Date(partnerLoc.lastOfflineAt) && created <= new Date(partnerLoc.lastOnlineAt)) {
+                    finalStatus = "Missing";
+                }
+            }
+            return {
+                _id: s._id,
+                bookingType: "Service",
+                patientName: s.userId?.name || "Patient",
+                serviceType: s.childServiceId?.name || "Service",
+                status: finalStatus,
+                date: s.scheduledSlot?.startTime || s.createdAt,
+                timeSlot: s.scheduledSlot?.startTime ? formatTimeSlot(s.scheduledSlot.startTime, s.scheduledSlot.endTime) : "As scheduled",
+                totalAmount: s.price,
+                partnerEarning: s.partnerEarning || (s.price * earningRatio),
+                paymentMode: s.paymentMode || "ONLINE",
+                paymentStatus: s.paymentStatus || "PENDING",
+                location: { address: s.addressId?.address || s.location?.address || "Patient Location" },
+                createdAt: s.createdAt,
+                acceptanceDeadline: s.acceptanceDeadline
+            };
+        }),
+        ...rejectedServices.map((s: any) => ({
             _id: s._id,
             bookingType: "Service",
             patientName: s.userId?.name || "Patient",
             serviceType: s.childServiceId?.name || "Service",
-            status: s.status,
+            status: "CANCELLED",
             date: s.scheduledSlot?.startTime || s.createdAt,
-            timeSlot: "As scheduled",
+            timeSlot: s.scheduledSlot?.startTime ? formatTimeSlot(s.scheduledSlot.startTime, s.scheduledSlot.endTime) : "As scheduled",
             totalAmount: s.price,
+            partnerEarning: s.partnerEarning || (s.price * earningRatio),
             paymentMode: s.paymentMode || "ONLINE",
             paymentStatus: s.paymentStatus || "PENDING",
-            location: { address: s.location?.address || "Patient Location" }
+            location: { address: s.addressId?.address || s.location?.address || "Patient Location" },
+            createdAt: s.createdAt
         })),
     ];
 
@@ -148,7 +258,7 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
             totalAmount: appt.totalAmount,
             discountAmount: appt.discountAmount || 0,
             couponCode: appt.couponCode || null,
-            partnerEarning: appt.partnerEarning ?? null,
+            partnerEarning: appt.partnerEarning || (appt.totalAmount * ((100 - (await getActiveCommissionRate(providerId))) / 100)),
             address: { label: "At Hospital / Online Consultation", coords: null },
             notes: null,
             createdAt: appt.createdAt,
@@ -162,8 +272,23 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
         .populate("childServiceId")
         .populate("addressId");
     if (!svc) throw new ApiError(404, "Booking not found");
-    if (String(svc.assignedProviderId ?? "") !== String(providerId)) {
+
+    const provider = await Doctor.findById(providerId);
+    if (!provider) throw new ApiError(404, "Provider not found");
+
+    if (svc.status !== "BROADCASTED" && String(svc.assignedProviderId ?? "") !== String(providerId)) {
         throw new ApiError(403, "This booking is not assigned to you");
+    }
+
+    if (svc.status === "BROADCASTED") {
+        const allowed = (svc.childServiceId as any)?.allowedRoleIds;
+        const partnerRoleId = provider.roleId;
+        if (allowed && allowed.length > 0 && partnerRoleId) {
+            const hasRole = allowed.some((r: any) => r.toString() === partnerRoleId.toString());
+            if (!hasRole) {
+                throw new ApiError(403, "Your role is not authorized to view this booking");
+            }
+        }
     }
 
     const a = svc.addressId;
@@ -198,7 +323,7 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
         totalAmount: svc.price,
         discountAmount: svc.discountAmount || 0,
         couponCode: svc.couponCode || null,
-        partnerEarning: svc.partnerEarning ?? null,
+        partnerEarning: svc.partnerEarning || (svc.price * ((100 - (await getActiveCommissionRate(providerId))) / 100)),
         address: {
             label: addr || "Patient location",
             coords: addrCoords,

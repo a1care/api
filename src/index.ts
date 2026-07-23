@@ -63,15 +63,29 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_message', async (data) => {
-        // Identity comes from the verified socket, never from the client payload —
-        // and senderType must match the ChatMessage enum ["Patient","Partner"].
-        const verified = {
-            ...data,
-            senderId: (socket as any).userId,
-            senderType: (socket as any).userRole === 'Patient' ? 'Patient' : 'Partner',
-        };
-        await saveChatMessage(verified);
-        socket.to(data.roomId).emit('receive_message', verified);
+        try {
+            const bookingId = data.bookingId || data.roomId;
+            if (!bookingId) return;
+
+            const { assertBookingParticipant } = await import('./modules/Chat/chat.controller.js');
+            await assertBookingParticipant(bookingId, (socket as any).userId);
+
+            let saved = data;
+            if (!data._id) {
+                const verified = {
+                    ...data,
+                    senderId: (socket as any).userId,
+                    senderType: (socket as any).userRole === 'Patient' ? 'Patient' : 'Partner',
+                };
+                saved = await saveChatMessage(verified);
+            }
+            if (saved) {
+                socket.to(data.roomId).emit('receive_message', saved);
+            }
+        } catch (e: any) {
+            console.error('[Socket] send_message error:', e.message);
+            socket.emit('error', { message: e.message || 'Access denied' });
+        }
     });
 
     socket.on('update_location', (data) => {

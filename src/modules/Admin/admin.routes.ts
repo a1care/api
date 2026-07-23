@@ -42,7 +42,8 @@ import {
   approveDeletion,
   getDoctorAvailabilityAdmin,
   upsertDoctorAvailabilityAdmin,
-  debugPartnerServiceEligibility
+  debugPartnerServiceEligibility,
+  getAdminCommissionReport
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -129,6 +130,9 @@ adminRoutes.delete("/notifications/clear", protectAdmin, adminClearNotifications
 
 adminRoutes.get("/payouts", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminPayouts);
 adminRoutes.put("/payouts/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateAdminPayoutStatus);
+
+// Commission report (per-booking commission ledger)
+adminRoutes.get("/commission/report", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminCommissionReport);
 
 adminRoutes.get("/reviews", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAllReviews);
 adminRoutes.put("/reviews/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateReviewStatus);

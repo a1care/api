@@ -6,13 +6,25 @@ import doctorModel from "../Doctors/doctor.model.js";
 import { Order, OrderStatus } from "../Payments/payment.model.js";
 import { v4 as uuidv4 } from "uuid";
 
+export const getCategories = async (req: Request, res: Response) => {
+    try {
+        const cats = await PartnerSubscriptionPlan.distinct("category");
+        res.status(200).json({ success: true, data: cats });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 export const getPlans = async (req: Request, res: Response) => {
     try {
-        const { category } = req.query;
-        const filter: any = { isActive: true };
-        if (category) filter.category = category;
+        const { category, all } = req.query;
+        const filter: any = {};
+        if (all !== "true") filter.isActive = true;
+        if (category && (category as string).toLowerCase() !== "all") {
+            filter.category = { $in: [category, "All", "ALL", "all"] };
+        }
 
-        const plans = await PartnerSubscriptionPlan.find(filter);
+        const plans = await PartnerSubscriptionPlan.find(filter).sort({ price: 1 });
         res.status(200).json({ success: true, data: plans });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
@@ -60,13 +72,23 @@ export const subscribe = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, message: "Plan not found" });
         }
 
+        // Limit free plan subscriptions to once per partner
+        if (plan.isFree) {
+            const hasHadFreePlan = await PartnerSubscription.findOne({
+                partnerId,
+                planId: plan._id,
+                status: { $in: ["Active", "Expired", "Cancelled", "Pending"] }
+            });
+            if (hasHadFreePlan) {
+                return res.status(400).json({ success: false, message: "You have already used the Free Plan once. Please select a paid subscription plan." });
+            }
+        }
+
         const startDate = new Date();
         const endDate = new Date();
         endDate.setDate(startDate.getDate() + plan.validityDays);
 
-        // Cancel any existing Active OR Pending subscriptions first, so a partner who taps
-        // Subscribe multiple times (or whose payment is slow) doesn't accumulate duplicate
-        // pending records that could all later activate.
+        // Cancel any existing Active OR Pending subscriptions first
         await PartnerSubscription.updateMany(
             { partnerId, status: { $in: ["Active", "Pending"] } },
             { status: "Cancelled" }

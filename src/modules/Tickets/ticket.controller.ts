@@ -30,7 +30,7 @@ export const createTicket = asyncHandler(async (req, res) => {
         String(newTicket._id)
     );
 
-    const partner = await DoctorModel.findById(staffId).select("email name").lean();
+    const partner = await DoctorModel.findById(staffId).select("email name fcmToken").lean();
     if (partner?.email) {
         enqueueEmail({
             kind: "ticket_receipt",
@@ -41,6 +41,18 @@ export const createTicket = asyncHandler(async (req, res) => {
                 ticketId: String(newTicket._id).slice(-8).toUpperCase(),
                 priority: newTicket.priority,
             },
+        }).catch(() => {});
+    }
+    if ((partner as any)?.fcmToken) {
+        enqueuePush({
+            recipientId: new mongoose.Types.ObjectId(staffId),
+            recipientType: "partner",
+            fcmToken: (partner as any).fcmToken,
+            title: "🎫 Ticket Raised",
+            body: `Your support ticket "${subject.slice(0, 60)}" has been submitted. We'll respond within 24 hours.`,
+            data: { screen: "/support" },
+            refType: "Ticket",
+            refId: newTicket._id as mongoose.Types.ObjectId,
         }).catch(() => {});
     }
 

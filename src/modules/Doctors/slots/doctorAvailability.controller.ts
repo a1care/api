@@ -90,6 +90,15 @@ export const availableSlotByDoctorId = asyncHandler(async (req, res) => {
   let startingTime, endingTime, slotDuration;
 
   if (checkingSlot) {
+    // ── weekDay gate: if the requested date is not a working day, return no slots ──
+    const requestedWeekDay = parsedDate.getDay(); // 0=Sun … 6=Sat
+    if (checkingSlot.weekDays && checkingSlot.weekDays.length > 0) {
+      if (!checkingSlot.weekDays.includes(requestedWeekDay)) {
+        return res.status(200).json(
+          new ApiResponse(200, "Doctor is not available on this day", [])
+        );
+      }
+    }
     ({ startingTime, endingTime, slotDuration } = checkingSlot as any);
   } else {
     // 🏷️ Fallback: Check doctorModel workingHours

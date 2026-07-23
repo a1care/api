@@ -1,0 +1,10 @@
+import mongoose from 'mongoose';
+await mongoose.connect('mongodb+srv://a1caresocialhub_db_user:A1care1231@cluster0.swo4f25.mongodb.net/a1care');
+const db = mongoose.connection.db;
+const total = await db.collection('patients').countDocuments();
+const withToken = await db.collection('patients').countDocuments({ fcmToken: { $exists: true, $nin: [null, ''] } });
+const sample = await db.collection('patients').find({ fcmToken: { $exists: true, $nin: [null, ''] } }).limit(3).toArray();
+console.log('Total patients: ' + total);
+console.log('With FCM token: ' + withToken);
+sample.forEach(p => console.log('  ' + (p.name||'?') + ' => ' + (p.fcmToken||'').slice(0,50) + '...'));
+await mongoose.disconnect();

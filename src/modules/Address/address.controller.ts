@@ -38,16 +38,16 @@ export const addAddress = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Validation failed!")
     }
 
-    // Ensure HOME and WORK labels are unique for the user
+    // If adding a HOME or WORK address, demote any existing active address with that label to OTHERS
     if (["HOME", "WORK"].includes(parsed.data.label)) {
-        const existing = await UserAddressModel.findOne({
-            userId,
-            label: parsed.data.label,
-            isDeleted: false
-        });
-        if (existing) {
-            throw new ApiError(400, `You already have an address labeled as ${parsed.data.label}. Please edit the existing one or use OTHERS.`);
-        }
+        await UserAddressModel.updateMany(
+            {
+                userId,
+                label: parsed.data.label,
+                isDeleted: false
+            },
+            { $set: { label: "OTHERS" } }
+        );
     }
 
     const newAddress = new UserAddressModel(parsed.data)
@@ -145,17 +145,17 @@ export const updateAddress = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Validation failed!")
     }
 
-    // Ensure HOME and WORK labels are unique for the user when updating
+    // If updating to HOME or WORK, demote any existing active address with that label to OTHERS
     if (["HOME", "WORK"].includes(parsed.data.label)) {
-        const existing = await UserAddressModel.findOne({
-            userId,
-            label: parsed.data.label,
-            isDeleted: false,
-            _id: { $ne: new mongoose.Types.ObjectId(addressId) }
-        });
-        if (existing) {
-            throw new ApiError(400, `An address with label ${parsed.data.label} already exists. Please choose a different label.`);
-        }
+        await UserAddressModel.updateMany(
+            {
+                userId,
+                label: parsed.data.label,
+                isDeleted: false,
+                _id: { $ne: new mongoose.Types.ObjectId(addressId) }
+            },
+            { $set: { label: "OTHERS" } }
+        );
     }
 
     const updatedAddress = await UserAddressModel.findOneAndUpdate(

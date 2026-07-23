@@ -56,9 +56,36 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         partnerId: providerId,
         status: "Active",
         endDate: { $gte: new Date() }
-    });
+    }).populate("planId");
     if (!activeSub) {
         throw new ApiError(403, "Active subscription required to accept jobs.");
+    }
+
+    const plan = activeSub.planId as any;
+    if (plan && plan.maxBookingsPerDay > 0) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Count doctor appointments accepted today
+        const doctorAppointmentsCount = await mongoose.model("DoctorAppointment").countDocuments({
+            doctorId: providerId,
+            status: { $in: ["Confirmed", "Completed", "Active", "IN_PROGRESS"] },
+            createdAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        // Count service requests accepted today
+        const serviceRequestsCount = await serviceRequestModel.countDocuments({
+            assignedProviderId: providerId,
+            status: { $in: ["ACCEPTED", "IN_PROGRESS", "COMPLETED"] },
+            updatedAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        const totalAcceptedToday = doctorAppointmentsCount + serviceRequestsCount;
+        if (totalAcceptedToday >= plan.maxBookingsPerDay) {
+            throw new ApiError(403, `You have reached your daily limit of ${plan.maxBookingsPerDay} bookings for your current plan.`);
+        }
     }
 
     // For broadcasted bookings: atomic claim — first partner wins, reject races
@@ -74,10 +101,10 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     }
 
     const payload = {
-        ...req.body,
+        ...(req.body || {}),
         serviceRequestId,
         providerId,
-        roleId: req.body.roleId || serviceRequestDetails.assignedRoleId?.toString() || providerDetails.roleId?.toString(),
+        roleId: req.body?.roleId || serviceRequestDetails.assignedRoleId?.toString() || providerDetails?.roleId?.toString(),
         patientId: (serviceRequestDetails.userId as any)?._id?.toString(),
         price: serviceRequestDetails.price || 0,
         status: "ACCEPTED"
@@ -131,24 +158,26 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
 // Partner rejects a service request
 export const createServiceRejected = asyncHandler(async (req, res) => {
     const providerId = req.user?.id;
-    const { requestId } = req.params;
-    if (!requestId) throw new ApiError(401, "Request id not found");
+    const requestId = req.params.serviceRequestId || req.params.requestId;
+    if (!requestId) throw new ApiError(400, "Request ID is required");
 
     const serviceRequestDetails = await serviceRequestModel.findById(requestId);
     if (!serviceRequestDetails) throw new ApiError(404, "Service Request not found");
 
-    // Authorization: only the partner this booking is actually assigned to may reject it.
-    if (serviceRequestDetails.assignedProviderId?.toString() !== providerId) {
+    const isBroadcasted = serviceRequestDetails.status === "BROADCASTED";
+    const isAssigned = serviceRequestDetails.assignedProviderId?.toString() === providerId;
+
+    if (!isBroadcasted && !isAssigned) {
         throw new ApiError(403, "This booking is not assigned to you");
     }
 
     const providerDetails = await DoctorModel.findById(providerId);
     
     const payload = {
-        ...req.body,
+        ...(req.body || {}),
         providerId,
         serviceRequestId: requestId,
-        roleId: req.body.roleId || (serviceRequestDetails as any).assignedRoleId?.toString() || providerDetails?.roleId?.toString(),
+        roleId: req.body?.roleId || (serviceRequestDetails as any).assignedRoleId?.toString() || providerDetails?.roleId?.toString(),
         patientId: (serviceRequestDetails.userId as any)?.toString(),
         price: serviceRequestDetails.price || 0,
         status: "REJECTED",
@@ -164,30 +193,32 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
     const createRejected = new serviceAcceptanceModal(parsed.data);
     await createRejected.save();
 
-    // Send the service request back to admin for re-assignment
-    await serviceRequestModel.findByIdAndUpdate(requestId, {
-        $set: { status: "RETURNED_TO_ADMIN" },
-        $unset: { assignedProviderId: "" }
-    });
-
-    // Notify admin (socket) that the booking was returned
-    try {
-        emitToRoom("admin", "booking_returned", {
-            bookingId: requestId,
-            providerId,
-            reason: req.body.reason || "Partner rejected"
+    if (!isBroadcasted) {
+        // Send the service request back to admin for re-assignment
+        await serviceRequestModel.findByIdAndUpdate(requestId, {
+            $set: { status: "RETURNED_TO_ADMIN" },
+            $unset: { assignedProviderId: "" }
         });
-    } catch (e) {
-        console.error("[Socket] booking_returned emit error:", e);
-    }
 
-    // Persistent admin bell alert — needs re-assignment
-    await notifyAdmin(
-        "↩️ Booking Returned to Admin",
-        `${providerDetails?.name || "A partner"} rejected a booking. It needs re-assignment.`,
-        "ServiceRequest",
-        String(requestId)
-    );
+        // Notify admin (socket) that the booking was returned
+        try {
+            emitToRoom("admin", "booking_returned", {
+                bookingId: requestId,
+                providerId,
+                reason: req.body.reason || "Partner rejected"
+            });
+        } catch (e) {
+            console.error("[Socket] booking_returned emit error:", e);
+        }
+
+        // Persistent admin bell alert — needs re-assignment
+        await notifyAdmin(
+            "↩️ Booking Returned to Admin",
+            `${providerDetails?.name || "A partner"} rejected a booking. It needs re-assignment.`,
+            "ServiceRequest",
+            String(requestId)
+        );
+    }
 
     // Notify customer their booking is being reassigned
     try {

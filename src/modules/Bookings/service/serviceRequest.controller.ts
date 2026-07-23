@@ -142,7 +142,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         catch (e) { console.error("[Referral] reward error:", e); }
     }
 
-    // ── Send Confirmation Email ─────────────────────────────────────────────
+    // ── Send Confirmation Email + FCM Push ─────────────────────────────────
     try {
         const patient = await Patient.findById(userId);
         if (patient?.email) {
@@ -157,6 +157,18 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                     location: patient.primaryAddressId ? "Stored Patient Address" : "Current Location",
                 },
             });
+        }
+        if (patient?.fcmToken) {
+            enqueuePush({
+                recipientId: patient._id as mongoose.Types.ObjectId,
+                recipientType: "patient",
+                fcmToken: patient.fcmToken,
+                title: "✅ Booking Confirmed!",
+                body: `Your ${bookingName} booking is confirmed. We'll assign a provider shortly.`,
+                data: { screen: `/booking/${newServiceRequest._id}` },
+                refType: "ServiceRequest",
+                refId: newServiceRequest._id as mongoose.Types.ObjectId,
+            }).catch(e => console.error("[Push] booking confirmation error:", e));
         }
     } catch (e) {
         console.error("[Email] service booking email error:", e);

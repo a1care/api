@@ -32,8 +32,12 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
 
     let totalAmount = req.body.totalAmount;
     const doctor = await DoctorModel.findById(doctorId);
-    if (!totalAmount && doctor) totalAmount = doctor.consultationFee;
-    if (totalAmount === undefined || totalAmount === null) throw new ApiError(400, "Consultation fee not found");
+    if (!totalAmount && doctor) {
+        totalAmount = doctor.consultationFee ?? doctor.homeConsultationFee ?? doctor.onlineConsultationFee;
+    }
+    if (totalAmount === undefined || totalAmount === null) {
+        totalAmount = 500; // Fallback default fee if doctor fee properties are not set
+    }
 
     const baseAmount = Number(totalAmount);
 

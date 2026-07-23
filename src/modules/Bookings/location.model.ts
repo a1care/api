@@ -8,6 +8,8 @@ export interface ILocation extends Document {
     heading: number;
     speed: number;
     isOnline: boolean;
+    lastOfflineAt?: Date;
+    lastOnlineAt?: Date;
 }
 
 const LocationSchema = new Schema<ILocation>(
@@ -18,7 +20,9 @@ const LocationSchema = new Schema<ILocation>(
         longitude: { type: Number, required: true },
         heading: { type: Number, default: 0 },
         speed: { type: Number, default: 0 },
-        isOnline: { type: Boolean, default: true }
+        isOnline: { type: Boolean, default: true },
+        lastOfflineAt: { type: Date },
+        lastOnlineAt: { type: Date }
     },
     { timestamps: true }
 );

@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { getPlans, createPlan, updatePlan, deletePlan, subscribe, getMySubscription, getHistory, getAdminSubscriptions, approveSubscription } from "./subscription.controller.js";
+import { getPlans, createPlan, updatePlan, deletePlan, subscribe, getMySubscription, getHistory, getAdminSubscriptions, approveSubscription, getCategories } from "./subscription.controller.js";
 import { protect } from "../../middlewares/protect.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
 
 const router = Router();
 
 // Partners/public may view plans and manage their own subscription
+router.get("/plans/categories", getCategories);
 router.get("/plans", getPlans);
 router.post("/subscribe", protect, subscribe);
 router.get("/my-active", protect, getMySubscription);

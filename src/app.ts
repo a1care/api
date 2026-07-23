@@ -39,7 +39,17 @@ app.use(cors({
         "https://admin.a1carehospital.in",
         "https://a1carehospital.in",
         /\.a1carehospital\.in$/,
-        ...(process.env.NODE_ENV !== "production" ? ["http://localhost:5173", "http://localhost:3000"] : []),
+        ...(process.env.NODE_ENV !== "production" ? [
+            // Vite admin panel
+            "http://localhost:5173",
+            "http://localhost:3000",
+            // Expo web (Metro picks ports 8081-8084, 19006)
+            "http://localhost:8081",
+            "http://localhost:8082",
+            "http://localhost:8083",
+            "http://localhost:8084",
+            "http://localhost:19006",
+        ] : []),
     ],
     credentials: true,
 }));
@@ -129,6 +139,9 @@ app.use("/api/role", roleRoutes)
 
 //doctors
 app.use('/api/doctor', doctorRoutes)
+app.use('/api/nurse', doctorRoutes)
+app.use('/api/ambulance', doctorRoutes)
+app.use('/api/rental', doctorRoutes)
 
 //address
 app.use('/api/patient/address', addressRoutes)
@@ -167,6 +180,7 @@ app.use('/api/patient', patientMedicalHistoryRoutes)
 app.use('/api/doctor/earnings', staffEarningsRoutes)
 app.use('/api/nurse/earnings', staffEarningsRoutes)
 app.use('/api/ambulance/earnings', staffEarningsRoutes)
+app.use('/api/rental/earnings', staffEarningsRoutes)
 app.use('/api/agora', agoraRoutes)
 app.use('/api/health-packages', healthPackageRoutes)
 

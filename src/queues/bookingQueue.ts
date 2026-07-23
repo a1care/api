@@ -8,7 +8,7 @@ const bookingQueue =
     ? new Queue("a1care-bookings", { connection })
     : null;
 
-const BROADCAST_TIMEOUT_MS = 30 * 60 * 1000; // 30 min: auto-return to admin if no partner claims
+const BROADCAST_TIMEOUT_MS = 1 * 60 * 1000; // 1 min: auto-return to admin if no partner claims
 const PARTNER_ACCEPTANCE_TIMEOUT_MS = 5 * 60 * 1000; // 5 min: auto-unassign if partner doesn't accept
 
 export async function scheduleBroadcastToAll(serviceRequestId: string) {

@@ -93,7 +93,7 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
       recipientType: "partner" as const,
       fcmToken: p.fcmToken ?? null,
     })),
-    "🆕 New Job Available!",
+    "🆕 New Booking Available!",
     `A new ${serviceName} booking near you — tap to accept.`,
     { screen: `/booking/${serviceRequestId}` },
     "ServiceRequest",
@@ -144,7 +144,7 @@ export async function runBroadcastTimeout(serviceRequestId: string): Promise<voi
 
   await notifyAdmin(
     "⏰ Booking Expired — No Partner Accepted",
-    `A broadcasted booking received no response from partners in 30 minutes. Please assign manually.`,
+    `A broadcasted booking received no response from partners in 1 minute. Please assign manually.`,
     "ServiceRequest",
     serviceRequestId
   );

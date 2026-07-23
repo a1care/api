@@ -19,6 +19,7 @@ export interface PatientDocument extends Document {
   deletionRequested?: boolean;
   deletionRequestedAt?: Date | null;
   deletedAt?: Date | null;
+  isDeleted?: boolean;
   tokenVersion?: number;
 }
 
@@ -99,6 +100,10 @@ const PatientSchema = new Schema<PatientDocument>(
     deletedAt: {
       type: Date,
       default: null
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false
     },
     tokenVersion: {
       type: Number,

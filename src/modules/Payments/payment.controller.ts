@@ -412,7 +412,25 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
     const statusIcon = isSuccess ? "✅" : "❌";
 
     res.send(`
-        <html><head><title>${statusMsg}</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+        <html><head>
+            <title>${statusMsg}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script>
+                try {
+                    const statusVal = "${isSuccess ? 'success' : 'failed'}";
+                    const txnIdVal = "${response.txnid || ''}";
+                    const messagePayload = { type: 'PAYMENT_COMPLETE', status: statusVal, txnId: txnIdVal };
+                    if (window.parent) {
+                        window.parent.postMessage(messagePayload, '*');
+                    }
+                    if (window.opener) {
+                        window.opener.postMessage(messagePayload, '*');
+                    }
+                } catch (e) {
+                    console.error("Failed to post message", e);
+                }
+            </script>
+        </head>
         <body style="font-family:sans-serif; text-align:center; padding-top:20%; background-color:#F8FAFC;">
             <div style="font-size:60px;">${statusIcon}</div>
             <h2 style="color:#1E293B;">${statusMsg}</h2>

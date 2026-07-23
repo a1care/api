@@ -11,6 +11,8 @@ export interface ISubscriptionPlan extends Document {
     features: string[];
     isRefundable: boolean;
     isActive: boolean;
+    maxBookingsPerDay: number; // 0 or -1 means unlimited
+    isFree: boolean;
 }
 
 const SubscriptionPlanSchema = new Schema<ISubscriptionPlan>(
@@ -25,6 +27,8 @@ const SubscriptionPlanSchema = new Schema<ISubscriptionPlan>(
         features: [{ type: String }],
         isRefundable: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
+        maxBookingsPerDay: { type: Number, default: 0 },
+        isFree: { type: Boolean, default: false },
     },
     { timestamps: true }
 );

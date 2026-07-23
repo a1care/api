@@ -28,6 +28,7 @@ import { NotificationModel } from "../Notifications/notification.model.js";
 import MedicalRecord from "../MedicalRecords/medicalRecord.model.js";
 import { UserAddressModel } from "../Address/address.model.js";
 import serviceAcceptanceModal from "../Bookings/service/serviceAcceptance.model.js";
+import PartnerSubscriptionPlan from "../PartnerSubscription/plan.model.js";
 import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
 import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
@@ -1075,6 +1076,37 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 
   if (user.email && user.name) {
     if (nextStatus === "Active") {
+      // Auto-subscribe the partner to the free/Basic Tier plan if they don't already have an active subscription
+      try {
+        const hasActiveSub = await PartnerSubscription.findOne({
+          partnerId: id,
+          status: "Active",
+          endDate: { $gte: new Date() }
+        });
+        if (!hasActiveSub) {
+          const freePlan = await PartnerSubscriptionPlan.findOne({
+            price: 0,
+            isActive: true
+          });
+          if (freePlan) {
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(startDate.getDate() + freePlan.validityDays);
+
+            await PartnerSubscription.create({
+              partnerId: id,
+              planId: freePlan._id,
+              startDate,
+              endDate,
+              status: "Active"
+            });
+            console.log(`[Auto-Subscribe] Automatically activated free plan for partner ${id}`);
+          }
+        }
+      } catch (subErr) {
+        console.error("[Auto-Subscribe] Error activating default free plan:", subErr);
+      }
+
       enqueueEmail({
         kind: "partner_approved",
         data: { email: user.email, fullName: user.name }
@@ -1608,7 +1640,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
           recipientId: partner._id as any,
           recipientType: "partner",
           fcmToken: partner.fcmToken,
-          title: "🚨 New Job — Accept Now!",
+          title: "🚨 New Booking — Accept Now!",
           body: `${serviceName} request near you. You have 5 minutes to accept.`,
           data: { screen: `/bookings`, type: "JOB_ASSIGNED", bookingId: String(booking._id) },
           refType: "ServiceRequest",
@@ -1634,7 +1666,7 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
           recipientId: partner._id as any,
           recipientType: "partner",
           fcmToken: partner.fcmToken,
-          title: "📋 New Job Assigned!",
+          title: "📋 New Booking Assigned!",
           body: `You have been assigned a ${serviceName} booking. Tap to review and accept.`,
           data: { screen: `/booking/${String(booking._id)}`, type: "JOB_ASSIGNED" },
           refType: "ServiceRequest",
@@ -1966,6 +1998,126 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
       openTickets: ticketCount,
       failedPayments: failedPaymentsCount
     }
+  }));
+});
+
+// ─── Commission Report (per-booking breakdown) ────────────────────────────────
+export const getAdminCommissionReport = asyncHandler(async (req, res) => {
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  const { from, to, page = 1, limit = 50 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  // Doctor appointments: completed + paid (strict) OR completed (fallback for older records)
+  const dateMatch: any = {
+    status: "Completed",
+    $or: [{ paymentStatus: "COMPLETED" }, { paymentStatus: { $exists: false } }, { totalAmount: { $gt: 0 } }]
+  };
+  // Service requests: just COMPLETED status (paymentStatus may not be set on all records)
+  const svcDateMatch: any = { status: "COMPLETED" };
+  if (from && to) {
+    const fromDate = new Date(from as string);
+    const toDate = new Date(to as string);
+    toDate.setHours(23, 59, 59, 999);
+    dateMatch.createdAt = { $gte: fromDate, $lte: toDate };
+    svcDateMatch.createdAt = { $gte: fromDate, $lte: toDate };
+  }
+
+  const [apptRows, svcRows] = await Promise.all([
+    doctorAppointmentModel.aggregate([
+      { $match: dateMatch },
+      {
+        $lookup: {
+          from: "doctors",
+          localField: "doctorId",
+          foreignField: "_id",
+          as: "doctor"
+        }
+      },
+      { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          bookingType: { $literal: "Doctor Consultation" },
+          partnerName: { $ifNull: ["$doctor.name", "Unknown"] },
+          grossAmount: "$totalAmount",
+          commissionPct: { $ifNull: ["$commissionPercentage", 20] },
+          commissionAmount: {
+            $ifNull: [
+              "$commissionAmount",
+              { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.2] }
+            ]
+          },
+          partnerEarning: {
+            $ifNull: [
+              "$partnerEarning",
+              { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.8] }
+            ]
+          },
+          createdAt: 1
+        }
+      }
+    ]),
+    serviceRequestModel.aggregate([
+      { $match: svcDateMatch },
+      {
+        $lookup: {
+          from: "doctors",
+          localField: "assignedProviderId",
+          foreignField: "_id",
+          as: "doctor"
+        }
+      },
+      { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          bookingType: { $ifNull: ["$serviceType", "Home Care Visit"] },
+          partnerName: { $ifNull: ["$doctor.name", "Unknown"] },
+          grossAmount: "$price",
+          commissionPct: { $ifNull: ["$commissionPercentage", 20] },
+          commissionAmount: {
+            $ifNull: [
+              "$commissionAmount",
+              { $multiply: [{ $ifNull: ["$price", 0] }, 0.2] }
+            ]
+          },
+          partnerEarning: {
+            $ifNull: [
+              "$partnerEarning",
+              { $multiply: [{ $ifNull: ["$price", 0] }, 0.8] }
+            ]
+          },
+          createdAt: 1
+        }
+      }
+    ])
+  ]);
+
+
+  // Merge + sort by date descending
+  const all = [...apptRows, ...svcRows].sort(
+    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const total = all.length;
+  const items = all.slice(skip, skip + Number(limit));
+
+  // Summary aggregates
+  const totalGross = all.reduce((acc: number, r: any) => acc + (r.grossAmount || 0), 0);
+  const totalCommission = all.reduce((acc: number, r: any) => acc + (r.commissionAmount || 0), 0);
+  const totalPartnerEarning = all.reduce((acc: number, r: any) => acc + (r.partnerEarning || 0), 0);
+
+  return res.status(200).json(new ApiResponse(200, "Commission report fetched", {
+    summary: {
+      totalGross,
+      totalCommission,
+      totalPartnerEarning,
+      totalBookings: total,
+    },
+    items,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(total / Number(limit))
   }));
 });
 
@@ -2317,21 +2469,14 @@ export const approveDeletion = asyncHandler(async (req, res) => {
 
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
 
-  let user;
+  let deletedUser;
   if (type === 'patient') {
-    user = await Patient.findById(id);
+    deletedUser = await Patient.findByIdAndDelete(id);
   } else {
-    user = await Doctor.findById(id);
+    deletedUser = await Doctor.findByIdAndDelete(id);
   }
 
-  if (!user) throw new ApiError(404, "User not found");
-
-  (user as any).isDeleted = true;
-  (user as any).deletedAt = new Date();
-  (user as any).deletionRequested = false;
-  (user as any).fcmToken = "";
-  (user as any).tokenVersion = ((user as any).tokenVersion ?? 0) + 1;
-  await user.save();
+  if (!deletedUser) throw new ApiError(404, "User not found");
 
   // Flush Redis token cache so the session is invalidated immediately (not after 60s TTL)
   try {
@@ -2345,10 +2490,10 @@ export const approveDeletion = asyncHandler(async (req, res) => {
     actorRole: (req as any).user?.role,
     action: "ACCOUNT_DELETED_BY_ADMIN",
     targetType: type === 'patient' ? "Patient" : "Doctor",
-    targetId: String(user._id),
+    targetId: String(id),
   });
 
-  return res.status(200).json(new ApiResponse(200, "Account successfully marked as deleted"));
+  return res.status(200).json(new ApiResponse(200, "Account permanently deleted successfully"));
 });
 
 const isValidTimeString = (value: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);

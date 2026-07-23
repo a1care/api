@@ -39,6 +39,7 @@ export interface DoctorDocument extends Document {
   deletionRequested?: boolean;
   deletionRequestedAt?: Date | null;
   deletedAt?: Date | null;
+  isDeleted?: boolean;
   tokenVersion?: number;
 }
 
@@ -190,6 +191,10 @@ const DoctorSchema = new Schema<DoctorDocument>(
     deletedAt: {
       type: Date,
       default: null
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false
     },
     tokenVersion: {
       type: Number,

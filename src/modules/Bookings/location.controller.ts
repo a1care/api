@@ -9,16 +9,26 @@ export const updateLocation = asyncHandler(async (req, res) => {
 
     if (!userId) throw new ApiError(401, "Not authorized");
 
+    const updateFields: any = {
+        latitude,
+        longitude,
+        heading,
+        speed,
+        userType: req.user?.role === 'Staff' ? 'Staff' : 'User'
+    };
+
+    if (isOnline !== undefined) {
+        updateFields.isOnline = isOnline;
+        if (isOnline === false) {
+            updateFields.lastOfflineAt = new Date();
+        } else if (isOnline === true) {
+            updateFields.lastOnlineAt = new Date();
+        }
+    }
+
     const location = await Location.findOneAndUpdate(
         { userId },
-        { 
-            latitude, 
-            longitude, 
-            heading, 
-            speed, 
-            isOnline,
-            userType: req.user?.role === 'Staff' ? 'Staff' : 'User'
-        },
+        updateFields,
         { upsert: true, new: true }
     );
 

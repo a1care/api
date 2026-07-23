@@ -6,7 +6,7 @@ import { getSystemSettings } from "../Admin/admin.controller.js";
 import { Patient } from "../Authentication/patient.model.js";
 import DoctorModel from "../Doctors/doctor.model.js";
 import { generateEasebuzzHash, verifyEasebuzzResponse } from "./easebuzz.utils.js";
-import { enqueueEmail } from "../../queues/communicationQueue.js";
+import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
 import { v4 as uuidv4 } from "uuid";
 
 const txNotExists = (description: string) => ({
@@ -141,6 +141,16 @@ export const handlePaymentResponse = asyncHandler(async (req, res) => {
                     },
                 });
             }
+            enqueuePush({
+                recipientId: userId,
+                recipientType: "patient",
+                fcmToken: patient?.fcmToken || null,
+                title: "💰 Wallet Credited",
+                body: `Your wallet has been successfully topped up with ₹${amount}.`,
+                data: { screen: "wallet" },
+                refType: "Wallet",
+                refId: userId,
+            }).catch((err) => console.error("Error queueing push for topup:", err));
         }
     }
 
@@ -172,18 +182,21 @@ export const addMoney = asyncHandler(async (req, res) => {
         throw new ApiError(400, "This adjustment has already been applied (Duplicate Description)");
     }
 
-    // ── Send Confirmation Email ───────────────────────────────────────
+    // ── Send Confirmation Email & Push Notification ───────────────────
     let userEmail: string | undefined;
     let userName: string | undefined;
+    let userFcmToken: string | undefined;
 
     if (onModel === "Patient") {
         const patient = await Patient.findById(targetUserId);
         userEmail = patient?.email;
         userName = patient?.name;
+        userFcmToken = patient?.fcmToken;
     } else {
         const staff = await DoctorModel.findById(targetUserId);
         userEmail = staff?.email;
         userName = staff?.name;
+        userFcmToken = (staff as any)?.fcmToken;
     }
 
     if (userEmail) {
@@ -197,6 +210,17 @@ export const addMoney = asyncHandler(async (req, res) => {
             },
         });
     }
+
+    enqueuePush({
+        recipientId: targetUserId as string,
+        recipientType: onModel === "Patient" ? "patient" : "partner",
+        fcmToken: userFcmToken || null,
+        title: "💰 Wallet Credited",
+        body: `Your wallet has been credited with ₹${amount}. Description: ${finalDescription}`,
+        data: { screen: "wallet" },
+        refType: "Wallet",
+        refId: wallet?._id as any,
+    }).catch((err) => console.error("Error queueing push for manual credit:", err));
 
     return res.status(200).json(new ApiResponse(200, "Money added successfully", wallet));
 });
