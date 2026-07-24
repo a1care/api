@@ -35,6 +35,23 @@ jobs:
             # Pull the latest changes from GitHub
             git pull origin main
             
+            # --- RUN DIAGNOSTICS ---
+            echo "=== CURRENT DIRECTORY & BRANCH ==="
+            pwd
+            git status
+            
+            echo "=== DOCKER STATUS ==="
+            docker ps -a
+            
+            echo "=== PM2 STATUS ==="
+            pm2 status || echo "PM2 not found or not running"
+            
+            echo "=== ACTIVE PORTS (3000 / 80 / 443) ==="
+            sudo netstat -tulpn | grep -E "3000|80|443" || sudo ss -tulpn | grep -E "3000|80|443" || echo "Netstat/ss not available or no ports active"
+            
+            echo "=== HOST NGINX CONFIGS ==="
+            sudo cat /etc/nginx/sites-enabled/* /etc/nginx/conf.d/* 2>/dev/null || echo "No local Nginx configs found"
+
             # Build and restart containers using Docker Compose
             docker compose up -d --build
             
@@ -50,3 +67,4 @@ jobs:
             docker builder prune -f
             
             echo "Deployment complete and cleanup finished."
+
