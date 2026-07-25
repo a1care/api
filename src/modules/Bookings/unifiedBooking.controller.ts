@@ -34,6 +34,15 @@ const formatTimeSlot = (startTime?: Date | string, endTime?: Date | string) => {
 /**
  * Merges Doctor Appointments and Service Requests into a single feed for the Partner.
  */
+const formatFeedAddress = (addrObj: any, fallbackLoc?: any) => {
+    if (!addrObj && !fallbackLoc?.address) return "Patient Location";
+    if (addrObj) {
+        const full = addrObj.address || [addrObj.houseNo, addrObj.addressLine1, addrObj.street, addrObj.landmark, addrObj.city, addrObj.state, addrObj.pincode].filter(Boolean).join(", ");
+        if (full) return full;
+    }
+    return fallbackLoc?.address || "Patient Location";
+};
+
 export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
     const providerId = req.user?.id;
     if (!providerId) throw new ApiError(401, "Provider ID missing");
@@ -70,9 +79,11 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                     (status === 'all') ? ["ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED", "COMPLETED", "CANCELLED"] :
                     ["ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED"];
 
-    if (!isOnline) {
-        srStatus = srStatus.filter(s => s !== "PARTNER_ASSIGNED");
-    }
+    // We no longer filter out PARTNER_ASSIGNED when offline, because if an admin manually
+    // assigned a booking, the partner needs to see it and respond.
+    // if (!isOnline) {
+    //     srStatus = srStatus.filter(s => s !== "PARTNER_ASSIGNED");
+    // }
 
     const commissionPct = await getActiveCommissionRate(providerId);
     const earningRatio = (100 - commissionPct) / 100;
@@ -178,7 +189,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             partnerEarning: (s as any).partnerEarning || (s.price * earningRatio),
             paymentMode: (s as any).paymentMode || "ONLINE",
             paymentStatus: (s as any).paymentStatus || "PENDING",
-            location: { address: (s.addressId as any)?.address || (s as any).location?.address || "Patient Location" },
+            location: { address: formatFeedAddress(s.addressId, (s as any).location) },
             createdAt: (s as any).createdAt,
             acceptanceDeadline: (s as any).acceptanceDeadline
         })),
@@ -202,7 +213,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                 partnerEarning: s.partnerEarning || (s.price * earningRatio),
                 paymentMode: s.paymentMode || "ONLINE",
                 paymentStatus: s.paymentStatus || "PENDING",
-                location: { address: s.addressId?.address || s.location?.address || "Patient Location" },
+                location: { address: formatFeedAddress(s.addressId, s.location) },
                 createdAt: s.createdAt,
                 acceptanceDeadline: s.acceptanceDeadline
             };
@@ -219,7 +230,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             partnerEarning: s.partnerEarning || (s.price * earningRatio),
             paymentMode: s.paymentMode || "ONLINE",
             paymentStatus: s.paymentStatus || "PENDING",
-            location: { address: s.addressId?.address || s.location?.address || "Patient Location" },
+            location: { address: formatFeedAddress(s.addressId, s.location) },
             createdAt: s.createdAt
         })),
     ];

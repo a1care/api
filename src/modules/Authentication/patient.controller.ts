@@ -105,12 +105,17 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
       }
 
       const token = jwt.sign(
-        { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0 },
+        { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0, type: 'access' },
         process.env.JWT_SECRET as string,
         { expiresIn: "7d" }
       );
+      const refreshToken = jwt.sign(
+        { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0, type: 'refresh' },
+        process.env.JWT_SECRET as string,
+        { expiresIn: "30d" }
+      );
 
-      return res.status(200).json(new ApiResponse(200, "Verification successful", { token }));
+      return res.status(200).json(new ApiResponse(200, "Verification successful", { token, refreshToken }));
     } else if (storedOtp) {
        throw new ApiError(400, "Invalid OTP provided.");
     }
@@ -165,12 +170,17 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
 
     // 4. Generate your own custom JWT Token
     const token = jwt.sign(
-      { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0 },
+      { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0, type: 'access' },
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }
-    )
+    );
+    const refreshToken = jwt.sign(
+      { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0, type: 'refresh' },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "30d" }
+    );
 
-    return res.status(200).json(new ApiResponse(200, "Firebase Verification successful", { token }))
+    return res.status(200).json(new ApiResponse(200, "Firebase Verification successful", { token, refreshToken }))
 
   } catch (error: any) {
     console.error("Firebase Token Error:", error);
@@ -291,7 +301,40 @@ export const requestPatientDeletion = asyncHandler(async (req, res) => {
   try {
     const RedisClient = (await import("../../configs/redisConnect.js")).default;
     await RedisClient.del(`tv:patient:${patientId}`);
-  } catch { /* non-fatal */ }
+  } catch (err) {
+    console.error("Redis flush error on patient delete:", err);
+  }
 
-  return res.status(200).json(new ApiResponse(200, "Account deleted successfully. Admin will process it shortly.", {}));
+  return res.status(200).json(new ApiResponse(200, "Account deletion requested successfully. You have been logged out.", {}));
+});
+
+export const refreshTokenForPatient = asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) throw new ApiError(400, "Refresh token is required");
+
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET as string) as any;
+        if (decoded.type !== 'refresh') throw new ApiError(401, "Invalid token type");
+
+        const patient = await Patient.findById(decoded.userId);
+        if (!patient) throw new ApiError(401, "User not found");
+        if (patient.isDeleted || patient.deletedAt) throw new ApiError(401, "Account deleted");
+        if (patient.tokenVersion !== decoded.tv) throw new ApiError(401, "Token revoked");
+
+        const accessToken = jwt.sign(
+            { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0, type: 'access' },
+            process.env.JWT_SECRET as string,
+            { expiresIn: "7d" }
+        );
+
+        const newRefreshToken = jwt.sign(
+            { mobileNumber: patient.mobileNumber, userId: patient._id, tv: patient.tokenVersion || 0, type: 'refresh' },
+            process.env.JWT_SECRET as string,
+            { expiresIn: "30d" }
+        );
+
+        return res.status(200).json(new ApiResponse(200, "Token refreshed", { token: accessToken, refreshToken: newRefreshToken }));
+    } catch (error) {
+        throw new ApiError(401, "Invalid or expired refresh token");
+    }
 });

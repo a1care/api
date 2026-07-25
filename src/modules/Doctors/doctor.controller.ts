@@ -191,13 +191,18 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       }
 
       const token = jwt.sign(
-        { staffId: staff._id, tv: staff.tokenVersion || 0 },
+        { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'access' },
         process.env.JWT_SECRET!,
         { expiresIn: "7d" }
       );
+      const refreshToken = jwt.sign(
+        { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'refresh' },
+        process.env.JWT_SECRET!,
+        { expiresIn: "30d" }
+      );
 
       return res.status(200).json(
-        new ApiResponse(200, "Verification successful", { token })
+        new ApiResponse(200, "Verification successful", { token, refreshToken })
       );
     } else if (storedOtp) {
        throw new ApiError(400, "Invalid OTP provided.");
@@ -261,13 +266,18 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
     // 4. Generate the JWT Token for the rest of the app
     const token = jwt.sign(
-      { staffId: staff._id, tv: staff.tokenVersion || 0 },
+      { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'access' },
       process.env.JWT_SECRET!,
       { expiresIn: "7d" }
     );
+    const refreshToken = jwt.sign(
+      { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'refresh' },
+      process.env.JWT_SECRET!,
+      { expiresIn: "30d" }
+    );
 
     return res.status(200).json(
-      new ApiResponse(200, "Firebase Verification successful", { token })
+      new ApiResponse(200, "Firebase Verification successful", { token, refreshToken })
     );
 
   } catch (error: any) {
@@ -426,7 +436,12 @@ export const registerStaff = asyncHandler(async (req, res) => {
         if (!existingSub) {
            const startDate = new Date();
            const endDate = new Date();
-           endDate.setDate(startDate.getDate() + (freePlan.validityDays || 30));
+           
+           if (freePlan.validityDays === 0) {
+               endDate.setFullYear(endDate.getFullYear() + 100); // Lifetime plan
+           } else {
+               endDate.setDate(startDate.getDate() + (freePlan.validityDays || 30));
+           }
 
            await PartnerSubscription.create({
               partnerId: staffId,
@@ -486,7 +501,9 @@ export const requestStaffDeletion = asyncHandler(async (req, res) => {
   try {
     const RedisClient = (await import("../../configs/redisConnect.js")).default;
     await RedisClient.del(`tv:staff:${staffId}`);
-  } catch { /* non-fatal */ }
+  } catch (err) {
+    console.error("Redis flush error on partner delete:", err);
+  }
 
   await notifyAdmin(
     "🗑️ Account Deletion Requested",
@@ -495,6 +512,36 @@ export const requestStaffDeletion = asyncHandler(async (req, res) => {
     String(staffId)
   );
 
-  return res.status(200).json(new ApiResponse(200, "Account deletion requested. Our team will process it shortly.", {}));
+  return res.status(200).json(new ApiResponse(200, "Account deletion requested successfully. You have been logged out.", {}));
 });
 
+export const refreshTokenForDoctor = asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) throw new ApiError(400, "Refresh token is required");
+
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET!) as any;
+        if (decoded.type !== 'refresh') throw new ApiError(401, "Invalid token type");
+
+        const staff = await doctorModel.findById(decoded.staffId);
+        if (!staff) throw new ApiError(401, "User not found");
+        if (staff.isDeleted || staff.deletedAt) throw new ApiError(401, "Account deleted");
+        if (staff.tokenVersion !== decoded.tv) throw new ApiError(401, "Token revoked");
+
+        const accessToken = jwt.sign(
+            { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'access' },
+            process.env.JWT_SECRET!,
+            { expiresIn: "7d" }
+        );
+
+        const newRefreshToken = jwt.sign(
+            { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'refresh' },
+            process.env.JWT_SECRET!,
+            { expiresIn: "30d" }
+        );
+
+        return res.status(200).json(new ApiResponse(200, "Token refreshed", { token: accessToken, refreshToken: newRefreshToken }));
+    } catch (error) {
+        throw new ApiError(401, "Invalid or expired refresh token");
+    }
+});

@@ -86,7 +86,12 @@ export const subscribe = async (req: Request, res: Response) => {
 
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setDate(startDate.getDate() + plan.validityDays);
+        
+        if (plan.validityDays === 0) {
+            endDate.setFullYear(endDate.getFullYear() + 100); // Lifetime
+        } else {
+            endDate.setDate(startDate.getDate() + plan.validityDays);
+        }
 
         // Cancel any existing Active OR Pending subscriptions first
         await PartnerSubscription.updateMany(
@@ -131,11 +136,28 @@ export const subscribe = async (req: Request, res: Response) => {
 export const getMySubscription = async (req: Request, res: Response) => {
     try {
         const partnerId = (req as any).user?.id;
-        const subscription = await PartnerSubscription.findOne({
+        
+        let subscription: any = await PartnerSubscription.findOne({
             partnerId,
             status: "Active",
-            endDate: { $gte: new Date() }
-        }).populate("planId");
+        }).populate("planId").sort({ createdAt: -1 });
+
+        if (subscription) {
+            const isLifetime = subscription.planId?.validityDays === 0;
+            const isExpired = new Date(subscription.endDate).getTime() < new Date().getTime();
+            
+            if (isLifetime) {
+                // Auto-heal old lifetime subscriptions that were incorrectly assigned 30 days
+                if (isExpired || new Date(subscription.endDate).getFullYear() < 2050) {
+                    const newEndDate = new Date();
+                    newEndDate.setFullYear(newEndDate.getFullYear() + 100);
+                    subscription.endDate = newEndDate;
+                    await PartnerSubscription.findByIdAndUpdate(subscription._id, { endDate: newEndDate });
+                }
+            } else if (isExpired) {
+                subscription = null; // actually expired
+            }
+        }
 
         res.status(200).json({ success: true, data: subscription });
     } catch (error: any) {
@@ -198,11 +220,26 @@ export const approveSubscription = async (req: Request, res: Response) => {
 };
 export const getActiveCommissionRate = async (partnerId: string) => {
     try {
-        const subscription: any = await PartnerSubscription.findOne({
+        let subscription: any = await PartnerSubscription.findOne({
             partnerId,
             status: "Active",
-            endDate: { $gte: new Date() }
-        }).populate("planId");
+        }).populate("planId").sort({ createdAt: -1 });
+
+        if (subscription) {
+            const isLifetime = subscription.planId?.validityDays === 0;
+            const isExpired = new Date(subscription.endDate).getTime() < new Date().getTime();
+            
+            if (isLifetime) {
+                if (isExpired || new Date(subscription.endDate).getFullYear() < 2050) {
+                    const newEndDate = new Date();
+                    newEndDate.setFullYear(newEndDate.getFullYear() + 100);
+                    subscription.endDate = newEndDate;
+                    await PartnerSubscription.findByIdAndUpdate(subscription._id, { endDate: newEndDate });
+                }
+            } else if (isExpired) {
+                subscription = null;
+            }
+        }
 
         if (subscription && subscription.planId) {
             return subscription.planId.commissionPercentage;
