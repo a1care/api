@@ -90,14 +90,18 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
 
     // For broadcasted bookings: atomic claim — first partner wins, reject races
     if (isBroadcasted) {
+        console.info(`[BOOKING] [CLAIM_ATTEMPT] [${serviceRequestId}] Partner ${providerId} attempting to claim broadcasted booking.`);
         const claimed = await serviceRequestModel.findOneAndUpdate(
             { _id: serviceRequestId, status: "BROADCASTED" },
             { $set: { status: "ACCEPTED", assignedProviderId: new mongoose.Types.ObjectId(providerId!) } },
             { new: true }
         );
         if (!claimed) {
+            console.warn(`[BOOKING] [CLAIM_FAIL] [${serviceRequestId}] Partner ${providerId} failed to claim (race condition).`);
             throw new ApiError(409, "Sorry, another partner just claimed this job. Check back for the next one!");
         }
+    } else {
+        console.info(`[BOOKING] [CLAIM_ATTEMPT] [${serviceRequestId}] Partner ${providerId} accepting directly assigned booking.`);
     }
 
     const payload = {
@@ -127,6 +131,8 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     // Create acceptance record
     const newAcceptance = new serviceAcceptanceModal(parsed.data);
     await newAcceptance.save();
+
+    console.info(`[BOOKING] [CLAIM_SUCCESS] [${serviceRequestId}] Successfully accepted by Partner ${providerId}`);
 
     // Emit real-time status update to booking room
     emitToRoom(serviceRequestId, 'booking_status_updated', { bookingId: serviceRequestId, status: 'ACCEPTED' });

@@ -3,64 +3,95 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { Patient } from "../Authentication/patient.model.js";
+import Doctor from "../Doctors/doctor.model.js";
 import Referral from "./referral.model.js";
+import ReferralConfig from "./referralConfig.model.js";
 import { creditWalletAtomic } from "../Wallet/wallet.controller.js";
 
-const REFERRAL_REWARD = 100; // ₹100 wallet credit for referrer
+// Fetch dynamic config
+const getConfig = async () => {
+  let config = await ReferralConfig.findOne();
+  if (!config) {
+    config = await ReferralConfig.create({ customerRewardAmount: 100, partnerRewardAmount: 100 });
+  }
+  return config;
+};
 
-/** Generate a unique 6-char uppercase referral code */
 const generateCode = async (): Promise<string> => {
   let code: string;
   let exists = true;
   do {
     code = crypto.randomBytes(3).toString("hex").toUpperCase();
-    exists = !!(await Patient.findOne({ referralCode: code }));
+    const patientExists = await Patient.findOne({ referralCode: code });
+    const doctorExists = await Doctor.findOne({ referralCode: code });
+    exists = !!(patientExists || doctorExists);
   } while (exists);
   return code;
 };
 
-/** GET /api/referral/my-code — returns current patient's referral code */
 export const getMyReferralCode = asyncHandler(async (req, res) => {
-  const patientId = req.user?.id;
-  const patient = await Patient.findById(patientId).select("referralCode name mobileNumber");
-  if (!patient) throw new ApiError(404, "Patient not found");
+  const userId = req.user?.id;
+  const role = req.user?.role; // 'Patient' or 'Staff'
+  
+  let user;
+  if (role === 'Patient') {
+    user = await Patient.findById(userId).select("referralCode name mobileNumber");
+  } else {
+    user = await Doctor.findById(userId).select("referralCode name mobileNumber");
+  }
+  
+  if (!user) throw new ApiError(404, "User not found");
 
   // Auto-generate if missing (lazy init)
-  if (!patient.referralCode) {
-    patient.referralCode = await generateCode();
-    await patient.save();
+  if (!user.referralCode) {
+    user.referralCode = await generateCode();
+    await user.save();
   }
+
+  const config = await getConfig();
+  const reward = role === 'Patient' ? config.customerRewardAmount : config.partnerRewardAmount;
 
   return res.status(200).json(
     new ApiResponse(200, "Referral code fetched", {
-      referralCode: patient.referralCode,
-      shareMessage: `Use my code ${patient.referralCode} on A1Care to get ₹${REFERRAL_REWARD} off your first booking!`,
+      referralCode: user.referralCode,
+      shareMessage: `Use my code ${user.referralCode} on A1Care to get ₹${reward} off your first booking/job!`,
+      rewardAmount: reward,
     })
   );
 });
 
-/** POST /api/referral/validate — preview discount before booking */
 export const validateReferralCode = asyncHandler(async (req, res) => {
-  const patientId = req.user?.id;
+  const userId = req.user?.id;
+  const role = req.user?.role;
   const { code } = req.body;
   if (!code) throw new ApiError(400, "Referral code is required");
 
-  const referrer = await Patient.findOne({ referralCode: code.toUpperCase().trim() }).select("_id name referralCode");
+  let referrer: any = await Patient.findOne({ referralCode: code.toUpperCase().trim() }).select("_id name referralCode");
+  let referrerModel = "Patient";
+  
+  if (!referrer) {
+    referrer = await Doctor.findOne({ referralCode: code.toUpperCase().trim() }).select("_id name referralCode");
+    referrerModel = "Doctor";
+  }
+  
   if (!referrer) throw new ApiError(404, "Invalid referral code");
 
-  if (String(referrer._id) === String(patientId)) {
+  if (String(referrer._id) === String(userId)) {
     throw new ApiError(400, "You cannot use your own referral code");
   }
 
-  // Check if this patient already used a referral code
-  const alreadyUsed = await Referral.findOne({ refereeId: patientId });
+  // Check if this user already used a referral code
+  const alreadyUsed = await Referral.findOne({ refereeId: userId });
   if (alreadyUsed) throw new ApiError(400, "You have already used a referral code");
+
+  const config = await getConfig();
+  const reward = referrerModel === 'Patient' ? config.customerRewardAmount : config.partnerRewardAmount;
 
   return res.status(200).json(
     new ApiResponse(200, "Valid referral code", {
       referrerId: referrer._id,
       referrerName: referrer.name || "A1Care Member",
-      rewardAmount: REFERRAL_REWARD,
+      rewardAmount: reward,
     })
   );
 });
@@ -70,28 +101,38 @@ export const validateReferralCode = asyncHandler(async (req, res) => {
  * Credits the referrer ₹100 and marks the referral REWARDED.
  */
 export const applyReferralReward = async (
-  patientId: string,
+  userId: string,
+  userModel: "Patient" | "Doctor",
   referralCode: string,
-  bookingId: string
+  bookingId?: string
 ): Promise<void> => {
   try {
     const code = referralCode.toUpperCase().trim();
-    const referrer = await Patient.findOne({ referralCode: code }).select("_id");
+    let referrer: any = await Patient.findOne({ referralCode: code }).select("_id");
+    let referrerModel = "Patient";
+    
+    if (!referrer) {
+      referrer = await Doctor.findOne({ referralCode: code }).select("_id");
+      referrerModel = "Doctor";
+    }
+    
     if (!referrer) return;
 
-    if (String(referrer._id) === String(patientId)) return;
+    if (String(referrer._id) === String(userId)) return;
 
-    // Race-safe: the unique index on refereeId means only ONE Referral can ever be
-    // inserted per referee. If two concurrent bookings race here, the second insert
-    // throws a duplicate-key error and we bail without double-crediting the referrer.
     let referral;
+    const config = await getConfig();
+    const reward = referrerModel === 'Patient' ? config.customerRewardAmount : config.partnerRewardAmount;
+
     try {
       referral = await Referral.create({
         referrerId: referrer._id,
-        refereeId: patientId,
+        referrerModel,
+        refereeId: userId,
+        refereeModel: userModel,
         referralCode: code,
         status: "REWARDED",
-        rewardAmount: REFERRAL_REWARD,
+        rewardAmount: reward,
         appliedOnBookingId: bookingId,
       });
     } catch (e: any) {
@@ -99,14 +140,14 @@ export const applyReferralReward = async (
       throw e;
     }
 
-    // Credit referrer's wallet (idempotent on the referral id)
+    // Credit referrer's wallet
     await creditWalletAtomic(
       String(referrer._id),
-      REFERRAL_REWARD,
+      reward,
       `REFERRAL_REWARD:${referral._id}`
     );
 
-    console.log(`[Referral] ₹${REFERRAL_REWARD} credited to ${referrer._id} for referral code ${code}`);
+    console.log(`[Referral] ₹${reward} credited to ${referrer._id} for referral code ${code}`);
   } catch (err) {
     console.error("[Referral] applyReferralReward error:", err);
   }
@@ -128,14 +169,39 @@ export const getReferralStats = asyncHandler(async (req, res) => {
       .limit(Number(limit)),
   ]);
 
+  // sum of all rewardAmounts
+  const totalRewardPaidAggr = await Referral.aggregate([
+    { $match: { status: "REWARDED" } },
+    { $group: { _id: null, total: { $sum: "$rewardAmount" } } }
+  ]);
+  const totalRewardPaid = totalRewardPaidAggr[0]?.total || 0;
+
   return res.status(200).json(
     new ApiResponse(200, "Referral stats fetched", {
       items: referrals,
       total,
       rewarded,
-      totalRewardPaid: rewarded * REFERRAL_REWARD,
+      totalRewardPaid,
       page: Number(page),
       totalPages: Math.ceil(total / Number(limit)),
     })
   );
+});
+
+// Admin config routes
+export const getReferralConfig = asyncHandler(async (req, res) => {
+  const config = await getConfig();
+  return res.status(200).json(new ApiResponse(200, "Config fetched", config));
+});
+
+export const updateReferralConfig = asyncHandler(async (req, res) => {
+  const { customerRewardAmount, partnerRewardAmount } = req.body;
+  let config = await ReferralConfig.findOne();
+  if (!config) {
+    config = new ReferralConfig();
+  }
+  if (customerRewardAmount !== undefined) config.customerRewardAmount = customerRewardAmount;
+  if (partnerRewardAmount !== undefined) config.partnerRewardAmount = partnerRewardAmount;
+  await config.save();
+  return res.status(200).json(new ApiResponse(200, "Config updated", config));
 });

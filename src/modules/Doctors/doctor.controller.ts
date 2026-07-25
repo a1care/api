@@ -6,6 +6,7 @@ import generateOtp from "../../utils/generateOtp.js";
 import doctorModel from "./doctor.model.js";
 import doctorValidation from "./doctor.schema.js";
 import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
+import PartnerSubscriptionPlan from "../PartnerSubscription/plan.model.js";
 import jwt from 'jsonwebtoken'
 import { v1 as uuidv4 } from "uuid";
 import { hmacHash } from "../../utils/Hmac.js";
@@ -324,7 +325,8 @@ export const registerStaff = asyncHandler(async (req, res) => {
   const fields = [
     'name', 'gender', 'startExperience', 'specialization', 'about',
     'workingHours', 'serviceRadius', 'roleId', 'role', 'consultationFee', 'homeConsultationFee',
-    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage', 'email', 'dateOfBirth'
+    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage', 'email', 'dateOfBirth',
+    'vehicleNumber', 'vehicleType', 'businessName', 'gstNumber'
   ];
 
   fields.forEach(field => {
@@ -352,15 +354,16 @@ export const registerStaff = asyncHandler(async (req, res) => {
       throw new ApiError(403, "Authentication pending. Please wait for admin to verify your documents.");
     }
 
-    // 2. Subscription Check (Optional: Allow for now but warn/restrict later)
+    // 2. Subscription Check
     const activeSub = await PartnerSubscription.findOne({
       partnerId: staffId,
       status: "Active",
       endDate: { $gte: new Date() }
     });
     
-    // IF we want to strictly enforce it:
-    // if (!activeSub) throw new ApiError(403, "Active subscription required to go online.");
+    if (!activeSub) {
+      throw new ApiError(403, "Active subscription required to go online. Please upgrade your plan.");
+    }
   }
 
   // Handle specific overrides if necessary
@@ -398,9 +401,46 @@ export const registerStaff = asyncHandler(async (req, res) => {
     await notifyAdmin(
       "🧑‍⚕️ New Partner Registration",
       `${updatedStaff.name} registered and is awaiting KYC verification.`,
-      "Partner",
+      "staff",
       String(updatedStaff._id)
     );
+
+    // AUTO-ACTIVATE FREE PLAN
+    try {
+      let roleName = "All";
+      if (updatedStaff.role?.name) {
+        roleName = updatedStaff.role.name;
+      } else if (updatedStaff.roleId) {
+        const roleDoc = await mongoose.model("Role").findById(updatedStaff.roleId);
+        if (roleDoc) roleName = roleDoc.name;
+      }
+      
+      const freePlan = await PartnerSubscriptionPlan.findOne({
+        isFree: true,
+        isActive: true,
+        $or: [{ category: { $regex: new RegExp(`^${roleName}$`, 'i') } }, { category: { $regex: /^all$/i } }]
+      });
+
+      if (freePlan) {
+        const existingSub = await PartnerSubscription.findOne({ partnerId: staffId });
+        if (!existingSub) {
+           const startDate = new Date();
+           const endDate = new Date();
+           endDate.setDate(startDate.getDate() + (freePlan.validityDays || 30));
+
+           await PartnerSubscription.create({
+              partnerId: staffId,
+              planId: freePlan._id,
+              startDate,
+              endDate,
+              status: "Active"
+           });
+           console.log(`[SUBSCRIPTION] Auto-assigned Free Plan to ${updatedStaff.name}`);
+        }
+      }
+    } catch (subErr) {
+      console.error("[SUBSCRIPTION] Failed to auto-assign free plan:", subErr);
+    }
   }
 
   // Alert admins when a previously-rejected partner re-submits for review

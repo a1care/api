@@ -53,40 +53,45 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
     _id: { $in: subscribedPartnerIds },
     roleId: { $in: allowedRoleObjectIds },
     status: "Active",
-    fcmToken: { $exists: true, $ne: null },
   }).select("_id fcmToken serviceRadius");
 
   // 2. Filter partners by Radius
   const partnersInRadius: any[] = [];
   
-  // Exclude partners whose stored location is stale (app killed/offline) so dead
-  // partners don't fill the broadcast list with out-of-date coordinates.
-  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
+  // Exclude partners whose stored location is stale (app killed/offline)
+  const staleThreshold = new Date(Date.now() - 4 * 60 * 60 * 1000); // 4 hours
 
   if (userLat && userLng) {
     for (const partner of activePartners) {
-        const partnerLoc = await Location.findOne({ userId: partner._id, updatedAt: { $gte: staleThreshold } });
+        const partnerLoc = await Location.findOne({ userId: partner._id });
         if (partnerLoc && partnerLoc.latitude && partnerLoc.longitude) {
             const distance = calculateDistance(userLat, userLng, partnerLoc.latitude, partnerLoc.longitude);
-            const radius = partner.serviceRadius || 0;
+            const radius = partner.serviceRadius && partner.serviceRadius > 0 ? partner.serviceRadius : 50; // Default 50km
             
             console.log(`[GEO] Partner ${partner._id} is ${distance.toFixed(2)}km away. Allowed: ${radius}km`);
             
-            if (distance <= radius || radius === 0) { // radius=0 could mean "No Limit" or "Not Set"
+            if (distance <= radius) {
                 partnersInRadius.push(partner);
             }
+        } else {
+            // Partner has no location stored — include them anyway (they may be new)
+            console.log(`[GEO] Partner ${partner._id} has no location — including in broadcast`);
+            partnersInRadius.push(partner);
         }
     }
   } else {
-    // If user's location isn't provided (unlikely), broadcast to all matching active roles
+    // If user's location isn't provided, broadcast to all matching active roles
     partnersInRadius.push(...activePartners);
   }
 
-  if (partnersInRadius.length === 0) {
-    console.log(`[BROADCAST] No partners found within radius for request ${serviceRequestId}`);
-  }
-
   const serviceName = (request.childServiceId as any)?.name ?? (request.healthPackageId as any)?.name ?? "a service";
+  console.info(`[BOOKING] [BROADCAST_START] [${serviceRequestId}] Broadcasting ${serviceName} to active partners with roles: ${allowedRoleIds}`);
+
+  if (partnersInRadius.length === 0) {
+    console.warn(`[BOOKING] [BROADCAST_FAIL] [${serviceRequestId}] No partners found within radius or with active subscriptions.`);
+  } else {
+    console.info(`[BOOKING] [BROADCAST_SENT] [${serviceRequestId}] Found ${partnersInRadius.length} eligible partners in radius. Broadcasting push notifications.`);
+  }
   await enqueuePushToMany(
     partnersInRadius.map((p) => ({
       recipientId: p._id as mongoose.Types.ObjectId,

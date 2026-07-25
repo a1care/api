@@ -1550,10 +1550,10 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
   if (isDirectAssign) {
     updatePayload.assignedProviderId = assignedProviderId;
   }
-  // Rapido-style: when admin assigns a partner, set 5-min acceptance deadline
+  // Rapido-style: when admin assigns a partner, set 2-min acceptance deadline
   const isNewAssignment = assignedProviderId && status === "PARTNER_ASSIGNED";
   if (isNewAssignment) {
-    updatePayload.acceptanceDeadline = new Date(Date.now() + 5 * 60 * 1000);
+    updatePayload.acceptanceDeadline = new Date(Date.now() + 2 * 60 * 1000);
     updatePayload.status = "PARTNER_ASSIGNED";
   }
 
@@ -1562,6 +1562,8 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
     .populate("childServiceId")
     .populate("userId");
   if (!booking) throw new ApiError(404, "Service booking not found");
+
+  console.info(`[BOOKING] [ADMIN_OVERRIDE] [${id}] Admin changed status to ${status}${isDirectAssign ? ` and assigned to Partner ${assignedProviderId}` : ''}`);
 
   if (status === "ACCEPTED" || status === "CONFIRMED" || status === "Confirmed") {
     await HospitalBooking.findOneAndUpdate(

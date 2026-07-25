@@ -89,11 +89,13 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             status: { $in: srStatus }
         }).populate("userId", "name mobileNumber profileImage").populate("childServiceId").populate("addressId"),
 
-        (isOnline && (status === 'Pending' || status === 'Missing' || status === 'all' || !status)) ? (async () => {
+        // Always fetch broadcasted bookings regardless of online status
+        // so the FloatingBookingAlert always works in APK
+        (async () => {
             const partnerRoleId = provider.roleId;
 
             let timeQuery: any = {};
-            if (isOnline && status === 'Missing') {
+            if (status === 'Missing') {
                 if (partnerLoc && partnerLoc.lastOfflineAt && partnerLoc.lastOnlineAt) {
                     timeQuery.createdAt = {
                         $gte: partnerLoc.lastOfflineAt,
@@ -103,6 +105,10 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                     timeQuery._id = null;
                 }
             }
+
+            // Only skip broadcasted bookings when explicitly filtering for non-pending statuses
+            const skipBroadcast = (status === 'Completed' || status === 'Cancelled');
+            if (skipBroadcast) return [];
 
             let services = await ServiceRequest.find({
                 _id: { $nin: rejectedIds },
@@ -124,7 +130,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             }
 
             if (partnerLoc && partnerLoc.latitude && partnerLoc.longitude) {
-                const radius = provider.serviceRadius || 50;
+                const radius = provider.serviceRadius && provider.serviceRadius > 0 ? provider.serviceRadius : 50;
                 services = services.filter((s: any) => {
                     const addr = s.addressId;
                     const bookingLat = addr?.location?.lat ?? s.location?.lat;
@@ -136,7 +142,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                 });
             }
             return services;
-        })() : Promise.resolve([]),
+        })(),
 
         (status === 'Cancelled' || !status) ? ServiceRequest.find({
             _id: { $in: rejectedIds }

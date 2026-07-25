@@ -41,6 +41,7 @@ export interface DoctorDocument extends Document {
   deletedAt?: Date | null;
   isDeleted?: boolean;
   tokenVersion?: number;
+  referralCode?: string;
 }
 
 const DoctorSchema = new Schema<DoctorDocument>(
@@ -199,6 +200,13 @@ const DoctorSchema = new Schema<DoctorDocument>(
     tokenVersion: {
       type: Number,
       default: 0
+    },
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      uppercase: true
     }
   },
 

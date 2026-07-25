@@ -116,6 +116,8 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Could not create your booking. Any amount charged has been refunded to your wallet.");
     }
 
+    console.info(`[BOOKING] [CREATE] [${newServiceRequest._id}] Patient ${userId} requested ${bookingName} for ₹${finalPrice} via ${payload.paymentMode}`);
+
     // ── Consume the coupon now that payment + booking both succeeded ──
     if (couponToConsume) {
         try {
@@ -172,6 +174,18 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         }
     } catch (e) {
         console.error("[Email] service booking email error:", e);
+    }
+
+    try {
+        const { notifyAdmin } = await import("../../Notifications/notification.controller.js");
+        await notifyAdmin(
+            "New Booking Created",
+            `A new ${bookingName} booking was created by ${req.user?.name || "Customer"}.`,
+            "ServiceRequest",
+            newServiceRequest._id as any
+        );
+    } catch (e) {
+        console.error("[Push] admin notification error:", e);
     }
 
     const serviceRequest = await serviceRequestModel
@@ -277,6 +291,10 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     const NON_CANCELLABLE = ["IN_PROGRESS", "COMPLETED", "CANCELLED"];
     if (status === "CANCELLED" && NON_CANCELLABLE.includes(existing.status)) {
         throw new ApiError(400, `Cannot cancel a booking that is already ${existing.status}`);
+    }
+
+    if (status === "CANCELLED") {
+        console.info(`[BOOKING] [CANCEL] [${id}] Cancelled by ${isPatient ? 'Patient' : 'Provider'} (${requesterId})`);
     }
 
     // Auto-refund if a paid service booking is cancelled.

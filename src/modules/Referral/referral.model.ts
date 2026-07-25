@@ -4,14 +4,24 @@ const ReferralSchema = new Schema(
   {
     referrerId: {
       type: Schema.Types.ObjectId,
-      ref: "Patient",
       required: true,
+      refPath: 'referrerModel',
+    },
+    referrerModel: {
+      type: String,
+      required: true,
+      enum: ['Patient', 'Doctor'],
     },
     refereeId: {
       type: Schema.Types.ObjectId,
-      ref: "Patient",
       required: true,
       unique: true, // each referee can only ever be referred (and rewarded) once
+      refPath: 'refereeModel',
+    },
+    refereeModel: {
+      type: String,
+      required: true,
+      enum: ['Patient', 'Doctor'],
     },
     referralCode: {
       type: String,

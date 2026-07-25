@@ -9,7 +9,7 @@ const bookingQueue =
     : null;
 
 const BROADCAST_TIMEOUT_MS = 1 * 60 * 1000; // 1 min: auto-return to admin if no partner claims
-const PARTNER_ACCEPTANCE_TIMEOUT_MS = 5 * 60 * 1000; // 5 min: auto-unassign if partner doesn't accept
+const PARTNER_ACCEPTANCE_TIMEOUT_MS = 2 * 60 * 1000; // 2 min: auto-unassign if partner doesn't accept
 
 export async function scheduleBroadcastToAll(serviceRequestId: string) {
   if (bookingQueue) {
