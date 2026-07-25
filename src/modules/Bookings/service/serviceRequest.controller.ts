@@ -180,7 +180,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         const { notifyAdmin } = await import("../../Notifications/notification.controller.js");
         await notifyAdmin(
             "New Booking Created",
-            `A new ${bookingName} booking was created by ${req.user?.name || "Customer"}.`,
+            `A new ${bookingName} booking was created by ${(req.user as any)?.name || "Customer"}.`,
             "ServiceRequest",
             newServiceRequest._id as any
         );

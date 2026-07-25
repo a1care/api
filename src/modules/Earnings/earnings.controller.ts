@@ -96,7 +96,7 @@ export const requestPayout = asyncHandler(async (req, res) => {
     const staff = await Doctor.findById(staffId);
     if (!staff) throw new ApiError(404, "Staff not found");
 
-    const commissionPct = await getActiveCommissionRate(staffId);
+    const commissionPct = await getActiveCommissionRate(staffId as string);
     const earningRatio = (100 - commissionPct) / 100;
 
     let finalDetails: any = {};

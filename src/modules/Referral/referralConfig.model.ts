@@ -24,7 +24,7 @@ const ReferralConfigSchema = new Schema<IReferralConfig>(
 // Ensure there is only ever one config document
 ReferralConfigSchema.pre("save", async function (next) {
   if (this.isNew) {
-    const count = await mongoose.models.ReferralConfig.countDocuments();
+    const count = await mongoose.models.ReferralConfig?.countDocuments() || 0;
     if (count > 0) {
       return next(new Error("Only one ReferralConfig document can exist"));
     }
