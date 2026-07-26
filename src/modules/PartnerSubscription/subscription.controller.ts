@@ -104,7 +104,7 @@ export const subscribe = async (req: Request, res: Response) => {
             planId,
             startDate,
             endDate,
-            status: plan.price > 0 ? "Pending" : "Active"
+            status: plan.price > 0 ? "PAYMENT_PENDING" : "Active"
         });
 
         // ── If Paid, Create a Payment Order ──────────────────────────────────

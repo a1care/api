@@ -84,6 +84,7 @@ const ServiceRequestSchema = new Schema(
     status: {
       type: String,
       enum: [
+        "PAYMENT_PENDING",
         "PENDING",
         "BROADCASTED",
         "PARTNER_ASSIGNED",

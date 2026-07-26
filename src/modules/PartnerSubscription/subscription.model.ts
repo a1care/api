@@ -5,7 +5,7 @@ export interface IPartnerSubscription extends Document {
     planId: mongoose.Types.ObjectId;
     startDate: Date;
     endDate: Date;
-    status: "Active" | "Expired" | "Cancelled" | "Pending";
+    status: "PAYMENT_PENDING" | "Active" | "Expired" | "Cancelled" | "Pending";
     paymentId?: string;
 }
 
@@ -17,7 +17,7 @@ const PartnerSubscriptionSchema = new Schema<IPartnerSubscription>(
         endDate: { type: Date, required: true },
         status: {
             type: String,
-            enum: ["Active", "Expired", "Cancelled", "Pending"],
+            enum: ["PAYMENT_PENDING", "Active", "Expired", "Cancelled", "Pending"],
             default: "Active"
         },
         paymentId: { type: String },

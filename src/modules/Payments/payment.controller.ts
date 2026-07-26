@@ -228,6 +228,7 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
             const serviceReq = await ServiceRequest.findById(order.referenceId);
             if (serviceReq) {
                 (serviceReq as any).paymentStatus = "COMPLETED";
+                (serviceReq as any).status = "PENDING";
                 await serviceReq.save();
                 if (service && typeof service.logEvent === 'function') {
                     await service.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Updated Service Request payment: ${order.referenceId}`);

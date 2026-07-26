@@ -67,7 +67,8 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         totalAmount,
         couponCode: appliedCouponCode,
         discountAmount,
-        paymentStatus: req.body.paymentMode === 'ONLINE' ? 'COMPLETED' : 'PENDING',
+        paymentStatus: req.body.paymentMode === 'WALLET' ? 'COMPLETED' : 'PENDING',
+        status: req.body.paymentMode === 'ONLINE' ? 'PAYMENT_PENDING' : 'Pending',
     };
 
     const parsed = doctorAppoinmentValidations.safeParse(payload);
@@ -321,6 +322,9 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     }
 
     let updateData: any = { status };
+    if (didRefund) {
+        updateData.paymentStatus = "REFUNDED";
+    }
 
     // Calculate Commission if Completed
     if (status === "Completed" && existing.status !== "Completed") {

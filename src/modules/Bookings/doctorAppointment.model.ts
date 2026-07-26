@@ -58,7 +58,7 @@ const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
     } , 
     status:{
       type:String ,
-      enum:["Pending" , "Confirmed" , "Completed" , "Cancelled"],
+      enum:["PAYMENT_PENDING", "Pending" , "Confirmed" , "Completed" , "Cancelled"],
       default:"Pending"
     } , 
     paymentMode:{ 

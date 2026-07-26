@@ -80,7 +80,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         // ONLINE: paid via Razorpay gateway — fulfillOrder() marks it COMPLETED after verification.
         // COD/OFFLINE: collected on delivery, starts PENDING.
         paymentStatus: req.body.paymentMode === 'WALLET' ? 'COMPLETED' : 'PENDING',
-        status: "PENDING",
+        status: req.body.paymentMode === 'ONLINE' ? 'PAYMENT_PENDING' : 'PENDING',
     };
 
     const parsed = serviceRequestValiation.safeParse(payload);
@@ -311,6 +311,9 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     }
 
     let updateData: any = { status };
+    if (didRefund) {
+        updateData.paymentStatus = "REFUNDED";
+    }
 
     // Calculate Commission if Completed
     if (status === "COMPLETED" && existing.status !== "COMPLETED" && existing.assignedProviderId) {
