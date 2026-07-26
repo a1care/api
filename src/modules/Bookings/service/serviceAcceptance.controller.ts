@@ -57,34 +57,38 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         status: "Active",
         endDate: { $gte: new Date() }
     }).populate("planId");
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Count doctor appointments accepted today
+    const doctorAppointmentsCount = await mongoose.model("DoctorAppointment").countDocuments({
+        doctorId: providerId,
+        status: { $in: ["Confirmed", "Completed", "Active", "IN_PROGRESS"] },
+        createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // Count service requests accepted today
+    const serviceRequestsCount = await serviceRequestModel.countDocuments({
+        assignedProviderId: providerId,
+        status: { $in: ["ACCEPTED", "IN_PROGRESS", "COMPLETED"] },
+        updatedAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    const totalAcceptedToday = doctorAppointmentsCount + serviceRequestsCount;
+
     if (!activeSub) {
-        throw new ApiError(403, "Active subscription required to accept jobs.");
-    }
-
-    const plan = activeSub.planId as any;
-    if (plan && plan.maxBookingsPerDay > 0) {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        // Count doctor appointments accepted today
-        const doctorAppointmentsCount = await mongoose.model("DoctorAppointment").countDocuments({
-            doctorId: providerId,
-            status: { $in: ["Confirmed", "Completed", "Active", "IN_PROGRESS"] },
-            createdAt: { $gte: startOfDay, $lte: endOfDay }
-        });
-
-        // Count service requests accepted today
-        const serviceRequestsCount = await serviceRequestModel.countDocuments({
-            assignedProviderId: providerId,
-            status: { $in: ["ACCEPTED", "IN_PROGRESS", "COMPLETED"] },
-            updatedAt: { $gte: startOfDay, $lte: endOfDay }
-        });
-
-        const totalAcceptedToday = doctorAppointmentsCount + serviceRequestsCount;
-        if (totalAcceptedToday >= plan.maxBookingsPerDay) {
-            throw new ApiError(403, `You have reached your daily limit of ${plan.maxBookingsPerDay} bookings for your current plan.`);
+        // Fallback to implicit Free Plan (limit 5)
+        if (totalAcceptedToday >= 5) {
+            throw new ApiError(403, "You have reached your daily limit of 5 bookings for the free plan. Please subscribe to a premium plan to accept more.");
+        }
+    } else {
+        const plan = activeSub.planId as any;
+        if (plan && plan.maxBookingsPerDay > 0) {
+            if (totalAcceptedToday >= plan.maxBookingsPerDay) {
+                throw new ApiError(403, `You have reached your daily limit of ${plan.maxBookingsPerDay} bookings for your current plan.`);
+            }
         }
     }
 
@@ -128,9 +132,12 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         });
     }
 
-    // Create acceptance record
-    const newAcceptance = new serviceAcceptanceModal(parsed.data);
-    await newAcceptance.save();
+    // Create or update acceptance record
+    const newAcceptance = await serviceAcceptanceModal.findOneAndUpdate(
+        { serviceRequestId, providerId },
+        { $set: parsed.data },
+        { upsert: true, new: true }
+    );
 
     console.info(`[BOOKING] [CLAIM_SUCCESS] [${serviceRequestId}] Successfully accepted by Partner ${providerId}`);
 
@@ -156,6 +163,20 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         }
     } catch (e) {
         console.error("[Push] acceptance push error:", e);
+    }
+
+    try {
+        const timestamp = serviceRequestDetails.scheduledSlot?.startTime
+            ? new Date(serviceRequestDetails.scheduledSlot.startTime).getTime()
+            : 0;
+            
+        if (timestamp > Date.now()) {
+            const { scheduleServiceReminder } = await import("../../../queues/bookingQueue.js");
+            await scheduleServiceReminder(serviceRequestId, timestamp, '24h');
+            await scheduleServiceReminder(serviceRequestId, timestamp, '2h');
+        }
+    } catch (e) {
+        console.error("[Queue] Failed to schedule service reminders:", e);
     }
 
     return res.status(201).json(new ApiResponse(201, "Accepted your service", newAcceptance));
@@ -196,8 +217,11 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Error in validations: ${firstError}`);
     }
 
-    const createRejected = new serviceAcceptanceModal(parsed.data);
-    await createRejected.save();
+    const createRejected = await serviceAcceptanceModal.findOneAndUpdate(
+        { serviceRequestId: requestId, providerId },
+        { $set: parsed.data },
+        { upsert: true, new: true }
+    );
 
     if (!isBroadcasted) {
         // Send the service request back to admin for re-assignment

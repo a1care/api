@@ -37,10 +37,13 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
     return;
   }
 
-  // 1. Get all active partners with matching roles + Active Subscription
+  // 1. Get all active partners with matching roles + Active/Grace Period Subscription
+  const gracePeriodMs = 3 * 24 * 60 * 60 * 1000;
+  const graceThreshold = new Date(Date.now() - gracePeriodMs);
+
   const activeSubs = await (await import("../../PartnerSubscription/subscription.model.js")).default.find({
-    status: "Active",
-    endDate: { $gte: new Date() }
+    status: { $in: ["Active", "Expired"] },
+    endDate: { $gte: graceThreshold }
   }).select("partnerId");
   const subscribedPartnerIds = activeSubs.map(s => s.partnerId);
 
@@ -170,5 +173,38 @@ export async function runBroadcastTimeout(serviceRequestId: string): Promise<voi
     }
   } catch (e) {
     console.error("[Push] broadcast timeout customer notify error:", e);
+  }
+}
+
+export async function runServiceReminder(serviceRequestId: string, type: '24h' | '2h'): Promise<void> {
+  const request = await serviceRequestModel.findById(serviceRequestId).populate("assignedProviderId");
+  
+  if (!request || !request.assignedProviderId) return;
+  // If the booking is not ACCEPTED (e.g. they cancelled it later), don't send reminder
+  if (request.status !== "ACCEPTED" && request.status !== "PARTNER_ASSIGNED") return;
+
+  const partnerId = (request.assignedProviderId as any)._id || request.assignedProviderId;
+  const partner = await DoctorModel.findById(partnerId).select("fcmToken");
+  
+  if (!partner?.fcmToken) return;
+
+  const title = type === '24h' ? "📅 Upcoming Service Reminder" : "⏳ Starting Soon";
+  const body = type === '24h' 
+    ? "You have a scheduled booking tomorrow. Please make sure you are prepared."
+    : "Your service appointment starts in 2 hours. Please prepare to depart soon.";
+
+  try {
+    await enqueuePush({
+      recipientId: partner._id as mongoose.Types.ObjectId,
+      recipientType: "partner",
+      fcmToken: partner.fcmToken,
+      title,
+      body,
+      data: { screen: `/booking_detail/${serviceRequestId}` },
+      refType: "ServiceRequest",
+      refId: request._id as mongoose.Types.ObjectId,
+    });
+  } catch (e) {
+    console.error(`[Push] Service reminder ${type} error:`, e);
   }
 }

@@ -155,7 +155,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             return services;
         })(),
 
-        (status === 'Cancelled' || !status) ? ServiceRequest.find({
+        (status === 'Cancelled' || status === 'all' || !status) ? ServiceRequest.find({
             _id: { $in: rejectedIds }
         }).populate("userId", "name mobileNumber profileImage").populate("childServiceId").populate("addressId").lean() : Promise.resolve([])
     ]);
@@ -294,7 +294,16 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
     if (!provider) throw new ApiError(404, "Provider not found");
 
     if (svc.status !== "BROADCASTED" && String(svc.assignedProviderId ?? "") !== String(providerId)) {
-        throw new ApiError(403, "This booking is not assigned to you");
+        // If they rejected it, they should still be able to view its details (it shows up as CANCELLED in their feed)
+        const hasRejected = await serviceAcceptanceModal.findOne({
+            serviceRequestId: id,
+            providerId,
+            status: "REJECTED"
+        });
+        
+        if (!hasRejected) {
+            throw new ApiError(403, "This booking is not assigned to you");
+        }
     }
 
     if (svc.status === "BROADCASTED") {

@@ -7,6 +7,9 @@ import Doctor from "../Doctors/doctor.model.js";
 import Referral from "./referral.model.js";
 import ReferralConfig from "./referralConfig.model.js";
 import { creditWalletAtomic } from "../Wallet/wallet.controller.js";
+import Jimp from "jimp";
+import path from "path";
+import mongoose from "mongoose";
 
 // Fetch dynamic config
 const getConfig = async () => {
@@ -54,7 +57,7 @@ export const getMyReferralCode = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, "Referral code fetched", {
       referralCode: user.referralCode,
-      shareMessage: `Use my code ${user.referralCode} on A1Care to get ₹${reward} off your first booking/job!`,
+      shareMessage: `Use my code ${user.referralCode} on A1Care to get ₹${reward} off your first booking/job!\n\nhttps://api.a1carehospital.in/api/admin/referral/share-image?code=${user.referralCode}`,
       rewardAmount: reward,
     })
   );
@@ -98,13 +101,13 @@ export const validateReferralCode = asyncHandler(async (req, res) => {
 
 /**
  * Internal helper — call this after a booking is created.
- * Credits the referrer ₹100 and marks the referral REWARDED.
+ * Creates a PENDING referral record. Does NOT credit wallet yet.
  */
-export const applyReferralReward = async (
+export const recordReferralUse = async (
   userId: string,
   userModel: "Patient" | "Doctor",
   referralCode: string,
-  bookingId?: string
+  bookingId: string
 ): Promise<void> => {
   try {
     const code = referralCode.toUpperCase().trim();
@@ -120,38 +123,90 @@ export const applyReferralReward = async (
 
     if (String(referrer._id) === String(userId)) return;
 
-    let referral;
     const config = await getConfig();
     const reward = referrerModel === 'Patient' ? config.customerRewardAmount : config.partnerRewardAmount;
 
     try {
-      referral = await Referral.create({
+      await Referral.create({
         referrerId: referrer._id,
         referrerModel,
         refereeId: userId,
         refereeModel: userModel,
         referralCode: code,
-        status: "REWARDED",
+        status: "PENDING",
         rewardAmount: reward,
         appliedOnBookingId: bookingId,
       });
+      console.log(`[Referral] PENDING referral recorded for referee ${userId}, code ${code}`);
     } catch (e: any) {
-      if (e?.code === 11000) return; // already rewarded for this referee
+      if (e?.code === 11000) return; // already exists for this referee
       throw e;
     }
+  } catch (err) {
+    console.error("[Referral] recordReferralUse error:", err);
+  }
+};
 
-    // Credit referrer's wallet
+/**
+ * Internal helper — call this when a booking is completed.
+ * Changes PENDING to REWARDED and credits the referrer.
+ */
+export const completeReferralReward = async (bookingId: string): Promise<void> => {
+  try {
+    const referral = await Referral.findOne({ appliedOnBookingId: bookingId, status: "PENDING" });
+    if (!referral) return;
+
+    referral.status = "REWARDED";
+    await referral.save();
+
     await creditWalletAtomic(
-      String(referrer._id),
-      reward,
+      String(referral.referrerId),
+      referral.rewardAmount,
       `REFERRAL_REWARD:${referral._id}`
     );
 
-    console.log(`[Referral] ₹${reward} credited to ${referrer._id} for referral code ${code}`);
+    console.log(`[Referral] ₹${referral.rewardAmount} credited to ${referral.referrerId} for booking ${bookingId}`);
   } catch (err) {
-    console.error("[Referral] applyReferralReward error:", err);
+    console.error("[Referral] completeReferralReward error:", err);
   }
 };
+
+/** GET /api/referral/my-earnings — get referral ledger for logged in user */
+export const getMyEarnings = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+  const { page = 1, limit = 50 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [total, referrals] = await Promise.all([
+    Referral.countDocuments({ referrerId: userId }),
+    Referral.find({ referrerId: userId })
+      .populate("refereeId", "name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+  ]);
+
+  const totalEarned = await Referral.aggregate([
+    { $match: { referrerId: new mongoose.Types.ObjectId(userId), status: "REWARDED" } },
+    { $group: { _id: null, total: { $sum: "$rewardAmount" } } }
+  ]);
+
+  const totalPending = await Referral.aggregate([
+    { $match: { referrerId: new mongoose.Types.ObjectId(userId), status: "PENDING" } },
+    { $group: { _id: null, total: { $sum: "$rewardAmount" } } }
+  ]);
+
+  res.status(200).json(
+    new ApiResponse(200, "Earnings fetched", {
+      items: referrals,
+      totalEarned: totalEarned[0]?.total || 0,
+      totalPending: totalPending[0]?.total || 0,
+      totalRecords: total,
+      currentPage: Number(page),
+      totalPages: Math.ceil(total / Number(limit))
+    })
+  );
+});
 
 /** GET /api/referral/stats — admin: list all referrals */
 export const getReferralStats = asyncHandler(async (req, res) => {
@@ -204,4 +259,41 @@ export const updateReferralConfig = asyncHandler(async (req, res) => {
   if (partnerRewardAmount !== undefined) config.partnerRewardAmount = partnerRewardAmount;
   await config.save();
   return res.status(200).json(new ApiResponse(200, "Config updated", config));
+});
+
+/** GET /api/referral/share-image?code=XYZ */
+export const generateShareImage = asyncHandler(async (req, res) => {
+  const code = req.query.code as string;
+  if (!code) throw new ApiError(400, "Referral code is required");
+
+  try {
+    const bgPath = path.resolve(process.cwd(), "public", "a1care_referral_bg.jpg");
+    const image = await Jimp.read(bgPath);
+    
+    // Load font (Jimp provides some built-in bitmap fonts)
+    const font = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK);
+    
+    // Print the code on the image (centered roughly)
+    image.print(
+      font,
+      0,
+      0,
+      {
+        text: `Code: ${code.toUpperCase()}`,
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+        alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+      },
+      image.bitmap.width,
+      image.bitmap.height
+    );
+
+    const buffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+    
+    res.setHeader("Content-Type", "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+    res.send(buffer);
+  } catch (error) {
+    console.error("[Referral] generateShareImage error:", error);
+    throw new ApiError(500, "Failed to generate share image");
+  }
 });

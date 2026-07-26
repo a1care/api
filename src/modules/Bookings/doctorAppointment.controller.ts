@@ -14,7 +14,7 @@ import { getActiveCommissionRate } from "../PartnerSubscription/subscription.con
 import { emitToRoom } from "../../socket.js";
 import { validateCoupon, consumeCoupon } from "../Coupons/coupon.controller.js";
 import { notifyAdmin } from "../Notifications/notification.controller.js";
-import { applyReferralReward } from "../Referral/referral.controller.js";
+import { recordReferralUse, completeReferralReward } from "../Referral/referral.controller.js";
 import { cancelAppointmentReminder } from "../../queues/bookingQueue.js";
 import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
@@ -162,7 +162,7 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
 
     // Reward the referrer if a referral code was supplied (parity with service bookings)
     if (req.body.referralCode) {
-        try { await applyReferralReward(patientId, req.body.referralCode, String(newAppointment._id)); }
+        try { await recordReferralUse(patientId, "Patient", req.body.referralCode, String(newAppointment._id)); }
         catch (e) { console.error("[Referral] reward error:", e); }
     }
 
@@ -263,6 +263,49 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     const isPatient = existing.patientId.toString() === requesterId.toString();
     const isDoctor = existing.doctorId.toString() === requesterId.toString();
     if (!isPatient && !isDoctor) throw new ApiError(403, "Not allowed to modify this appointment");
+
+    if (isDoctor && status === "Confirmed" && existing.status !== "Confirmed") {
+        const { default: PartnerSubscription } = await import("../PartnerSubscription/subscription.model.js");
+        const { default: serviceRequestModel } = await import("./service/serviceRequest.model.js");
+
+        const activeSub = await PartnerSubscription.findOne({
+            partnerId: requesterId,
+            status: "Active",
+            endDate: { $gte: new Date() }
+        }).populate("planId");
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const doctorAppointmentsCount = await doctorAppointmentModel.countDocuments({
+            doctorId: requesterId,
+            status: { $in: ["Confirmed", "Completed", "Active", "IN_PROGRESS"] },
+            createdAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        const serviceRequestsCount = await serviceRequestModel.countDocuments({
+            assignedProviderId: requesterId,
+            status: { $in: ["ACCEPTED", "IN_PROGRESS", "COMPLETED"] },
+            updatedAt: { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        const totalAcceptedToday = doctorAppointmentsCount + serviceRequestsCount;
+
+        if (!activeSub) {
+            if (totalAcceptedToday >= 5) {
+                throw new ApiError(403, "You have reached your daily limit of 5 bookings for the free plan. Please subscribe to a premium plan to accept more.");
+            }
+        } else {
+            const plan = activeSub.planId as any;
+            if (plan && plan.maxBookingsPerDay > 0) {
+                if (totalAcceptedToday >= plan.maxBookingsPerDay) {
+                    throw new ApiError(403, `You have reached your daily limit of ${plan.maxBookingsPerDay} bookings for your current plan.`);
+                }
+            }
+        }
+    }
 
     // Auto-refund if a paid appointment is cancelled.
     let didRefund = false;
@@ -370,7 +413,16 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         }
     }
 
-    // ── Service completed email ──
+    // 💵 Referral Reward 💵
+    if (status === "Completed" && existing.status !== "Completed") {
+        try {
+            await completeReferralReward(String(id));
+        } catch (e) {
+            console.error("[Referral] complete referral error:", e);
+        }
+    }
+
+    // 📧 Service completed email 📧
     if (status === "Completed" && existing.status !== "Completed" && patient?.email) {
         try {
             await enqueueEmail({

@@ -164,6 +164,7 @@ app.use('/api/wallet', walletRoutes)
 
 //payments
 app.use('/api/payments', paymentRoutes)
+app.use('/api/payment', paymentRoutes)
 
 //subscriptions
 app.use('/api/subscription', partnerSubscriptionRoutes)

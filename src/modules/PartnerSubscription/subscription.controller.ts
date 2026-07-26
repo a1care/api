@@ -60,7 +60,7 @@ export const deletePlan = async (req: Request, res: Response) => {
 
 export const subscribe = async (req: Request, res: Response) => {
     try {
-        const { planId } = req.body;
+        const { planId, paymentMode } = req.body;
         const partnerId = (req as any).user?.id;
 
         if (!partnerId) {
@@ -110,14 +110,45 @@ export const subscribe = async (req: Request, res: Response) => {
         // ── If Paid, Create a Payment Order ──────────────────────────────────
         let order = null;
         if (plan.price > 0) {
-            order = await Order.create({
-                userId: partnerId,
-                amount: plan.price,
-                type: "SUBSCRIPTION",
-                referenceId: subscription._id.toString(),
-                txnId: `SUB-${uuidv4().split("-")[0]}-${Date.now()}`,
-                status: OrderStatus.PENDING,
-            });
+            if (paymentMode === "WALLET") {
+                const Wallet = (await import("../Wallet/wallet.model.js")).default;
+                let wallet = await Wallet.findOne({ userId: partnerId }); // onModel is typically implicitly handled or default
+                
+                if (!wallet || wallet.balance < plan.price) {
+                    await PartnerSubscription.findByIdAndDelete(subscription._id);
+                    return res.status(400).json({ success: false, message: "Insufficient wallet balance." });
+                }
+
+                wallet.balance -= plan.price;
+                wallet.transactions.push({
+                    amount: plan.price,
+                    type: "Debit",
+                    description: `Subscription purchase: ${plan.name}`,
+                    date: new Date()
+                });
+                await wallet.save();
+
+                subscription.status = "Active";
+                subscription.paymentId = `WALLET-${Date.now()}`;
+                await subscription.save();
+
+                return res.status(201).json({ 
+                    success: true, 
+                    data: { 
+                        subscription, 
+                        requiresPayment: false 
+                    } 
+                });
+            } else {
+                order = await Order.create({
+                    userId: partnerId,
+                    amount: plan.price,
+                    type: "SUBSCRIPTION",
+                    referenceId: subscription._id.toString(),
+                    txnId: `SUB-${uuidv4().split("-")[0]}-${Date.now()}`,
+                    status: OrderStatus.PENDING,
+                });
+            }
         }
 
         res.status(201).json({ 
@@ -125,7 +156,7 @@ export const subscribe = async (req: Request, res: Response) => {
             data: { 
                 subscription, 
                 order,
-                requiresPayment: plan.price > 0 
+                requiresPayment: plan.price > 0 && paymentMode !== "WALLET"
             } 
         });
     } catch (error: any) {
@@ -139,12 +170,16 @@ export const getMySubscription = async (req: Request, res: Response) => {
         
         let subscription: any = await PartnerSubscription.findOne({
             partnerId,
-            status: "Active",
+            status: { $in: ["Active", "Expired"] },
         }).populate("planId").sort({ createdAt: -1 });
 
         if (subscription) {
+            let isExpired = false;
+            let isInGracePeriod = false;
             const isLifetime = subscription.planId?.validityDays === 0;
-            const isExpired = new Date(subscription.endDate).getTime() < new Date().getTime();
+            const now = new Date().getTime();
+            const endDateMs = new Date(subscription.endDate).getTime();
+            isExpired = endDateMs < now;
             
             if (isLifetime) {
                 // Auto-heal old lifetime subscriptions that were incorrectly assigned 30 days
@@ -153,10 +188,21 @@ export const getMySubscription = async (req: Request, res: Response) => {
                     newEndDate.setFullYear(newEndDate.getFullYear() + 100);
                     subscription.endDate = newEndDate;
                     await PartnerSubscription.findByIdAndUpdate(subscription._id, { endDate: newEndDate });
+                    isExpired = false;
                 }
             } else if (isExpired) {
-                subscription = null; // actually expired
+                const gracePeriodMs = 3 * 24 * 60 * 60 * 1000;
+                isInGracePeriod = now <= (endDateMs + gracePeriodMs);
+                
+                if (subscription.status === "Active") {
+                    await PartnerSubscription.findByIdAndUpdate(subscription._id, { status: "Expired" });
+                    subscription.status = "Expired";
+                }
             }
+            
+            subscription = subscription.toObject();
+            subscription.isExpired = isExpired;
+            subscription.isInGracePeriod = isInGracePeriod;
         }
 
         res.status(200).json({ success: true, data: subscription });
@@ -222,12 +268,14 @@ export const getActiveCommissionRate = async (partnerId: string) => {
     try {
         let subscription: any = await PartnerSubscription.findOne({
             partnerId,
-            status: "Active",
+            status: { $in: ["Active", "Expired"] },
         }).populate("planId").sort({ createdAt: -1 });
 
         if (subscription) {
             const isLifetime = subscription.planId?.validityDays === 0;
-            const isExpired = new Date(subscription.endDate).getTime() < new Date().getTime();
+            const now = new Date().getTime();
+            const endDateMs = new Date(subscription.endDate).getTime();
+            const isExpired = endDateMs < now;
             
             if (isLifetime) {
                 if (isExpired || new Date(subscription.endDate).getFullYear() < 2050) {
@@ -237,7 +285,13 @@ export const getActiveCommissionRate = async (partnerId: string) => {
                     await PartnerSubscription.findByIdAndUpdate(subscription._id, { endDate: newEndDate });
                 }
             } else if (isExpired) {
-                subscription = null;
+                if (subscription.status === "Active") {
+                    await PartnerSubscription.findByIdAndUpdate(subscription._id, { status: "Expired" });
+                }
+                const gracePeriodMs = 3 * 24 * 60 * 60 * 1000;
+                if (now > (endDateMs + gracePeriodMs)) {
+                    subscription = null; // Block benefits beyond grace period
+                }
             }
         }
 

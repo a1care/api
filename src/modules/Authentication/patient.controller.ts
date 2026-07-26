@@ -10,10 +10,10 @@ import { formatZodError } from "../../utils/formatZodError.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import RedisClient from "../../configs/redisConnect.js";
 
-// ─── STATIC TEST NUMBER ───────────────────────────────────────────────────────
-const STATIC_TEST_MOBILES = ["8309470360", "6302759527"];
+// ⭐⭐⭐ STATIC TEST NUMBER ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+const STATIC_TEST_MOBILES = ["8309470360", "6302759527", "9666210561"];
 const STATIC_TEST_OTP = "137460";
-// ─────────────────────────────────────────────────────────────────────────────
+// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 export const getPatientDetailsById = asyncHandler(async (req, res) => {
   const patientId = req.user?.id
@@ -69,14 +69,13 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
     console.error("[Patient OTP Send Failed]", result.message);
   }
 
-  if (process.env.NODE_ENV !== "production") console.log(`[Patient OTP] Sent to ${cleanMobile}`);;
+  if (process.env.NODE_ENV !== "production") console.log(`[Patient OTP] Sent to ${cleanMobile}`);
 
   return res.status(200).json(
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
   );
 })
 
-// verify otp 
 export const verifyOtpForPatient = asyncHandler(async (req, res) => {
   const { idToken, mobileNumber, otp } = req.body
   const cleanMobile = (mobileNumber || "").replace(/^\+91/, "").replace(/\D/g, "");
@@ -97,7 +96,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
         mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
       });
       if (patient && (patient.isDeleted || patient.deletedAt)) {
-        throw new ApiError(400, "This account has been deleted.");
+        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
       }
       if (!patient) {
         patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
@@ -153,6 +152,10 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
     
     if (!patient) {
         patient = await Patient.findOne({ mobileNumber: finalPhone });
+    }
+
+    if (patient && (patient.isDeleted || patient.deletedAt)) {
+        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
     }
 
     if (!patient) {
@@ -318,7 +321,7 @@ export const refreshTokenForPatient = asyncHandler(async (req, res) => {
 
         const patient = await Patient.findById(decoded.userId);
         if (!patient) throw new ApiError(401, "User not found");
-        if (patient.isDeleted || patient.deletedAt) throw new ApiError(401, "Account deleted");
+        if (patient.isDeleted || patient.deletedAt) throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
         if (patient.tokenVersion !== decoded.tv) throw new ApiError(401, "Token revoked");
 
         const accessToken = jwt.sign(

@@ -4,7 +4,7 @@ const UserAddressSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Patient",
       required: true,
       index: true
     },

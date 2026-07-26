@@ -90,7 +90,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
 
   // Static test number — bypass OTP when ALLOW_TEST_OTP env var is set
-  if (["8309470360", "6302759527"].includes(cleanMobile) && process.env.ALLOW_TEST_OTP?.trim() === "true") {
+  if (["8309470360", "6302759527", "9666210561"].includes(cleanMobile) && process.env.ALLOW_TEST_OTP?.trim() === "true") {
     await RedisClient.setEx(`otp:staff:${cleanMobile}`, 600, "137460");
     return res.status(200).json(
       new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
@@ -157,7 +157,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
   // Check Redis for manual OTP if provided
   if (otp && cleanMobile) {
-    const isStaticBypass = ["8309470360", "6302759527"].includes(cleanMobile) && String(otp) === "137460";
+    const isStaticBypass = ["8309470360", "6302759527", "9666210561"].includes(cleanMobile) && String(otp) === "137460";
     const storedOtp = isStaticBypass ? "137460" : await RedisClient.get(`otp:staff:${cleanMobile}`);
     if (storedOtp && String(storedOtp) === String(otp)) {
       console.log(`[OTP] ✅ Verified via Redis or Bypass for: ${cleanMobile}`);
@@ -172,7 +172,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       });
 
       if (staff && (staff.isDeleted || staff.deletedAt)) {
-        throw new ApiError(400, "This account has been deleted.");
+        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
       }
 
       if (staff && staff.isRegistered && role) {
@@ -241,6 +241,10 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     
     if (!staff) {
         staff = await doctorModel.findOne({ mobileNumber: finalPhone });
+    }
+
+    if (staff && (staff.isDeleted || staff.deletedAt)) {
+        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
     }
 
     if (staff && staff.isRegistered && role) {
@@ -365,10 +369,12 @@ export const registerStaff = asyncHandler(async (req, res) => {
     }
 
     // 2. Subscription Check
+    const gracePeriodMs = 3 * 24 * 60 * 60 * 1000;
+    const graceThreshold = new Date(Date.now() - gracePeriodMs);
     const activeSub = await PartnerSubscription.findOne({
       partnerId: staffId,
-      status: "Active",
-      endDate: { $gte: new Date() }
+      status: { $in: ["Active", "Expired"] },
+      endDate: { $gte: graceThreshold }
     });
     
     if (!activeSub) {

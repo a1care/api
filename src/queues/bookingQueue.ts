@@ -93,4 +93,34 @@ export async function cancelAppointmentReminder(appointmentId: string) {
   if (job) await job.remove();
 }
 
+export async function scheduleServiceReminder(serviceRequestId: string, timestamp: number, type: '24h' | '2h') {
+  const delayMs = type === '24h' 
+    ? timestamp - Date.now() - 24 * 60 * 60 * 1000 
+    : timestamp - Date.now() - 2 * 60 * 60 * 1000;
+    
+  if (delayMs <= 0) return;
+  
+  const jobId = `service_reminder_${type}:${serviceRequestId}`;
+  if (bookingQueue) {
+    await bookingQueue.add(
+      "service_reminder",
+      { serviceRequestId, type },
+      { jobId, delay: delayMs, removeOnComplete: true, attempts: 2 }
+    );
+    return;
+  }
+  setTimeout(async () => {
+    const { runServiceReminder } = await import("../modules/Bookings/service/serviceBroadcast.js");
+    runServiceReminder(serviceRequestId, type).catch((e) =>
+      console.error("[Booking] service_reminder fallback error:", e)
+    );
+  }, delayMs);
+}
+
+export async function cancelServiceReminder(serviceRequestId: string) {
+  if (!bookingQueue) return;
+  await bookingQueue.getJob(`service_reminder_24h:${serviceRequestId}`).then(job => job?.remove());
+  await bookingQueue.getJob(`service_reminder_2h:${serviceRequestId}`).then(job => job?.remove());
+}
+
 export { bookingQueue };

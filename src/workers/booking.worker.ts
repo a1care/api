@@ -33,6 +33,14 @@ new Worker(
       }
       return;
     }
+    if (job.name === "service_reminder") {
+      const { serviceRequestId, type } = job.data as { serviceRequestId: string, type: '24h' | '2h' };
+      if (serviceRequestId) {
+        const { runServiceReminder } = await import("../modules/Bookings/service/serviceBroadcast.js");
+        await runServiceReminder(serviceRequestId, type);
+      }
+      return;
+    }
   },
   { connection }
 );

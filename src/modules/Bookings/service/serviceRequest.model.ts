@@ -68,7 +68,7 @@ const ServiceRequestSchema = new Schema(
 
     assignedProviderId: {
       type: Schema.Types.ObjectId,
-      ref: "User"
+      ref: "staff"
     },
 
     assignedRoleId: {

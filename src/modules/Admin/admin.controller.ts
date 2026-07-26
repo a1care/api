@@ -30,6 +30,7 @@ import { UserAddressModel } from "../Address/address.model.js";
 import serviceAcceptanceModal from "../Bookings/service/serviceAcceptance.model.js";
 import PartnerSubscriptionPlan from "../PartnerSubscription/plan.model.js";
 import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
+import { EmailTemplate } from "../EmailTemplates/emailTemplate.model.js";
 import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
 import Payout from "../Earnings/payout.model.js";
@@ -855,7 +856,13 @@ export const listDoctors = asyncHandler(async (req, res) => {
   const { page = 1, limit = 50, search, status } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
   const query: any = {};
-  if (status && status !== "All") query.status = status;
+  
+  if (status === "Archived") {
+    query.isDeleted = true;
+  } else {
+    query.isDeleted = { $ne: true };
+    if (status && status !== "All") query.status = status;
+  }
 
   if (search && search !== "") {
     const s = new RegExp(escapeRegex(search), 'i');
@@ -868,6 +875,7 @@ export const listDoctors = asyncHandler(async (req, res) => {
 
   const total = await Doctor.countDocuments(query);
   const doctors = await Doctor.find(query)
+    .populate("roleId", "name")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit));
@@ -2030,7 +2038,7 @@ export const getAdminCommissionReport = asyncHandler(async (req, res) => {
       { $match: dateMatch },
       {
         $lookup: {
-          from: "doctors",
+          from: "staffs",
           localField: "doctorId",
           foreignField: "_id",
           as: "doctor"
@@ -2063,7 +2071,7 @@ export const getAdminCommissionReport = asyncHandler(async (req, res) => {
       { $match: svcDateMatch },
       {
         $lookup: {
-          from: "doctors",
+          from: "staffs",
           localField: "assignedProviderId",
           foreignField: "_id",
           as: "doctor"
@@ -2095,10 +2103,13 @@ export const getAdminCommissionReport = asyncHandler(async (req, res) => {
   ]);
 
 
-  // Merge + sort by date descending
   const all = [...apptRows, ...svcRows].sort(
     (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  console.log("=== DEBUG svcRows [0] ===");
+  console.log(JSON.stringify(svcRows[0], null, 2));
+  console.log("=========================");
 
   const total = all.length;
   const items = all.slice(skip, skip + Number(limit));
@@ -2498,6 +2509,40 @@ export const approveDeletion = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, "Account permanently deleted successfully"));
 });
 
+export const restoreDeletion = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { type } = req.body; // 'patient' or 'staff'
+
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  let restoredUser;
+  if (type === 'patient') {
+    restoredUser = await Patient.findByIdAndUpdate(
+      id,
+      { isDeleted: false, deletedAt: null, deletionRequested: false, deletionRequestedAt: null },
+      { new: true }
+    );
+  } else {
+    restoredUser = await Doctor.findByIdAndUpdate(
+      id,
+      { isDeleted: false, deletedAt: null, deletionRequested: false, deletionRequestedAt: null },
+      { new: true }
+    );
+  }
+
+  if (!restoredUser) throw new ApiError(404, "User not found");
+
+  await AuditLog.create({
+    actorAdminId: (req as any).user?.id,
+    actorRole: (req as any).user?.role,
+    action: "ACCOUNT_RESTORED_BY_ADMIN",
+    targetType: type === 'patient' ? "Patient" : "Doctor",
+    targetId: String(id),
+  });
+
+  return res.status(200).json(new ApiResponse(200, "Account restored successfully"));
+});
+
 const isValidTimeString = (value: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
 
 export const getDoctorAvailabilityAdmin = asyncHandler(async (req, res) => {
@@ -2613,4 +2658,143 @@ export const debugPartnerServiceEligibility = asyncHandler(async (req, res) => {
       reasons,
     })
   );
+});
+
+export const softDeleteDoctor = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const doctor = await Doctor.findByIdAndUpdate(
+    id,
+    { isDeleted: true, deletedAt: new Date() },
+    { new: true }
+  );
+  if (!doctor) throw new ApiError(404, "Provider not found");
+  return res.status(200).json(new ApiResponse(200, "Provider archived successfully", doctor));
+});
+
+export const restoreDoctor = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const doctor = await Doctor.findByIdAndUpdate(
+    id,
+    { isDeleted: false, deletedAt: null },
+    { new: true }
+  );
+  if (!doctor) throw new ApiError(404, "Provider not found");
+  return res.status(200).json(new ApiResponse(200, "Provider restored successfully", doctor));
+});
+
+export const hardDeleteDoctor = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Strict Safeguard: Check for any associated bookings
+  const bookingsCount = await doctorAppointmentModel.countDocuments({ doctorId: id });
+  
+  if (bookingsCount > 0) {
+    throw new ApiError(
+      400, 
+      `Cannot permanently delete this provider because they have ${bookingsCount} booking(s) associated with their account. Please use the Soft Delete (Archive) feature instead to preserve financial and historical records.`
+    );
+  }
+
+  const doctor = await Doctor.findByIdAndDelete(id);
+  if (!doctor) throw new ApiError(404, "Provider not found");
+  
+  return res.status(200).json(new ApiResponse(200, "Provider permanently deleted", { _id: id }));
+});
+
+
+// ==========================================
+// EMAIL TEMPLATES
+// ==========================================
+
+export const getEmailTemplates = asyncHandler(async (req, res) => {
+  const templates = await EmailTemplate.find().sort({ name: 1 });
+  
+  if (templates.length === 0) {
+    // Seed default templates if empty
+    const defaults = [
+      {
+        name: "Welcome",
+        code: "welcome",
+        subject: "Welcome to A1Care 24/7 - Quality Care at Home",
+        htmlBody: `
+        <div style="text-align:center; margin-bottom:30px;">
+            <div style="width:80px; height:80px; background-color:#EFF6FF; border-radius:40px; display:inline-block; line-height:80px; font-size:36px; margin-bottom:20px;">👋</div>
+            <h2 style="font-size:26px;font-weight:900;margin-bottom:10px;color:#0F172A;">Welcome to A1Care!</h2>
+            <p style="color:#64748B;font-size:16px;">Your healthcare journey begins here.</p>
+        </div>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
+        <p style="margin-bottom:20px;">We're thrilled to welcome you to A1Care 24/7! Your account has been successfully created.</p>
+        <div style="background-color:#F8FAFC;padding:24px;border-radius:16px;margin-bottom:30px;border:1px solid #E2E8F0;">
+            <h3 style="margin-top:0;font-size:16px;font-weight:800;color:#0D2E6E;margin-bottom:15px;">What you can do next:</h3>
+            <ul style="margin:0;padding-left:20px;color:#475569;line-height:1.6;">
+                <li>Book verified healthcare professionals</li>
+                <li>Track your medical records securely</li>
+                <li>Schedule tele-consultations</li>
+            </ul>
+        </div>
+        <div style="text-align:center; padding-top:10px;">
+            <a href="https://a1care.in/services" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;">Book a Service Now</a>
+        </div>`,
+        availableVariables: ["{{fullName}}"]
+      },
+      {
+        name: "Partner Approved",
+        code: "partner_approved",
+        subject: "A1Care Partner KYC Approved",
+        htmlBody: `
+        <div style="text-align:center; margin-bottom:30px;">
+            <div style="width:80px; height:80px; background-color:#F0FDF4; border-radius:40px; display:inline-block; line-height:80px; font-size:36px; margin-bottom:20px;">🎉</div>
+            <h2 style="font-size:26px;font-weight:900;margin-bottom:10px;color:#065F46;">KYC Approved!</h2>
+            <p style="color:#64748B;font-size:16px;">Welcome to the A1Care Provider Network.</p>
+        </div>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
+        <p style="margin-bottom:20px;">Congratulations! Your KYC documents have been successfully verified and your account is now <strong>Active</strong>.</p>
+        <div style="background-color:#F8FAFC;padding:24px;border-radius:16px;margin-bottom:30px;border:1px solid #E2E8F0;">
+            <p style="margin:0;color:#475569;">You are now eligible to receive booking requests and manage your availability directly from the partner app.</p>
+        </div>
+        <div style="text-align:center; padding-top:10px;">
+            <a href="https://a1care.in/partner" style="display:inline-block;background-color:#10B981;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;">Open Partner App</a>
+        </div>`,
+        availableVariables: ["{{fullName}}"]
+      },
+      {
+        name: "Partner Rejected",
+        code: "partner_rejected",
+        subject: "A1Care Partner KYC Update Required",
+        htmlBody: `
+        <div style="text-align:center; margin-bottom:30px;">
+            <div style="width:80px; height:80px; background-color:#FEF2F2; border-radius:40px; display:inline-block; line-height:80px; font-size:36px; margin-bottom:20px;">⚠️</div>
+            <h2 style="font-size:26px;font-weight:900;margin-bottom:10px;color:#991B1B;">KYC Action Required</h2>
+            <p style="color:#64748B;font-size:16px;">Please update your profile details.</p>
+        </div>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
+        <p style="margin-bottom:20px;">We reviewed your recent KYC application but we need a few corrections before we can activate your account.</p>
+        <div style="background-color:#FEF2F2;padding:24px;border-radius:16px;margin-bottom:30px;border:1px solid #FCA5A5;">
+            <p style="margin:0 0 10px;font-size:11px;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:0.1em;">Rejection Reason</p>
+            <p style="margin:0;font-size:15px;font-weight:600;color:#7F1D1D;">{{reason}}</p>
+        </div>
+        <p style="margin-bottom:20px;">Please open the partner app to update your details and re-submit your application.</p>
+        <div style="text-align:center; padding-top:10px;">
+            <a href="https://a1care.in/partner" style="display:inline-block;background-color:#EF4444;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;">Update KYC Now</a>
+        </div>`,
+        availableVariables: ["{{fullName}}", "{{reason}}"]
+      }
+    ];
+    await EmailTemplate.insertMany(defaults);
+    return res.status(200).json(new ApiResponse(200, "Templates seeded and fetched", await EmailTemplate.find().sort({ name: 1 })));
+  }
+
+  return res.status(200).json(new ApiResponse(200, "Templates fetched", templates));
+});
+
+export const updateEmailTemplate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { subject, htmlBody } = req.body;
+  
+  if (!subject || !htmlBody) throw new ApiError(400, "Subject and HTML Body are required");
+
+  const template = await EmailTemplate.findByIdAndUpdate(id, { subject, htmlBody }, { new: true });
+  if (!template) throw new ApiError(404, "Template not found");
+
+  return res.status(200).json(new ApiResponse(200, "Template updated", template));
 });

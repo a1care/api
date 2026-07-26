@@ -13,7 +13,7 @@ import HospitalBooking from "../hospitalBooking.model.js";
 import { getActiveCommissionRate } from "../../PartnerSubscription/subscription.controller.js";
 import { emitToRoom } from "../../../socket.js";
 import { validateCoupon, consumeCoupon } from "../../Coupons/coupon.controller.js";
-import { applyReferralReward } from "../../Referral/referral.controller.js";
+import { recordReferralUse, completeReferralReward } from "../../Referral/referral.controller.js";
 import { notifyAdmin } from "../../Notifications/notification.controller.js";
 import { scheduleBroadcastToAll } from "../../../queues/bookingQueue.js";
 
@@ -140,7 +140,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     // the referral rewards a DIFFERENT user (the referrer). They are independent acquisition
     // costs and do not compound against the same amount, so stacking is intentionally allowed.
     if (req.body.referralCode) {
-        try { await applyReferralReward(userId, req.body.referralCode, String(newServiceRequest._id)); }
+        try { await recordReferralUse(userId, "Patient", req.body.referralCode, String(newServiceRequest._id)); }
         catch (e) { console.error("[Referral] reward error:", e); }
     }
 
@@ -405,6 +405,16 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
     }
 
     // ── Service completed email ──
+    // 💵 Referral Reward 💵
+    if (status === "COMPLETED" && existing.status !== "COMPLETED") {
+        try {
+            await completeReferralReward(String(id));
+        } catch (e) {
+            console.error("[Referral] complete referral error:", e);
+        }
+    }
+
+    // 📧 Service completed email 📧
     if (status === "COMPLETED" && existing.status !== "COMPLETED" && patientFull?.email) {
         try {
             let partnerName = "A1Care Provider";

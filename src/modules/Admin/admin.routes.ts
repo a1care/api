@@ -11,6 +11,9 @@ import {
   listAuditLogs,
   listPatients,
   listDoctors,
+  softDeleteDoctor,
+  restoreDoctor,
+  hardDeleteDoctor,
   listUsersByCategory,
   createUserByCategory,
   getUserCategoryStats,
@@ -40,10 +43,13 @@ import {
   adjustUserWallet,
   getDeletionRequests,
   approveDeletion,
+  restoreDeletion,
   getDoctorAvailabilityAdmin,
   upsertDoctorAvailabilityAdmin,
   debugPartnerServiceEligibility,
-  getAdminCommissionReport
+  getAdminCommissionReport,
+  getEmailTemplates,
+  updateEmailTemplate
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -89,6 +95,9 @@ adminRoutes.get("/users", protectAdmin, requireAdminRole(["super_admin"]), listA
 adminRoutes.put("/users/:id/role", protectAdmin, requireAdminRole(["super_admin"]), updateAdminRole);
 adminRoutes.get("/patients", protectAdmin, requireAdminRole(["admin", "super_admin"]), listPatients);
 adminRoutes.get("/doctors", protectAdmin, requireAdminRole(["admin", "super_admin"]), listDoctors);
+adminRoutes.put("/doctors/:id/soft-delete", protectAdmin, requireAdminRole(["admin", "super_admin"]), softDeleteDoctor);
+adminRoutes.put("/doctors/:id/restore", protectAdmin, requireAdminRole(["admin", "super_admin"]), restoreDoctor);
+adminRoutes.delete("/doctors/:id/hard-delete", protectAdmin, requireAdminRole(["super_admin"]), hardDeleteDoctor);
 adminRoutes.get("/doctors/:doctorId/availability", protectAdmin, requireAdminRole(["admin", "super_admin"]), getDoctorAvailabilityAdmin);
 adminRoutes.post("/doctors/:doctorId/availability", protectAdmin, requireAdminRole(["admin", "super_admin"]), upsertDoctorAvailabilityAdmin);
 adminRoutes.get("/user-stats/:category", protectAdmin, requireAdminRole(["admin", "super_admin"]), getUserCategoryStats);
@@ -124,6 +133,9 @@ adminRoutes.post(
 adminRoutes.get("/system-config", protectAdmin, requireAdminRole(["super_admin"]), getSystemConfig);
 adminRoutes.put("/system-config", protectAdmin, requireAdminRole(["super_admin"]), updateSystemConfig);
 
+adminRoutes.get("/email-templates", protectAdmin, requireAdminRole(["super_admin"]), getEmailTemplates);
+adminRoutes.put("/email-templates/:id", protectAdmin, requireAdminRole(["super_admin"]), updateEmailTemplate);
+
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
 adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);
 adminRoutes.delete("/notifications/clear", protectAdmin, adminClearNotifications);
@@ -142,6 +154,7 @@ adminRoutes.get("/payments/logs/:txnId", protectAdmin, requireAdminRole(["admin"
 
 adminRoutes.get("/deletion-requests", protectAdmin, requireAdminRole(["super_admin"]), getDeletionRequests);
 adminRoutes.post("/deletion-approve/:id", protectAdmin, requireAdminRole(["super_admin"]), approveDeletion);
+adminRoutes.post("/deletion-restore/:id", protectAdmin, requireAdminRole(["super_admin"]), restoreDeletion);
 
 // Referrals
 adminRoutes.get("/referrals", protectAdmin, requireAdminRole(["admin", "super_admin"]), getReferralStats);

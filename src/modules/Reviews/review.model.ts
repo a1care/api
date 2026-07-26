@@ -16,7 +16,7 @@ const ReviewSchema = new Schema<ReviewDocument>(
     {
         userId: {
             type: Schema.Types.ObjectId,
-            ref: "user",
+            ref: "Patient",
             required: true,
         },
         doctorId: {

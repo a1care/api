@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { getSystemSettings } from "../modules/Admin/admin.controller.js";
+import { EmailTemplate } from "../modules/EmailTemplates/emailTemplate.model.js";
 
 export interface EmailOptions {
     to: string;
@@ -90,7 +91,33 @@ const baseTemplate = (title: string, body: string) => `
         </tr>
     </table>
 </body>
+</body>
 </html>`;
+
+const getDynamicTemplate = async (code: string, fallbackSubject: string, fallbackBody: string, data: Record<string, any>) => {
+    let subject = fallbackSubject;
+    let body = fallbackBody;
+
+    try {
+        const template = await EmailTemplate.findOne({ code }).lean();
+        if (template) {
+            subject = template.subject;
+            body = template.htmlBody;
+        }
+    } catch (error) {
+        console.error(`[EmailTemplate] Failed to fetch template for ${code}`, error);
+    }
+
+    // Replace all placeholders {{key}} with actual data
+    for (const [key, value] of Object.entries(data)) {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        const strVal = String(value || "");
+        subject = subject.replace(regex, strVal);
+        body = body.replace(regex, strVal);
+    }
+
+    return { subject, body };
+};
 
 export const sendWelcomeEmail = async (data: { email: string; fullName: string }) => {
     const body = `
@@ -106,44 +133,47 @@ export const sendWelcomeEmail = async (data: { email: string; fullName: string }
 };
 
 export const sendPartnerWelcomeEmail = async (data: { email: string; fullName: string }) => {
-    const body = `
+    const fallbackBody = `
         <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Welcome to the A1Care Partner Network!</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
         <p style="margin-bottom:20px;">We're thrilled to have you join us as a healthcare partner. A1Care 24/7 is on a mission to bring high-quality healthcare directly to patients' homes, and your expertise is key to making that happen.</p>
         <p style="margin-bottom:20px;">Your profile is currently under review. Once verified, you'll be able to receive and manage service requests, track your earnings, and grow your practice with us.</p>
         <p style="margin-bottom:30px;">Download the A1Care Partner app to stay updated on your status and start receiving bookings once you're active.</p>
         <a href="https://a1care.in/partner" style="display:inline-block;background-color:${EMAIL_PRIMARY_COLOR};color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Go to Partner App</a>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
-    return sendEmail({ to: data.email, subject: "Welcome to A1Care Partner - Let's Grow Together", html: baseTemplate("Welcome Partner", body) });
+    const { subject, body } = await getDynamicTemplate("partner_welcome", "Welcome to A1Care Partner - Let's Grow Together", fallbackBody, data);
+    return sendEmail({ to: data.email, subject, html: baseTemplate("Welcome Partner", body) });
 };
 
 export const sendPartnerApprovalEmail = async (data: { email: string; fullName: string }) => {
-    const body = `
+    const fallbackBody = `
         <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#059669;">Your Partner Account is Approved</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
         <p style="margin-bottom:20px;">Great news. Your A1Care partner profile and documents have been verified successfully.</p>
         <p style="margin-bottom:20px;">You can now go online in the A1Care Partner app and start receiving eligible booking requests.</p>
         <a href="https://a1care.in/partner" style="display:inline-block;background-color:#059669;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Open Partner App</a>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
-    return sendEmail({ to: data.email, subject: "A1Care Partner KYC Approved", html: baseTemplate("Partner Approved", body) });
+    const { subject, body } = await getDynamicTemplate("partner_approved", "A1Care Partner KYC Approved", fallbackBody, data);
+    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner Approved", body) });
 };
 
 export const sendPartnerRejectionEmail = async (data: { email: string; fullName: string; reason: string }) => {
-    const body = `
+    const fallbackBody = `
         <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#e11d48;">Partner KYC Needs Updates</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
+        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
         <p style="margin-bottom:20px;">We reviewed your A1Care partner application, but we could not approve it yet.</p>
         <div style="background-color:#fff1f2;padding:24px;border-radius:16px;margin-bottom:24px;border:1px solid #fecdd3;">
             <p style="margin:0 0 8px;font-size:11px;font-weight:800;color:#be123c;text-transform:uppercase;letter-spacing:0.08em;">Reason</p>
-            <p style="margin:0;font-size:15px;color:#881337;font-weight:600;">${data.reason}</p>
+            <p style="margin:0;font-size:15px;color:#881337;font-weight:600;">{{reason}}</p>
         </div>
         <p style="margin-bottom:20px;">Please update the required details or re-upload the correct documents in the A1Care Partner app. Our team will review your profile again after resubmission.</p>
         <a href="https://a1care.in/partner" style="display:inline-block;background-color:#e11d48;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Update Application</a>
         <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
     `;
-    return sendEmail({ to: data.email, subject: "A1Care Partner KYC Update Required", html: baseTemplate("Partner KYC Update Required", body) });
+    const { subject, body } = await getDynamicTemplate("partner_rejected", "A1Care Partner KYC Update Required", fallbackBody, data);
+    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner KYC Update Required", body) });
 };
 
 export const sendJobAcknowledgmentEmail = async (data: { email: string; fullName: string; jobTitle: string }) => {
@@ -367,4 +397,80 @@ export const sendOTPFallbackEmail = async (data: { email: string; otp: string })
         <p style="font-size:12px;color:#6b7280;text-align:center;">This code will expire in 10 minutes. Do not share this code with anyone.</p>
     `;
     return sendEmail({ to: data.email, subject: "A1Care 24/7 Verification Code", html: baseTemplate("Security Code", body) });
+};
+
+export const sendInvoiceReceiptEmail = async (data: {
+    email: string;
+    fullName: string;
+    serviceName: string;
+    bookingId: string;
+    date: string;
+    subtotal: number | string;
+    tax: number | string;
+    discount?: number | string;
+    totalAmount: number | string;
+    paymentMode: string;
+}) => {
+    const body = `
+        <div style="text-align:center; margin-bottom:30px;">
+            <div style="width:60px; height:60px; background-color:#EFF6FF; border-radius:30px; display:inline-block; line-height:60px; font-size:28px; margin-bottom:20px;">🧾</div>
+            <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;color:#0D2E6E;">Payment Receipt</h2>
+            <p style="color:#64748B;font-size:14px;margin:0;">Thank you for choosing A1Care 24/7.</p>
+        </div>
+        <div style="background-color:#ffffff;padding:32px;border-radius:16px;border:1px solid #E2E8F0;margin-bottom:30px;box-shadow:0 4px 6px rgba(0,0,0,0.02);">
+            <div style="display:table; width:100%; margin-bottom:24px;">
+                <div style="display:table-cell; width:50%;">
+                    <p style="margin:0; font-size:10px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Invoice For</p>
+                    <p style="margin:4px 0 0; font-size:14px; font-weight:700; color:#1E293B;">${data.fullName}</p>
+                </div>
+                <div style="display:table-cell; width:50%; text-align:right;">
+                    <p style="margin:0; font-size:10px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Date & Time</p>
+                    <p style="margin:4px 0 0; font-size:14px; font-weight:700; color:#1E293B;">${data.date}</p>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid #E2E8F0;">
+                <p style="margin:0; font-size:10px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Service Details</p>
+                <div style="display:table; width:100%; margin-top:12px;">
+                    <div style="display:table-cell; width:70%;">
+                        <p style="margin:0; font-size:15px; font-weight:700; color:#0D2E6E;">${data.serviceName}</p>
+                        <p style="margin:2px 0 0; font-size:12px; color:#64748B;">ID: ${data.bookingId}</p>
+                    </div>
+                    <div style="display:table-cell; width:30%; text-align:right; vertical-align:top;">
+                        <p style="margin:0; font-size:15px; font-weight:700; color:#1E293B;">₹${data.subtotal}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:table; width:100%; margin-bottom:12px;">
+                <div style="display:table-cell; width:70%; text-align:right; padding-right:16px;">
+                    <p style="margin:0; font-size:13px; color:#64748B;">Taxes & Fees</p>
+                </div>
+                <div style="display:table-cell; width:30%; text-align:right;">
+                    <p style="margin:0; font-size:13px; font-weight:600; color:#1E293B;">₹${data.tax}</p>
+                </div>
+            </div>
+            ${data.discount ? `
+            <div style="display:table; width:100%; margin-bottom:16px;">
+                <div style="display:table-cell; width:70%; text-align:right; padding-right:16px;">
+                    <p style="margin:0; font-size:13px; font-weight:600; color:#10B981;">Discount Applied</p>
+                </div>
+                <div style="display:table-cell; width:30%; text-align:right;">
+                    <p style="margin:0; font-size:13px; font-weight:700; color:#10B981;">- ₹${data.discount}</p>
+                </div>
+            </div>` : ''}
+
+            <div style="display:table; width:100%; background-color:#F8FAFC; padding:16px; border-radius:12px; margin-top:20px;">
+                <div style="display:table-cell; width:60%; vertical-align:middle;">
+                    <p style="margin:0; font-size:16px; font-weight:800; color:#0D2E6E;">Total Amount Paid</p>
+                    <p style="margin:4px 0 0; font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase;">Via ${data.paymentMode}</p>
+                </div>
+                <div style="display:table-cell; width:40%; text-align:right; vertical-align:middle;">
+                    <p style="margin:0; font-size:24px; font-weight:900; color:#0D2E6E;">₹${data.totalAmount}</p>
+                </div>
+            </div>
+        </div>
+        <p style="font-size:13px;color:#94A3B8;text-align:center;">This is a computer-generated receipt and does not require a physical signature.</p>
+    `;
+    return sendEmail({ to: data.email, subject: `Payment Receipt for ${data.serviceName} - A1Care 24/7`, html: baseTemplate("Payment Receipt", body) });
 };

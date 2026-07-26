@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import { initSocket } from './socket.js';
 import { saveChatMessage } from './modules/Chat/chat.controller.js';
 import { runSubscriptionCleanup } from './jobs/subscriptionCleaner.js';
+import { runAccountCleanupJob } from './jobs/accountCleanup.job.js';
 
 const server = http.createServer(app);
 const io = initSocket(server);
@@ -107,6 +108,7 @@ const startServer = async () => {
         // Background Jobs
         await runSubscriptionCleanup();
         setInterval(runSubscriptionCleanup, 3600 * 1000); // Every Hour
+        runAccountCleanupJob(); // Nightly cron job
 
         server.listen(Number(process.env.PORT) || 3000, '0.0.0.0', () => {
             console.log(`Server (Socket enabled) running on 0.0.0.0:${process.env.PORT || 3000}`);
@@ -118,3 +120,4 @@ const startServer = async () => {
 };
 
 startServer();
+// Trigger restart for admin controller fix
