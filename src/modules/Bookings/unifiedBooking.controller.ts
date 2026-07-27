@@ -57,6 +57,16 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
     ]);
     if (!provider) throw new ApiError(404, "Provider not found");
 
+    // Industry Standard: If provider is not verified (e.g., Pending or Rejected), do not expose any bookings
+    if (provider.status !== "Active") {
+        return res.status(200).json(
+            new ApiResponse(200, "Account under review", {
+                data: [],
+                stats: { pending: 0, completed: 0, earnings: 0, total: 0 }
+            })
+        );
+    }
+
     const { status } = req.query;
     const isOnline = partnerLoc ? partnerLoc.isOnline : true;
     const rejectedIds = rejected.map(r => r.serviceRequestId?.toString()).filter(Boolean);
@@ -120,6 +130,19 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             // Only skip broadcasted bookings when explicitly filtering for non-pending statuses
             const skipBroadcast = (status === 'Completed' || status === 'Cancelled');
             if (skipBroadcast) return [];
+
+            // Industry Standard: Filter out existing bookings created before the provider registered
+            const providerCreatedAt = (provider as any).createdAt;
+            if (providerCreatedAt) {
+                if (!timeQuery.createdAt) timeQuery.createdAt = {};
+                if (timeQuery.createdAt.$gte) {
+                    const existingGte = new Date(timeQuery.createdAt.$gte).getTime();
+                    const providerGte = new Date(providerCreatedAt).getTime();
+                    timeQuery.createdAt.$gte = new Date(Math.max(existingGte, providerGte));
+                } else {
+                    timeQuery.createdAt.$gte = providerCreatedAt;
+                }
+            }
 
             let services = await ServiceRequest.find({
                 _id: { $nin: rejectedIds },

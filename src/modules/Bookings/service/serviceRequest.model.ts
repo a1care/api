@@ -103,7 +103,7 @@ const ServiceRequestSchema = new Schema(
 
     paymentMode: {
       type: String,
-      enum: ["ONLINE", "OFFLINE", "COD"],
+      enum: ["ONLINE", "OFFLINE", "COD", "WALLET"],
       default: "COD"
     },
     paymentStatus: {

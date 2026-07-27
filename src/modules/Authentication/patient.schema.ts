@@ -15,7 +15,8 @@ export const patientValidation = z.object({
     isRegistered: z.preprocess((val) => {
         if (typeof val === 'string') return val === 'true';
         return Boolean(val);
-    }, z.boolean()).default(false)
+    }, z.boolean()).default(false),
+    referredByCode: z.string().optional()
 })
 
 export type patientType = z.infer<typeof patientValidation>

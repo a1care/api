@@ -2,6 +2,8 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface PayoutDocument extends Document {
   staffId: mongoose.Types.ObjectId;
+  partnerName?: string;
+  partnerMobile?: string;
   amount: number;
   status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
   bankDetails?: {
@@ -23,6 +25,12 @@ const PayoutSchema = new Schema<PayoutDocument>(
       ref: "staff",
       required: true,
       index: true
+    },
+    partnerName: {
+      type: String,
+    },
+    partnerMobile: {
+      type: String,
     },
     amount: {
       type: Number,

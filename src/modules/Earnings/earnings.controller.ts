@@ -142,6 +142,8 @@ export const requestPayout = asyncHandler(async (req, res) => {
 
     const payout = await Payout.create({
         staffId,
+        partnerName: staff.name,
+        partnerMobile: staff.mobileNumber,
         amount,
         bankDetails: finalDetails,
         status: "PENDING"

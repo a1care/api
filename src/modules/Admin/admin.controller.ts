@@ -2269,7 +2269,17 @@ export const getAdminPayouts = asyncHandler(async (req, res) => {
     .populate("staffId", "name mobileNumber")
     .sort({ createdAt: -1 });
 
-  let formatted = payouts.map(p => p.toObject() as any);
+  let formatted = payouts.map(p => {
+    const obj = p.toObject() as any;
+    // Fallback if the partner document was deleted but payouts remain
+    if (!obj.staffId) {
+      obj.staffId = {
+        name: obj.partnerName || obj.bankDetails?.accountHolderName || "Deleted Partner",
+        mobileNumber: obj.partnerMobile || "N/A"
+      };
+    }
+    return obj;
+  });
 
   if (search && search !== "") {
     const s = (search as string).toLowerCase();

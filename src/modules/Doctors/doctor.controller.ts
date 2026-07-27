@@ -7,7 +7,7 @@ import doctorModel from "./doctor.model.js";
 import doctorValidation from "./doctor.schema.js";
 import PartnerSubscription from "../PartnerSubscription/subscription.model.js";
 import PartnerSubscriptionPlan from "../PartnerSubscription/plan.model.js";
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 import { v1 as uuidv4 } from "uuid";
 import { hmacHash } from "../../utils/Hmac.js";
 import sendMessage from "../../configs/twilioConfig.js";
@@ -15,10 +15,7 @@ import sendAlotsSms from "../../utils/alotsSms.js";
 import mongoose from "mongoose";
 import { enqueueEmail } from "../../queues/communicationQueue.js";
 import { notifyAdmin } from "../Notifications/notification.controller.js";
-
-// ─── DEV BYPASS CONSTANTS ─────────────────────────────────────────────────────
-// const DEV_BYPASS_OTP = "123456";
-// ─────────────────────────────────────────────────────────────────────────────
+import { recordReferralUse } from "../Referral/referral.controller.js";
 
 //create doctor 
 export const createDoctor = asyncHandler(async (req, res) => {
@@ -88,6 +85,17 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
   }
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+
+  const doctor = await doctorModel.findOne({
+    $or: [
+      { mobileNumber: cleanMobile },
+      { mobileNumber: `+91${cleanMobile}` }
+    ]
+  });
+
+  if (doctor?.isDeleted) {
+    return res.status(403).json(new ApiResponse(403, "ACCOUNT_DELETED", { isDeleted: true }));
+  }
 
   // Static test number — bypass OTP when ALLOW_TEST_OTP env var is set
   if (["8309470360", "6302759527", "9666210561"].includes(cleanMobile) && process.env.ALLOW_TEST_OTP?.trim() === "true") {
@@ -172,7 +180,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       });
 
       if (staff && (staff.isDeleted || staff.deletedAt)) {
-        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
+        throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
       }
 
       if (staff && staff.isRegistered && role) {
@@ -244,7 +252,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     }
 
     if (staff && (staff.isDeleted || staff.deletedAt)) {
-        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
+        throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
     }
 
     if (staff && staff.isRegistered && role) {
@@ -385,6 +393,11 @@ export const registerStaff = asyncHandler(async (req, res) => {
   // Handle specific overrides if necessary
   if (req.body.isRegistered !== undefined) {
     updateData.isRegistered = req.body.isRegistered;
+  }
+
+  // Handle specific overrides if necessary
+  if (req.body.isRegistered !== undefined) {
+    updateData.isRegistered = req.body.isRegistered;
   } else if (!findStaff.isRegistered && req.body.name) {
     // If name is being set for the first time, maybe consider it partially registered
     updateData.isRegistered = true;
@@ -402,6 +415,15 @@ export const registerStaff = asyncHandler(async (req, res) => {
     updateData.status = "Pending";
     updateData.resubmittedAt = new Date();
     updateData.resubmissionCount = (findStaff.resubmissionCount || 0) + 1;
+  }
+
+  // Process referral code if provided on FIRST registration
+  if (parsed.data.referredByCode && !findStaff.isRegistered && updateData.isRegistered) {
+    try {
+      await recordReferralUse(String(staffId), "Doctor", parsed.data.referredByCode);
+    } catch (e) {
+      console.error("[Referral] Failed to record referral use:", e);
+    }
   }
 
   const updatedStaff = await doctorModel.findByIdAndUpdate(
@@ -525,29 +547,38 @@ export const refreshTokenForDoctor = asyncHandler(async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken) throw new ApiError(400, "Refresh token is required");
 
-    try {
-        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET!) as any;
-        if (decoded.type !== 'refresh') throw new ApiError(401, "Invalid token type");
+  const staffId = req.user?.id;
+  const { fcmToken } = req.body;
+  if (!fcmToken) throw new ApiError(400, "FCM Token is required");
 
-        const staff = await doctorModel.findById(decoded.staffId);
-        if (!staff) throw new ApiError(401, "User not found");
-        if (staff.isDeleted || staff.deletedAt) throw new ApiError(401, "Account deleted");
-        if (staff.tokenVersion !== decoded.tv) throw new ApiError(401, "Token revoked");
+  await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
+  return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
+});
 
-        const accessToken = jwt.sign(
-            { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'access' },
-            process.env.JWT_SECRET!,
-            { expiresIn: "7d" }
-        );
+// Restore deleted staff account
+export const restoreStaffAccount = asyncHandler(async (req, res) => {
+  const { mobileNumber } = req.body;
+  if (!mobileNumber) throw new ApiError(400, "Mobile number is required");
 
-        const newRefreshToken = jwt.sign(
-            { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'refresh' },
-            process.env.JWT_SECRET!,
-            { expiresIn: "30d" }
-        );
+  const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
 
-        return res.status(200).json(new ApiResponse(200, "Token refreshed", { token: accessToken, refreshToken: newRefreshToken }));
-    } catch (error) {
-        throw new ApiError(401, "Invalid or expired refresh token");
-    }
+  const staff = await doctorModel.findOne({
+    $or: [
+      { mobileNumber: cleanMobile },
+      { mobileNumber: `+91${cleanMobile}` }
+    ]
+  });
+
+  if (!staff) {
+    throw new ApiError(404, "User not found");
+  }
+
+  staff.isDeleted = false;
+  staff.deletedAt = null as any;
+  staff.deletionRequested = false;
+  staff.deletionRequestedAt = null as any;
+  staff.tokenVersion = (staff.tokenVersion || 0) + 1; // invalidate all old tokens just in case
+  await staff.save();
+
+  return res.status(200).json(new ApiResponse(200, "Account restored successfully", { mobileNumber }));
 });

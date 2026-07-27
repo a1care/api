@@ -98,7 +98,6 @@ export const validateReferralCode = asyncHandler(async (req, res) => {
     })
   );
 });
-
 /**
  * Internal helper — call this after a booking is created.
  * Creates a PENDING referral record. Does NOT credit wallet yet.
@@ -107,13 +106,13 @@ export const recordReferralUse = async (
   userId: string,
   userModel: "Patient" | "Doctor",
   referralCode: string,
-  bookingId: string
+  bookingId?: string
 ): Promise<void> => {
   try {
     const code = referralCode.toUpperCase().trim();
     let referrer: any = await Patient.findOne({ referralCode: code }).select("_id");
     let referrerModel = "Patient";
-    
+
     if (!referrer) {
       referrer = await Doctor.findOne({ referralCode: code }).select("_id");
       referrerModel = "Doctor";

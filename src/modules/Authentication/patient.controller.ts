@@ -9,6 +9,7 @@ import { enqueueEmail } from "../../queues/communicationQueue.js";
 import { formatZodError } from "../../utils/formatZodError.js";
 import sendAlotsSms from "../../utils/alotsSms.js";
 import RedisClient from "../../configs/redisConnect.js";
+import { recordReferralUse } from "../Referral/referral.controller.js";
 
 // ⭐⭐⭐ STATIC TEST NUMBER ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 const STATIC_TEST_MOBILES = ["8309470360", "6302759527", "9666210561"];
@@ -37,6 +38,17 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
   }
 
   const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+
+  const patient = await Patient.findOne({
+    $or: [
+      { mobileNumber: cleanMobile },
+      { mobileNumber: `+91${cleanMobile}` }
+    ]
+  });
+
+  if (patient?.isDeleted) {
+    return res.status(403).json(new ApiResponse(403, "ACCOUNT_DELETED", { isDeleted: true }));
+  }
 
   // Static test number — bypass OTP when ALLOW_TEST_OTP env var is set
   if (STATIC_TEST_MOBILES.includes(cleanMobile) && process.env.ALLOW_TEST_OTP?.trim() === "true") {
@@ -96,7 +108,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
         mobileNumber: { $in: [cleanMobile, `+91${cleanMobile}`] }
       });
       if (patient && (patient.isDeleted || patient.deletedAt)) {
-        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
+        throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
       }
       if (!patient) {
         patient = new Patient({ mobileNumber: `+91${cleanMobile}` });
@@ -155,7 +167,7 @@ export const verifyOtpForPatient = asyncHandler(async (req, res) => {
     }
 
     if (patient && (patient.isDeleted || patient.deletedAt)) {
-        throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
+        throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
     }
 
     if (!patient) {
@@ -228,6 +240,15 @@ export const updateProfile = asyncHandler(async (req, res) => {
       runValidators: true
     }
   );
+
+  // 3b. Process referral code if provided on FIRST registration
+  if (parsed.data.referredByCode && wasNotRegistered) {
+    try {
+      await recordReferralUse(String(patientId), "Patient", parsed.data.referredByCode);
+    } catch (e) {
+      console.error("[Referral] Failed to record referral use:", e);
+    }
+  }
 
   // 4. Handle not found
   if (!updatedPatient) {
@@ -321,7 +342,7 @@ export const refreshTokenForPatient = asyncHandler(async (req, res) => {
 
         const patient = await Patient.findById(decoded.userId);
         if (!patient) throw new ApiError(401, "User not found");
-        if (patient.isDeleted || patient.deletedAt) throw new ApiError(403, "Your account is scheduled for deletion. To restore your account, contact newadmin@a1care.com");
+        if (patient.isDeleted || patient.deletedAt) throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
         if (patient.tokenVersion !== decoded.tv) throw new ApiError(401, "Token revoked");
 
         const accessToken = jwt.sign(
@@ -340,4 +361,32 @@ export const refreshTokenForPatient = asyncHandler(async (req, res) => {
     } catch (error) {
         throw new ApiError(401, "Invalid or expired refresh token");
     }
+});
+
+// Restore deleted patient account
+export const restorePatientAccount = asyncHandler(async (req, res) => {
+  const { mobileNumber } = req.body;
+  if (!mobileNumber) throw new ApiError(400, "Mobile number is required");
+
+  const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+
+  const patient = await Patient.findOne({
+    $or: [
+      { mobileNumber: cleanMobile },
+      { mobileNumber: `+91${cleanMobile}` }
+    ]
+  });
+
+  if (!patient) {
+    throw new ApiError(404, "User not found");
+  }
+
+  patient.isDeleted = false;
+  patient.deletedAt = null;
+  patient.deletionRequested = false;
+  patient.deletionRequestedAt = null;
+  patient.tokenVersion = (patient.tokenVersion || 0) + 1; // invalidate old tokens
+  await patient.save();
+
+  return res.status(200).json(new ApiResponse(200, "Account restored successfully", { mobileNumber }));
 });

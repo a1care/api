@@ -86,7 +86,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const parsed = serviceRequestValiation.safeParse(payload);
     if (!parsed.success) {
         console.error("Validation failed!", parsed.error);
-        throw new ApiError(400, "Validation failed: " + (parsed.error as any).errors.map((e: any) => `${e.path?.join('.') || ''}: ${e.message}`).join(', '));
+        throw new ApiError(400, "Validation failed: " + (parsed.error as any).issues?.map((e: any) => `${e.path?.join('.') || ''}: ${e.message}`).join(', '));
     }
 
     if (payload.paymentMode === 'WALLET') {
@@ -148,7 +148,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     try {
         const patient = await Patient.findById(userId);
         if (patient?.email) {
-            await enqueueEmail({
+            enqueueEmail({
                 kind: "appointment",
                 data: {
                     email: patient.email,
@@ -158,7 +158,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                     time: "Awaiting admin assignment",
                     location: patient.primaryAddressId ? "Stored Patient Address" : "Current Location",
                 },
-            });
+            }).catch(e => console.error("[Email] enqueue error:", e));
         }
         if (patient?.fcmToken) {
             enqueuePush({
@@ -178,12 +178,12 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
 
     try {
         const { notifyAdmin } = await import("../../Notifications/notification.controller.js");
-        await notifyAdmin(
+        notifyAdmin(
             "New Booking Created",
             `A new ${bookingName} booking was created by ${(req.user as any)?.name || "Customer"}.`,
             "ServiceRequest",
             newServiceRequest._id as any
-        );
+        ).catch(e => console.error("[Push] admin notification error:", e));
     } catch (e) {
         console.error("[Push] admin notification error:", e);
     }

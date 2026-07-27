@@ -155,7 +155,7 @@
     },
     "email": {
       "user": "support@a1care247.com",
-      "pass": "",
+      "pass": "admin123",
       "host": "smtp.gmail.com",
       "port": 587,
       "from": "A1Care <support@a1care247.com>"

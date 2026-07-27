@@ -1,6 +1,6 @@
 import express from 'express'
 import rateLimit from 'express-rate-limit'
-import { checkOtpStatus, createDoctor, getDoctorById, getStaffByRoleId, getStaffDetials, registerStaff, requestStaffDeletion, sendOtpForStaff, updateFcmToken, verifyOtp, refreshTokenForDoctor } from './doctor.controller.js'
+import { checkOtpStatus, createDoctor, getDoctorById, getStaffByRoleId, getStaffDetials, registerStaff, requestStaffDeletion, sendOtpForStaff, updateFcmToken, verifyOtp, refreshTokenForDoctor, restoreStaffAccount } from './doctor.controller.js'
 import { availableSlotByDoctorId, blockTiming, createDoctorAvailability, getDoctorAvailabilitybyDoctorId } from './slots/doctorAvailability.controller.js'
 import { protect } from '../../middlewares/protect.js'
 import { protectAdmin, requireAdminRole } from '../../middlewares/protectAdmin.js'
@@ -31,6 +31,7 @@ const otpVerifyLimiter = rateLimit({
 // authentication routes
 router.post("/auth/send-otp", otpLimiter, sendOtpForStaff)
 router.post("/auth/verify-otp", otpVerifyLimiter, verifyOtp)
+router.post("/auth/restore", restoreStaffAccount)
 router.post("/auth/refresh", refreshTokenForDoctor)
 router.get("/auth/details", protect, getStaffDetials)
 router.post("/auth/otp/status", checkOtpStatus)

@@ -33,7 +33,8 @@ const doctorValidation = z.object({
         ifscCode: z.string().length(11, "IFSC code must be exactly 11 characters").optional(),
         bankName: z.string().min(3, "Bank name must be at least 3 characters").optional(),
         upiId: z.string().optional()
-    }).optional()
+    }).optional(),
+    referredByCode: z.string().optional()
 })
 
 export default doctorValidation
