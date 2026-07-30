@@ -293,6 +293,17 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Cannot cancel a booking that is already ${existing.status}`);
     }
 
+    // Guard: Prevent early execution of future bookings
+    if ((status === "IN_PROGRESS" || status === "COMPLETED") && existing.scheduledSlot?.startTime) {
+        const scheduledDate = new Date(existing.scheduledSlot.startTime);
+        const today = new Date();
+        scheduledDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        if (scheduledDate > today) {
+            throw new ApiError(400, "Cannot start or complete a booking scheduled for a future date.");
+        }
+    }
+
     if (status === "CANCELLED") {
         console.info(`[BOOKING] [CANCEL] [${id}] Cancelled by ${isPatient ? 'Patient' : 'Provider'} (${requesterId})`);
     }

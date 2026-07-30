@@ -74,7 +74,7 @@ export const validateReferralCode = asyncHandler(async (req, res) => {
   
   if (!referrer) {
     referrer = await Doctor.findOne({ referralCode: code.toUpperCase().trim() }).select("_id name referralCode");
-    referrerModel = "Doctor";
+    referrerModel = "staff";
   }
   
   if (!referrer) throw new ApiError(404, "Invalid referral code");
@@ -104,7 +104,7 @@ export const validateReferralCode = asyncHandler(async (req, res) => {
  */
 export const recordReferralUse = async (
   userId: string,
-  userModel: "Patient" | "Doctor",
+  userModel: "Patient" | "staff",
   referralCode: string,
   bookingId?: string
 ): Promise<void> => {
@@ -115,7 +115,7 @@ export const recordReferralUse = async (
 
     if (!referrer) {
       referrer = await Doctor.findOne({ referralCode: code }).select("_id");
-      referrerModel = "Doctor";
+      referrerModel = "staff";
     }
     
     if (!referrer) return;

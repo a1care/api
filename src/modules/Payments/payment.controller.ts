@@ -238,8 +238,15 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
     } else if (order.type === "SUBSCRIPTION" && order.referenceId) {
         const PartnerSubscription = (await import("../PartnerSubscription/subscription.model.js")).default;
         const sub = await PartnerSubscription.findByIdAndUpdate(order.referenceId, { status: "Active" }, { new: true });
-        if (sub && service && typeof service.logEvent === 'function') {
-            await service.logEvent(order.txnId, "SUBSCRIPTION_ACTIVATED", "INFO", `Activated subscription: ${order.referenceId}`);
+        if (sub) {
+            // Cancel any previous active subscriptions now that the new one is paid and active
+            await PartnerSubscription.updateMany(
+                { partnerId: sub.partnerId, _id: { $ne: sub._id }, status: "Active" },
+                { status: "Cancelled" }
+            );
+            if (service && typeof service.logEvent === 'function') {
+                await service.logEvent(order.txnId, "SUBSCRIPTION_ACTIVATED", "INFO", `Activated subscription: ${order.referenceId}`);
+            }
         }
     }
 };

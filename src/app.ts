@@ -137,6 +137,12 @@ app.use('/api/childService', childServiceRoute)
 //roles
 app.use("/api/role", roleRoutes)
 
+//cms and knowledge base
+import cmsRoutes from './modules/CMS/cms.routes.js'
+import knowledgeBaseRoutes from './modules/KnowledgeBase/knowledgeBase.routes.js'
+app.use('/api/cms', cmsRoutes)
+app.use('/api/knowledge-base', knowledgeBaseRoutes)
+
 //doctors
 app.use('/api/doctor', doctorRoutes)
 app.use('/api/nurse', doctorRoutes)

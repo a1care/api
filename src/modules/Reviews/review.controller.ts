@@ -76,7 +76,7 @@ export const addReview = asyncHandler(async (req, res) => {
 
     // Update Average Rating — patient reviews only, so partner→customer feedback never
     // contaminates the provider/service public stars.
-    if (bookingType === "Doctor" && doctorId) {
+    if (doctorId) {
         const stats = await ReviewModel.aggregate([
             { $match: { doctorId: new mongoose.Types.ObjectId(doctorId), status: "Active", reviewerType: "patient" } },
             { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } }
@@ -88,7 +88,9 @@ export const addReview = asyncHandler(async (req, res) => {
                 // We could also update 'completed' if we want, but usually that depends on booking status
             });
         }
-    } else if (bookingType === "Service" && childServiceId) {
+    } 
+    
+    if (bookingType === "Service" && childServiceId) {
         // Similarly for childService if it has a rating field
         const stats = await ReviewModel.aggregate([
             { $match: { childServiceId: new mongoose.Types.ObjectId(childServiceId), status: "Active", reviewerType: "patient" } },
@@ -182,4 +184,16 @@ export const updateReviewStatus = asyncHandler(async (req, res) => {
     if (!review) throw new ApiError(404, "Review not found");
 
     return res.status(200).json(new ApiResponse(200, "Review status updated", review));
+});
+
+export const getMyReviews = asyncHandler(async (req, res) => {
+    const partnerId = req.user?.id;
+    if (!partnerId) throw new ApiError(401, "Unauthorized");
+
+    const reviews = await ReviewModel.find({ doctorId: partnerId, status: "Active" })
+        .populate("userId", "name profileImage")
+        .populate("bookingId", "date startingTime")
+        .sort({ createdAt: -1 });
+
+    return res.status(200).json(new ApiResponse(200, "My reviews fetched", reviews));
 });

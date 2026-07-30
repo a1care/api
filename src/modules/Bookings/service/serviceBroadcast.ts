@@ -8,6 +8,7 @@ import { calculateDistance } from "../../../utils/geo.js";
 import { enqueuePush, enqueuePushToMany } from "../../../queues/communicationQueue.js";
 import { Patient } from "../../Authentication/patient.model.js";
 import { notifyAdmin } from "../../Notifications/notification.controller.js";
+import { emitToRoom } from "../../../socket.js";
 
 export const BROADCAST_DELAY_MS = 10_000;
 
@@ -111,6 +112,31 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
   await serviceRequestModel.findByIdAndUpdate(serviceRequestId, {
     status: "BROADCASTED",
     broadcastedAt: new Date(),
+  });
+
+  // Fetch patient name for the WebSocket payload
+  let patientName = "Customer";
+  try {
+      const patient = await Patient.findById(request.userId).select("name");
+      if (patient?.name) patientName = patient.name;
+  } catch (e) {
+      console.error("[Booking] Error fetching patient name for broadcast:", e);
+  }
+
+  // Construct the ultra-fast WebSocket payload
+  const wsPayload = {
+      bookingId: serviceRequestId,
+      serviceName,
+      patientName,
+      location: request.location ? "Near You" : "Remote", // Ideally format address here if available
+      amount: (request as any).price || 0,
+      scheduledTime: request.bookingType === "SCHEDULED" ? request.scheduledSlot?.startTime?.toISOString() : undefined,
+      acceptanceDeadline: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+  };
+
+  // Blast the payload directly to all eligible partners via WebSockets
+  partnersInRadius.forEach((p) => {
+      emitToRoom(`user_${p._id.toString()}`, "booking:assignment_request", wsPayload);
   });
 
   // Notify customer that we're actively looking for a partner

@@ -265,6 +265,17 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     const isDoctor = existing.doctorId.toString() === requesterId.toString();
     if (!isPatient && !isDoctor) throw new ApiError(403, "Not allowed to modify this appointment");
 
+    // Guard: Prevent early execution of future bookings
+    if ((status === "IN_PROGRESS" || status === "Completed") && existing.date) {
+        const scheduledDate = new Date(existing.date);
+        const today = new Date();
+        scheduledDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        if (scheduledDate > today) {
+            throw new ApiError(400, "Cannot start or complete an appointment scheduled for a future date.");
+        }
+    }
+
     if (isDoctor && status === "Confirmed" && existing.status !== "Confirmed") {
         const { default: PartnerSubscription } = await import("../PartnerSubscription/subscription.model.js");
         const { default: serviceRequestModel } = await import("./service/serviceRequest.model.js");

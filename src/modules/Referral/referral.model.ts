@@ -10,7 +10,7 @@ const ReferralSchema = new Schema(
     referrerModel: {
       type: String,
       required: true,
-      enum: ['Patient', 'Doctor'],
+      enum: ['Patient', 'staff'],
     },
     refereeId: {
       type: Schema.Types.ObjectId,
@@ -21,7 +21,7 @@ const ReferralSchema = new Schema(
     refereeModel: {
       type: String,
       required: true,
-      enum: ['Patient', 'Doctor'],
+      enum: ['Patient', 'staff'],
     },
     referralCode: {
       type: String,

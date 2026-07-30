@@ -420,7 +420,7 @@ export const registerStaff = asyncHandler(async (req, res) => {
   // Process referral code if provided on FIRST registration
   if (parsed.data.referredByCode && !findStaff.isRegistered && updateData.isRegistered) {
     try {
-      await recordReferralUse(String(staffId), "Doctor", parsed.data.referredByCode);
+      await recordReferralUse(String(staffId), "staff", parsed.data.referredByCode);
     } catch (e) {
       console.error("[Referral] Failed to record referral use:", e);
     }
@@ -547,12 +547,31 @@ export const refreshTokenForDoctor = asyncHandler(async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken) throw new ApiError(400, "Refresh token is required");
 
-  const staffId = req.user?.id;
-  const { fcmToken } = req.body;
-  if (!fcmToken) throw new ApiError(400, "FCM Token is required");
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET!) as any;
+        if (decoded.type !== 'refresh') throw new ApiError(401, "Invalid token type");
 
-  await doctorModel.findByIdAndUpdate(staffId, { fcmToken });
-  return res.status(200).json(new ApiResponse(200, "FCM Token updated successfully", {}));
+        const staff = await doctorModel.findById(decoded.staffId);
+        if (!staff) throw new ApiError(401, "User not found");
+        if (staff.isDeleted || staff.deletedAt) return res.status(403).json(new ApiResponse(403, "ACCOUNT_DELETED", { isDeleted: true }));
+        if (staff.tokenVersion !== decoded.tv) throw new ApiError(401, "Token revoked");
+
+        const accessToken = jwt.sign(
+            { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'access' },
+            process.env.JWT_SECRET!,
+            { expiresIn: "7d" }
+        );
+
+        const newRefreshToken = jwt.sign(
+            { staffId: staff._id, tv: staff.tokenVersion || 0, type: 'refresh' },
+            process.env.JWT_SECRET!,
+            { expiresIn: "30d" }
+        );
+
+        return res.status(200).json(new ApiResponse(200, "Token refreshed", { token: accessToken, refreshToken: newRefreshToken }));
+    } catch (error) {
+        throw new ApiError(401, "Invalid or expired refresh token");
+    }
 });
 
 // Restore deleted staff account

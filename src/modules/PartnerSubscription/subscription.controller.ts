@@ -93,9 +93,9 @@ export const subscribe = async (req: Request, res: Response) => {
             endDate.setDate(startDate.getDate() + plan.validityDays);
         }
 
-        // Cancel any existing Active OR Pending subscriptions first
+        // Cancel any existing Pending or incomplete subscriptions first to avoid clutter
         await PartnerSubscription.updateMany(
-            { partnerId, status: { $in: ["Active", "Pending"] } },
+            { partnerId, status: { $in: ["Pending", "PAYMENT_PENDING"] } },
             { status: "Cancelled" }
         );
 
@@ -111,26 +111,63 @@ export const subscribe = async (req: Request, res: Response) => {
         let order = null;
         if (plan.price > 0) {
             if (paymentMode === "WALLET") {
-                const Wallet = (await import("../Wallet/wallet.model.js")).default;
-                let wallet = await Wallet.findOne({ userId: partnerId }); // onModel is typically implicitly handled or default
-                
-                if (!wallet || wallet.balance < plan.price) {
+                // Partner "Wallet" is actually their dynamic Earnings balance.
+                const mongoose = (await import("mongoose")).default;
+                const Payout = (await import("../Earnings/payout.model.js")).default;
+                const { getActiveCommissionRate } = await import("../PartnerSubscription/subscription.controller.js");
+                const doctorAppointmentModel = (await import("../Bookings/doctorAppointment.model.js")).default;
+                const serviceRequestModel = (await import("../Bookings/service/serviceRequest.model.js")).default;
+
+                const commissionPct = await getActiveCommissionRate(partnerId);
+                const earningRatio = (100 - commissionPct) / 100;
+
+                // Server-side balance verification
+                const [apptEarnings, serviceEarnings, totalWithdrawn] = await Promise.all([
+                    doctorAppointmentModel.aggregate([
+                        { $match: { doctorId: new mongoose.Types.ObjectId(partnerId), status: "Completed", paymentStatus: "COMPLETED" } },
+                        { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$totalAmount", earningRatio] }] } } } }
+                    ]),
+                    serviceRequestModel.aggregate([
+                        { $match: { assignedProviderId: new mongoose.Types.ObjectId(partnerId), status: "COMPLETED" } },
+                        { $group: { _id: null, sum: { $sum: { $ifNull: ["$partnerEarning", { $multiply: ["$price", earningRatio] }] } } } }
+                    ]),
+                    Payout.aggregate([
+                        { $match: { staffId: new mongoose.Types.ObjectId(partnerId), status: { $in: ["PENDING", "APPROVED", "COMPLETED"] } } },
+                        { $group: { _id: null, sum: { $sum: "$amount" } } }
+                    ])
+                ]);
+
+                const totalEarned = (apptEarnings[0]?.sum || 0) + (serviceEarnings[0]?.sum || 0);
+                const alreadyWithdrawn = totalWithdrawn[0]?.sum || 0;
+                const availableBalance = totalEarned - alreadyWithdrawn;
+
+                if (availableBalance < plan.price) {
                     await PartnerSubscription.findByIdAndDelete(subscription._id);
-                    return res.status(400).json({ success: false, message: "Insufficient wallet balance." });
+                    return res.status(400).json({ success: false, message: `Insufficient wallet balance. Available: ₹${availableBalance.toFixed(2)}, Required: ₹${plan.price}` });
                 }
 
-                wallet.balance -= plan.price;
-                wallet.transactions.push({
+                // Deduct by creating a completed Payout record
+                const Doctor = (await import("../Doctors/doctor.model.js")).default;
+                const staff = await Doctor.findById(partnerId);
+                
+                await Payout.create({
+                    staffId: partnerId,
+                    partnerName: staff?.name || "A1Care Partner",
+                    partnerMobile: staff?.mobileNumber || "",
                     amount: plan.price,
-                    type: "Debit",
-                    description: `Subscription purchase: ${plan.name}`,
-                    date: new Date()
+                    status: "COMPLETED",
+                    adminNote: `Subscription purchase: ${plan.name}`,
                 });
-                await wallet.save();
 
                 subscription.status = "Active";
                 subscription.paymentId = `WALLET-${Date.now()}`;
                 await subscription.save();
+
+                // New subscription is active, cancel any previous active subscriptions
+                await PartnerSubscription.updateMany(
+                    { partnerId, _id: { $ne: subscription._id }, status: "Active" },
+                    { status: "Cancelled" }
+                );
 
                 return res.status(201).json({ 
                     success: true, 
@@ -149,6 +186,14 @@ export const subscribe = async (req: Request, res: Response) => {
                     status: OrderStatus.PENDING,
                 });
             }
+        }
+
+        if (subscription.status === "Active") {
+            // New subscription is active, cancel any previous active subscriptions
+            await PartnerSubscription.updateMany(
+                { partnerId, _id: { $ne: subscription._id }, status: "Active" },
+                { status: "Cancelled" }
+            );
         }
 
         res.status(201).json({ 

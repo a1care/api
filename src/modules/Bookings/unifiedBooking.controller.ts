@@ -13,19 +13,18 @@ import serviceAcceptanceModal from "./service/serviceAcceptance.model.js";
 const formatTimeSlot = (startTime?: Date | string, endTime?: Date | string) => {
     if (!startTime) return "As scheduled";
     const start = new Date(startTime);
-    const end = endTime ? new Date(endTime) : null;
     
     const formatTime = (d: Date) => {
-        let hours = d.getHours();
-        const minutes = d.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12;
-        const minStr = minutes < 10 ? '0' + minutes : minutes;
-        return `${hours}:${minStr} ${ampm}`;
+        return new Intl.DateTimeFormat('en-IN', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Kolkata'
+        }).format(d).toUpperCase();
     };
 
-    if (end) {
+    if (endTime) {
+        const end = new Date(endTime);
         return `${formatTime(start)} - ${formatTime(end)}`;
     }
     return formatTime(start);
@@ -37,7 +36,21 @@ const formatTimeSlot = (startTime?: Date | string, endTime?: Date | string) => {
 const formatFeedAddress = (addrObj: any, fallbackLoc?: any) => {
     if (!addrObj && !fallbackLoc?.address) return "Patient Location";
     if (addrObj) {
-        const full = addrObj.address || [addrObj.houseNo, addrObj.addressLine1, addrObj.street, addrObj.landmark, addrObj.city, addrObj.state, addrObj.pincode].filter(Boolean).join(", ");
+        const parts = [
+            addrObj.houseNo, 
+            addrObj.addressLine1, 
+            addrObj.address, 
+            addrObj.street, 
+            addrObj.landmark, 
+            addrObj.city, 
+            addrObj.state, 
+            addrObj.pincode
+        ].filter(Boolean).map(s => String(s).trim());
+        
+        // Remove duplicates (e.g. if user entered "8-2-150" for both houseNo and address)
+        const uniqueParts = [...new Set(parts)];
+        
+        const full = uniqueParts.join(", ");
         if (full) return full;
     }
     return fallbackLoc?.address || "Patient Location";
@@ -60,10 +73,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
     // Industry Standard: If provider is not verified (e.g., Pending or Rejected), do not expose any bookings
     if (provider.status !== "Active") {
         return res.status(200).json(
-            new ApiResponse(200, "Account under review", {
-                data: [],
-                stats: { pending: 0, completed: 0, earnings: 0, total: 0 }
-            })
+            new ApiResponse(200, "Account under review", [])
         );
     }
 
@@ -116,17 +126,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             const partnerRoleId = provider.roleId;
 
             let timeQuery: any = {};
-            if (status === 'Missing') {
-                if (partnerLoc && partnerLoc.lastOfflineAt && partnerLoc.lastOnlineAt) {
-                    timeQuery.createdAt = {
-                        $gte: partnerLoc.lastOfflineAt,
-                        $lte: partnerLoc.lastOnlineAt
-                    };
-                } else {
-                    timeQuery._id = null;
-                }
-            }
-
+            
             // Only skip broadcasted bookings when explicitly filtering for non-pending statuses
             const skipBroadcast = (status === 'Completed' || status === 'Cancelled');
             if (skipBroadcast) return [];
@@ -144,9 +144,11 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                 }
             }
 
+            const fetchStatuses = status === 'Missing' ? ["RETURNED_TO_ADMIN"] : (status === 'all' ? ["BROADCASTED", "RETURNED_TO_ADMIN"] : ["BROADCASTED"]);
+
             let services = await ServiceRequest.find({
                 _id: { $nin: rejectedIds },
-                status: "BROADCASTED",
+                status: { $in: fetchStatuses },
                 ...timeQuery
             })
                 .populate("userId", "name mobileNumber profileImage")
@@ -217,13 +219,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             acceptanceDeadline: (s as any).acceptanceDeadline
         })),
         ...broadcastedServices.map((s: any) => {
-            let finalStatus = s.status;
-            if (partnerLoc && partnerLoc.lastOfflineAt && partnerLoc.lastOnlineAt) {
-                const created = new Date(s.createdAt);
-                if (created >= new Date(partnerLoc.lastOfflineAt) && created <= new Date(partnerLoc.lastOnlineAt)) {
-                    finalStatus = "Missing";
-                }
-            }
+            let finalStatus = s.status === "RETURNED_TO_ADMIN" ? "Missing" : s.status;
             return {
                 _id: s._id,
                 bookingType: "Service",
@@ -316,7 +312,15 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
     const provider = await Doctor.findById(providerId);
     if (!provider) throw new ApiError(404, "Provider not found");
 
-    if (svc.status !== "BROADCASTED" && String(svc.assignedProviderId ?? "") !== String(providerId)) {
+    console.log("[DEBUG] getProviderBookingDetail:", {
+        id,
+        providerId,
+        svcStatus: svc.status,
+        assignedProviderId: svc.assignedProviderId
+    });
+
+    const allowedUnassignedStatuses = ["BROADCASTED", "MISSING", "RETURNED_TO_ADMIN"];
+    if (!allowedUnassignedStatuses.includes(svc.status?.toUpperCase()) && String(svc.assignedProviderId ?? "") !== String(providerId)) {
         // If they rejected it, they should still be able to view its details (it shows up as CANCELLED in their feed)
         const hasRejected = await serviceAcceptanceModal.findOne({
             serviceRequestId: id,
@@ -365,7 +369,7 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
         serviceName: svc.childServiceId?.name || "Service",
         date: svc.scheduledSlot?.startTime || svc.createdAt,
         timeSlot: svc.scheduledSlot?.startTime
-            ? new Date(svc.scheduledSlot.startTime).toLocaleString()
+            ? formatTimeSlot(svc.scheduledSlot.startTime, svc.scheduledSlot.endTime)
             : "As scheduled",
         paymentMode: svc.paymentMode || "ONLINE",
         paymentStatus: svc.paymentStatus,
@@ -374,10 +378,10 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
         couponCode: svc.couponCode || null,
         partnerEarning: svc.partnerEarning || (svc.price * ((100 - (await getActiveCommissionRate(providerId))) / 100)),
         address: {
-            label: addr || "Patient location",
+            label: formatFeedAddress(svc.addressId, svc.location) || "Patient location",
             coords: addrCoords,
         },
-        notes: svc.notes || null,
+        notes: svc.description || null,
         fulfillmentMode: svc.fulfillmentMode,
         urgency: svc.urgency || null,
         createdAt: svc.createdAt,

@@ -732,6 +732,21 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
     query.$or = searchConditions;
   }
 
+  // Handle All Users (Patients + Staff)
+  if (category === 'all') {
+    const [patients, staff] = await Promise.all([
+      Patient.find(query).sort({ createdAt: -1 }).limit(Number(limit)),
+      Doctor.find(query).sort({ createdAt: -1 }).limit(Number(limit))
+    ]);
+    const combined = [...patients.map(p => ({ ...p.toObject(), type: 'patient' })), ...staff.map(s => ({ ...s.toObject(), type: 'staff' }))];
+    return res.status(200).json(new ApiResponse(200, "Users fetched", {
+      items: combined.slice(skip, skip + limit),
+      total: combined.length,
+      page: Number(page),
+      totalPages: Math.ceil(combined.length / Number(limit))
+    }));
+  }
+
   // Handle Patients
   if (category === 'patient') {
     if (status && status !== "All") {
@@ -753,14 +768,22 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
   }
 
   // Handle Staff/Service Providers
-  const role = await RoleModel.findOne({
-    $or: [
-      { code: category.toUpperCase() },
-      { name: new RegExp(`^${category}$`, 'i') }
-    ]
-  });
+  let roles: any[] = [];
+  if (category === 'admin') {
+    roles = await RoleModel.find({ code: { $in: ['ADMIN', 'SUPER_ADMIN'] } });
+  } else if (category === 'partner' || category === 'staff') {
+    roles = await RoleModel.find({ code: { $nin: ['ADMIN', 'SUPER_ADMIN', 'PATIENT'] } });
+  } else {
+    const singleRole = await RoleModel.findOne({
+      $or: [
+        { code: category.toUpperCase() },
+        { name: new RegExp(`^${category}$`, 'i') }
+      ]
+    });
+    if (singleRole) roles = [singleRole];
+  }
 
-  if (!role) {
+  if (roles.length === 0) {
     return res.status(200).json(new ApiResponse(200, "Category not found", {
       items: [],
       total: 0,
@@ -769,7 +792,7 @@ export const listUsersByCategory = asyncHandler(async (req, res) => {
     }));
   }
 
-  query.roleId = role._id;
+  query.roleId = { $in: roles.map(r => r._id) };
   if (status && status !== "All") {
     query.status = status;
   }
@@ -1568,7 +1591,8 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
   const booking = await serviceRequestModel
     .findByIdAndUpdate(id, updatePayload, { new: true })
     .populate("childServiceId")
-    .populate("userId");
+    .populate("userId")
+    .populate("addressId");
   if (!booking) throw new ApiError(404, "Service booking not found");
 
   console.info(`[BOOKING] [ADMIN_OVERRIDE] [${id}] Admin changed status to ${status}${isDirectAssign ? ` and assigned to Partner ${assignedProviderId}` : ''}`);
@@ -1637,7 +1661,20 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
         bookingId: String(booking._id),
         serviceName,
         patientName: (booking as any).userId?.name || "Patient",
-        location: (booking as any).location?.address || "Location not provided",
+        location: (() => {
+            const addrObj = (booking as any).addressId;
+            if (addrObj) {
+                const parts = [
+                    addrObj.houseNo, addrObj.addressLine1, addrObj.address, 
+                    addrObj.street, addrObj.landmark, addrObj.city, 
+                    addrObj.state, addrObj.pincode
+                ].filter(Boolean).map(s => String(s).trim());
+                const uniqueParts = [...new Set(parts)];
+                const full = uniqueParts.join(", ");
+                if (full) return full;
+            }
+            return (booking as any).location?.address || "Location not provided";
+        })(),
         amount: (booking as any).price || 0,
         acceptanceDeadline: updatePayload.acceptanceDeadline,
         scheduledTime: (booking as any).scheduledTime,

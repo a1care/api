@@ -45,6 +45,7 @@ io.on('connection', (socket) => {
                 .findOne({ assignedProviderId: partnerId, status: 'PARTNER_ASSIGNED' })
                 .populate('childServiceId', 'name')
                 .populate('userId', 'name')
+                .populate('addressId')
                 .lean();
             if (pending) {
                 console.log(`[Socket] Resending missed assignment to partner: ${partnerId}`);
@@ -52,7 +53,20 @@ io.on('connection', (socket) => {
                     bookingId: String(pending._id),
                     serviceName: (pending as any).childServiceId?.name || 'Service',
                     patientName: (pending as any).userId?.name || 'Patient',
-                    location: (pending as any).location?.address || 'Location not provided',
+                    location: (() => {
+                        const addrObj = (pending as any).addressId;
+                        if (addrObj) {
+                            const parts = [
+                                addrObj.houseNo, addrObj.addressLine1, addrObj.address, 
+                                addrObj.street, addrObj.landmark, addrObj.city, 
+                                addrObj.state, addrObj.pincode
+                            ].filter(Boolean).map(s => String(s).trim());
+                            const uniqueParts = [...new Set(parts)];
+                            const full = uniqueParts.join(", ");
+                            if (full) return full;
+                        }
+                        return (pending as any).location?.address || 'Location not provided';
+                    })(),
                     amount: (pending as any).price || 0,
                     acceptanceDeadline: (pending as any).acceptanceDeadline,
                     scheduledTime: (pending as any).scheduledTime,
@@ -106,6 +120,9 @@ const startServer = async () => {
         await initFCM();
         
         // Background Jobs
+        const { initBookingReminderJob } = await import("./jobs/bookingReminder.job.js");
+        initBookingReminderJob();
+
         await runSubscriptionCleanup();
         setInterval(runSubscriptionCleanup, 3600 * 1000); // Every Hour
         runAccountCleanupJob(); // Nightly cron job

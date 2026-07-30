@@ -34,6 +34,9 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
         serviceRequestDetails.assignedProviderId?.toString?.() === providerId?.toString?.();
 
     if (!isBroadcasted && !isAssignedToProvider) {
+        if (serviceRequestDetails.status === "ACCEPTED" || serviceRequestDetails.status === "PARTNER_ASSIGNED") {
+            throw new ApiError(403, "This booking has already been claimed by another partner.");
+        }
         throw new ApiError(403, "This booking is not assigned to you");
     }
 

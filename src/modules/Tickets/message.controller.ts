@@ -8,6 +8,7 @@ import serviceRequestModel from "../Bookings/service/serviceRequest.model.js";
 import { Patient } from "../Authentication/patient.model.js";
 import Doctor from "../Doctors/doctor.model.js";
 import { getMessaging } from "../../configs/fcmConfig.js";
+import { emitToRoom } from "../../socket.js";
 
 export const getMessagesByTicket = asyncHandler(async (req, res) => {
     const ticketId = (req.params.ticketId || req.query.ticketId) as string | undefined;
@@ -122,6 +123,25 @@ export const sendMessage = asyncHandler(async (req, res) => {
         }
     } catch (err) {
         console.error("Push notification failed", err);
+    }
+
+    // Real-time WebSocket emission
+    const threadId = ticketId || bookingId;
+    if (threadId) {
+        // Emit to the specific chat room so the active chat screen updates instantly
+        emitToRoom(String(threadId), 'receive_message', newMessage);
+    }
+    
+    if (recipientId) {
+        // Emit to the recipient's personal room to trigger a global flash notification (toast)
+        emitToRoom(`user_${recipientId}`, 'flash_notification', {
+            title,
+            body: message.slice(0, 100),
+            threadId,
+            type: ticketId ? "TICKET_CHAT" : "BOOKING_CHAT",
+            senderName: (req.user as any)?.name || "Support",
+            message: newMessage
+        });
     }
 
     return res.status(201).json(new ApiResponse(201, "Message sent", newMessage));
