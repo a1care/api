@@ -144,16 +144,30 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         catch (e) { console.error("[Referral] reward error:", e); }
     }
 
+    if (payload.paymentMode !== 'ONLINE') {
+        postServiceBookingActions(newServiceRequest, userId, bookingName).catch(e => console.error("[PostBooking] error:", e));
+    }
+
+    const serviceRequest = await serviceRequestModel
+        .findById(newServiceRequest._id)
+        .populate("childServiceId")
+        .populate("healthPackageId")
+        .populate("addressId");
+
+    return res.status(201).json(new ApiResponse(201, "Service booked", serviceRequest));
+});
+
+export const postServiceBookingActions = async (serviceRequest: any, patientId: string, bookingName: string) => {
     // ── Send Confirmation Email + FCM Push ─────────────────────────────────
     try {
-        const patient = await Patient.findById(userId);
+        const patient = await Patient.findById(patientId);
         if (patient?.email) {
             enqueueEmail({
                 kind: "appointment",
                 data: {
                     email: patient.email,
                     fullName: patient.name || "Customer",
-                    serviceName: payload.bookingType || "Home Care Service",
+                    serviceName: serviceRequest.bookingType || "Home Care Service",
                     date: new Date().toDateString(),
                     time: "Awaiting admin assignment",
                     location: patient.primaryAddressId ? "Stored Patient Address" : "Current Location",
@@ -167,9 +181,9 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
                 fcmToken: patient.fcmToken,
                 title: "✅ Booking Confirmed!",
                 body: `Your ${bookingName} booking is confirmed. We'll assign a provider shortly.`,
-                data: { screen: `/booking/${newServiceRequest._id}` },
+                data: { screen: `/booking/${serviceRequest._id}` },
                 refType: "ServiceRequest",
-                refId: newServiceRequest._id as mongoose.Types.ObjectId,
+                refId: serviceRequest._id as mongoose.Types.ObjectId,
             }).catch(e => console.error("[Push] booking confirmation error:", e));
         }
     } catch (e) {
@@ -178,30 +192,23 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
 
     try {
         const { notifyAdmin } = await import("../../Notifications/notification.controller.js");
+        const patient = await Patient.findById(patientId);
         notifyAdmin(
             "New Booking Created",
-            `A new ${bookingName} booking was created by ${(req.user as any)?.name || "Customer"}.`,
+            `A new ${bookingName} booking was created by ${patient?.name || "Customer"}.`,
             "ServiceRequest",
-            newServiceRequest._id as any
+            serviceRequest._id as any
         ).catch(e => console.error("[Push] admin notification error:", e));
     } catch (e) {
         console.error("[Push] admin notification error:", e);
     }
 
-    const serviceRequest = await serviceRequestModel
-        .findById(newServiceRequest._id)
-        .populate("childServiceId")
-        .populate("healthPackageId")
-        .populate("addressId");
-
     // Trigger broadcast to nearby partners after a short delay so admin can also
     // manually assign before partners see it. Fire-and-forget — never block the response.
-    scheduleBroadcastToAll(String(newServiceRequest._id)).catch(e =>
+    scheduleBroadcastToAll(String(serviceRequest._id)).catch(e =>
         console.error("[Booking] broadcast schedule error:", e)
     );
-
-    return res.status(201).json(new ApiResponse(201, "Service booked", serviceRequest));
-});
+};
 
 export const getServiceRequestByUser = asyncHandler(async (req, res) => {
     const userId = req.user?.id;

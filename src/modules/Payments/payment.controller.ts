@@ -224,6 +224,14 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
             if (service && typeof service.logEvent === 'function') {
                 await service.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Confirmed Doctor Appointment: ${order.referenceId}`);
             }
+            try {
+                const { postDoctorBookingActions } = await import("../Bookings/doctorAppointment.controller.js");
+                const doctorModel = (await import("../Doctors/doctor.model.js")).default;
+                const doctor = await doctorModel.findById(appointment.doctorId);
+                await postDoctorBookingActions(appointment, String(appointment.patientId), doctor);
+            } catch (err) {
+                console.error("[PostDoctorBooking] Error during online payment fulfillment:", err);
+            }
         } else {
             const serviceReq = await ServiceRequest.findById(order.referenceId);
             if (serviceReq) {
@@ -232,6 +240,15 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
                 await serviceReq.save();
                 if (service && typeof service.logEvent === 'function') {
                     await service.logEvent(order.txnId, "BOOKING_CONFIRMED", "INFO", `Updated Service Request payment: ${order.referenceId}`);
+                }
+                try {
+                    const { postServiceBookingActions } = await import("../Bookings/service/serviceRequest.controller.js");
+                    const { ChildServiceModel } = await import("../Services/childService.model.js");
+                    const childSvc = await ChildServiceModel.findById(serviceReq.childServiceId);
+                    const bookingName = childSvc?.name || "Service";
+                    await postServiceBookingActions(serviceReq, String(serviceReq.userId), bookingName);
+                } catch (err) {
+                    console.error("[PostServiceBooking] Error during online payment fulfillment:", err);
                 }
             }
         }

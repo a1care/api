@@ -5,6 +5,8 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 import ChatMessage from "./chat.model.js";
 import serviceRequestModel from "../Bookings/service/serviceRequest.model.js";
 import doctorAppointmentModel from "../Bookings/doctorAppointment.model.js";
+import { Patient } from "../Authentication/patient.model.js";
+import DoctorModel from "../Doctors/doctor.model.js";
 
 /** Verify the caller is a participant (patient or assigned provider) of the booking. */
 export const assertBookingParticipant = async (bookingId: string, userId?: string) => {
@@ -120,6 +122,61 @@ export const saveChatMessage = async (data: any) => {
             message,
             type
         });
+
+        // Fire & forget push notification
+        (async () => {
+            try {
+                const sr: any = await serviceRequestModel.findById(bookingId).select("userId assignedProviderId");
+                const appt: any = sr ? null : await doctorAppointmentModel.findById(bookingId).select("patientId doctorId");
+                const doc = sr || appt;
+                if (!doc) return;
+
+                const patientId = doc.userId ?? doc.patientId;
+                const providerId = doc.assignedProviderId ?? doc.doctorId;
+
+                let recipientId: any;
+                let recipientType: "patient" | "partner";
+                let recipientToken: string | null = null;
+                let senderName = "New Message";
+
+                if (senderType === "Patient" || senderType === "User") {
+                    recipientId = providerId;
+                    recipientType = "partner";
+                    const [provider, patient] = await Promise.all([
+                        DoctorModel.findById(providerId).select("fcmToken"),
+                        Patient.findById(senderId).select("name"),
+                    ]);
+                    recipientToken = provider?.fcmToken ?? null;
+                    if (patient?.name) senderName = patient.name;
+                } else {
+                    recipientId = patientId;
+                    recipientType = "patient";
+                    const [patient, provider] = await Promise.all([
+                        Patient.findById(patientId).select("fcmToken"),
+                        DoctorModel.findById(senderId).select("name"),
+                    ]);
+                    recipientToken = (patient as any)?.fcmToken ?? null;
+                    if (provider?.name) senderName = provider.name;
+                }
+
+                if (recipientId) {
+                    const { enqueuePush } = await import("../../queues/communicationQueue.js");
+                    await enqueuePush({
+                        recipientId: recipientId as mongoose.Types.ObjectId,
+                        recipientType,
+                        fcmToken: recipientToken,
+                        title: senderName,
+                        body: message.length > 50 ? message.substring(0, 50) + '...' : message,
+                        data: { screen: `/booking/${bookingId}` },
+                        refType: sr ? "ServiceRequest" : "DoctorAppointment",
+                        refId: bookingId as mongoose.Types.ObjectId,
+                    });
+                }
+            } catch (err) {
+                console.error("[Chat Push] Failed to enqueue chat push:", err);
+            }
+        })();
+
         return chat;
     } catch (error) {
         console.error("Failed to save chat message", error);

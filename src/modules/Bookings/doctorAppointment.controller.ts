@@ -167,6 +167,14 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
         catch (e) { console.error("[Referral] reward error:", e); }
     }
 
+    if (payload.paymentMode !== 'ONLINE') {
+        postDoctorBookingActions(newAppointment, patientId, doctor, parsed.data).catch(e => console.error("[PostDoctorBooking] error:", e));
+    }
+
+    return res.status(201).json(new ApiResponse(201, "Appointment booked", newAppointment));
+});
+
+export const postDoctorBookingActions = async (appointment: any, patientId: string, doctor: any, parsedData?: any) => {
     // ── New: Send Confirmation Email ─────────────────────────────────────
     try {
         const patient = await Patient.findById(patientId);
@@ -177,8 +185,8 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
                     email: patient.email,
                     fullName: patient.name || "Customer",
                     serviceName: `Consultation with Dr. ${doctor?.name || "Doctor"}`,
-                    date: new Date(newAppointment.date).toDateString(),
-                    time: `${newAppointment.startingTime} - ${newAppointment.endingTime}`,
+                    date: new Date(appointment.date).toDateString(),
+                    time: `${appointment.startingTime} - ${appointment.endingTime}`,
                     location: "Clinic / In-App Video",
                 },
             });
@@ -197,9 +205,9 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
                 fcmToken: doctor.fcmToken ?? null,
                 title: "📅 New Appointment Request",
                 body: `${patient?.name ?? "A patient"} has booked a consultation with you.`,
-                data: { screen: `/booking/${newAppointment._id}` },
+                data: { screen: `/booking/${appointment._id}` },
                 refType: "DoctorAppointment",
-                refId: newAppointment._id as mongoose.Types.ObjectId,
+                refId: appointment._id as mongoose.Types.ObjectId,
             });
         }
     } catch (e) {
@@ -208,17 +216,17 @@ export const createDoctorAppointment = asyncHandler(async (req, res) => {
 
     // Schedule 24-hour reminder push for both doctor and patient
     try {
-        const apptTimestamp = new Date(`${parsed.data.date} ${parsed.data.startingTime}`).getTime();
+        const dateStr = parsedData ? parsedData.date : appointment.date;
+        const timeStr = parsedData ? parsedData.startingTime : appointment.startingTime;
+        const apptTimestamp = new Date(`${dateStr} ${timeStr}`).getTime();
         if (!Number.isNaN(apptTimestamp)) {
             const { scheduleAppointmentReminder } = await import("../../queues/bookingQueue.js");
-            await scheduleAppointmentReminder(String(newAppointment._id), apptTimestamp);
+            await scheduleAppointmentReminder(String(appointment._id), apptTimestamp);
         }
     } catch (e) {
         console.error("[Reminder] schedule error:", e);
     }
-
-    return res.status(201).json(new ApiResponse(201, "Appointment booked", newAppointment));
-});
+};
 
 // get appointments by doctor id
 export const getPendingAppointmentbyProviderId = asyncHandler(async (req, res) => {

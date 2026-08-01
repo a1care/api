@@ -42,12 +42,27 @@ export const upsertCMSContent = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
- * Get all CMS Content (For Admin Panel to manage)
- * Only Super Admin
+ * Get Privacy Policy Content (Admin)
  */
-export const getAllCMSContent = asyncHandler(async (req: Request, res: Response) => {
-  const allContent = await CMSContent.find().sort({ createdAt: -1 });
-  res.status(200).json(new ApiResponse(200, 'All CMS content fetched', allContent));
+export const getAdminPrivacy = asyncHandler(async (req: Request, res: Response) => {
+  const content = await CMSContent.find({ type: 'PRIVACY' }).sort({ createdAt: -1 });
+  res.status(200).json(new ApiResponse(200, 'Privacy Policy fetched', content));
+});
+
+/**
+ * Get Terms and Conditions Content (Admin)
+ */
+export const getAdminTerms = asyncHandler(async (req: Request, res: Response) => {
+  const content = await CMSContent.find({ type: 'TERMS' }).sort({ createdAt: -1 });
+  res.status(200).json(new ApiResponse(200, 'Terms and Conditions fetched', content));
+});
+
+/**
+ * Get FAQ Content (Admin)
+ */
+export const getAdminFaq = asyncHandler(async (req: Request, res: Response) => {
+  const content = await CMSContent.find({ type: 'FAQ' }).sort({ createdAt: -1 });
+  res.status(200).json(new ApiResponse(200, 'FAQs fetched', content));
 });
 
 

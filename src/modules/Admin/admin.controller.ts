@@ -2052,8 +2052,9 @@ export const getAdminDashboardOverview = asyncHandler(async (req, res) => {
 export const getAdminCommissionReport = asyncHandler(async (req, res) => {
   if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
 
-  const { from, to, page = 1, limit = 50 } = req.query;
+  const { from, to, page = 1, limit = 50, sortBy = "createdAt", sortDir = "desc" } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
+  const parsedLimit = Number(limit);
 
   // Doctor appointments: completed + paid (strict) OR completed (fallback for older records)
   const dateMatch: any = {
@@ -2070,104 +2071,118 @@ export const getAdminCommissionReport = asyncHandler(async (req, res) => {
     svcDateMatch.createdAt = { $gte: fromDate, $lte: toDate };
   }
 
-  const [apptRows, svcRows] = await Promise.all([
-    doctorAppointmentModel.aggregate([
-      { $match: dateMatch },
-      {
-        $lookup: {
-          from: "staffs",
-          localField: "doctorId",
-          foreignField: "_id",
-          as: "doctor"
-        }
-      },
-      { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          bookingType: { $literal: "Doctor Consultation" },
-          partnerName: { $ifNull: ["$doctor.name", "Unknown"] },
-          grossAmount: "$totalAmount",
-          commissionPct: { $ifNull: ["$commissionPercentage", 20] },
-          commissionAmount: {
-            $ifNull: [
-              "$commissionAmount",
-              { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.2] }
-            ]
-          },
-          partnerEarning: {
-            $ifNull: [
-              "$partnerEarning",
-              { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.8] }
-            ]
-          },
-          createdAt: 1
-        }
+  // Construct dynamic sort object
+  const sortStage: any = {};
+  sortStage[sortBy as string] = sortDir === "asc" ? 1 : -1;
+
+  const pipeline = [
+    { $match: dateMatch },
+    {
+      $lookup: {
+        from: "staffs",
+        localField: "doctorId",
+        foreignField: "_id",
+        as: "doctor"
       }
-    ]),
-    serviceRequestModel.aggregate([
-      { $match: svcDateMatch },
-      {
-        $lookup: {
-          from: "staffs",
-          localField: "assignedProviderId",
-          foreignField: "_id",
-          as: "doctor"
-        }
-      },
-      { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          bookingType: { $ifNull: ["$serviceType", "Home Care Visit"] },
-          partnerName: { $ifNull: ["$doctor.name", "Unknown"] },
-          grossAmount: "$price",
-          commissionPct: { $ifNull: ["$commissionPercentage", 20] },
-          commissionAmount: {
-            $ifNull: [
-              "$commissionAmount",
-              { $multiply: [{ $ifNull: ["$price", 0] }, 0.2] }
-            ]
-          },
-          partnerEarning: {
-            $ifNull: [
-              "$partnerEarning",
-              { $multiply: [{ $ifNull: ["$price", 0] }, 0.8] }
-            ]
-          },
-          createdAt: 1
-        }
+    },
+    { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        bookingType: { $literal: "Doctor Consultation" },
+        partnerName: { $ifNull: ["$doctor.name", "Unknown"] },
+        grossAmount: { $ifNull: ["$totalAmount", 0] },
+        commissionPct: { $ifNull: ["$commissionPercentage", 20] },
+        commissionAmount: {
+          $ifNull: [
+            "$commissionAmount",
+            { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.2] }
+          ]
+        },
+        partnerEarning: {
+          $ifNull: [
+            "$partnerEarning",
+            { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.8] }
+          ]
+        },
+        createdAt: 1
       }
-    ])
-  ]);
+    },
+    {
+      $unionWith: {
+        coll: "servicerequests",
+        pipeline: [
+          { $match: svcDateMatch },
+          {
+            $lookup: {
+              from: "staffs",
+              localField: "assignedProviderId",
+              foreignField: "_id",
+              as: "doctor"
+            }
+          },
+          { $unwind: { path: "$doctor", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              bookingType: { $ifNull: ["$serviceType", "Home Care Visit"] },
+              partnerName: { $ifNull: ["$doctor.name", "Unknown"] },
+              grossAmount: { $ifNull: ["$price", 0] },
+              commissionPct: { $ifNull: ["$commissionPercentage", 20] },
+              commissionAmount: {
+                $ifNull: [
+                  "$commissionAmount",
+                  { $multiply: [{ $ifNull: ["$price", 0] }, 0.2] }
+                ]
+              },
+              partnerEarning: {
+                $ifNull: [
+                  "$partnerEarning",
+                  { $multiply: [{ $ifNull: ["$price", 0] }, 0.8] }
+                ]
+              },
+              createdAt: 1
+            }
+          }
+        ]
+      }
+    },
+    { $sort: sortStage },
+    {
+      $facet: {
+        metadata: [{ $count: "total" }],
+        summary: [
+          {
+            $group: {
+              _id: null,
+              totalGross: { $sum: "$grossAmount" },
+              totalCommission: { $sum: "$commissionAmount" },
+              totalPartnerEarning: { $sum: "$partnerEarning" }
+            }
+          }
+        ],
+        items: [{ $skip: skip }, { $limit: parsedLimit }]
+      }
+    }
+  ];
 
+  const result = await doctorAppointmentModel.aggregate(pipeline);
+  const data = result[0];
 
-  const all = [...apptRows, ...svcRows].sort(
-    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-
-  console.log("=== DEBUG svcRows [0] ===");
-  console.log(JSON.stringify(svcRows[0], null, 2));
-  console.log("=========================");
-
-  const total = all.length;
-  const items = all.slice(skip, skip + Number(limit));
-
-  // Summary aggregates
-  const totalGross = all.reduce((acc: number, r: any) => acc + (r.grossAmount || 0), 0);
-  const totalCommission = all.reduce((acc: number, r: any) => acc + (r.commissionAmount || 0), 0);
-  const totalPartnerEarning = all.reduce((acc: number, r: any) => acc + (r.partnerEarning || 0), 0);
+  const total = data.metadata.length > 0 ? data.metadata[0].total : 0;
+  const summary = data.summary.length > 0 ? data.summary[0] : { totalGross: 0, totalCommission: 0, totalPartnerEarning: 0 };
+  const items = data.items;
 
   return res.status(200).json(new ApiResponse(200, "Commission report fetched", {
     summary: {
-      totalGross,
-      totalCommission,
-      totalPartnerEarning,
+      totalGross: summary.totalGross,
+      totalCommission: summary.totalCommission,
+      totalPartnerEarning: summary.totalPartnerEarning,
       totalBookings: total,
     },
     items,
     total,
     page: Number(page),
-    limit: Number(limit),
-    totalPages: Math.ceil(total / Number(limit))
+    limit: parsedLimit,
+    totalPages: Math.ceil(total / parsedLimit)
   }));
 });
 

@@ -32,9 +32,9 @@ export const addReview = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Review already submitted for this booking");
     }
 
-    // Verify the caller was a participant of this completed booking — either the patient
-    // (rating the provider) or the assigned provider (rating the customer). Otherwise
-    // anyone could manufacture reviews for any doctor/service.
+    // Verify the caller was a participant of this completed booking
+    let actualDoctorId = doctorId;
+
     if (bookingType === "Doctor") {
         const appt = await doctorAppointmentModel.findById(bookingId);
         if (!appt) throw new ApiError(404, "Booking not found");
@@ -45,6 +45,7 @@ export const addReview = asyncHandler(async (req, res) => {
         if (appt.status !== "Completed") {
             throw new ApiError(400, "You can only review a completed booking");
         }
+        actualDoctorId = appt.doctorId;
     } else if (bookingType === "Service") {
         const svc = await serviceRequestModel.findById(bookingId);
         if (!svc) throw new ApiError(404, "Booking not found");
@@ -55,6 +56,9 @@ export const addReview = asyncHandler(async (req, res) => {
         if (svc.status !== "COMPLETED") {
             throw new ApiError(400, "You can only review a completed booking");
         }
+        if (svc.assignedProviderId) {
+            actualDoctorId = svc.assignedProviderId;
+        }
     } else {
         throw new ApiError(400, "Invalid booking type");
     }
@@ -64,7 +68,7 @@ export const addReview = asyncHandler(async (req, res) => {
 
     const review = await ReviewModel.create({
         userId,
-        doctorId,
+        doctorId: actualDoctorId,
         childServiceId,
         bookingId,
         bookingType,
@@ -76,16 +80,15 @@ export const addReview = asyncHandler(async (req, res) => {
 
     // Update Average Rating — patient reviews only, so partner→customer feedback never
     // contaminates the provider/service public stars.
-    if (doctorId) {
+    if (actualDoctorId) {
         const stats = await ReviewModel.aggregate([
-            { $match: { doctorId: new mongoose.Types.ObjectId(doctorId), status: "Active", reviewerType: "patient" } },
+            { $match: { doctorId: new mongoose.Types.ObjectId(actualDoctorId), status: "Active", reviewerType: "patient" } },
             { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } }
         ]);
 
         if (stats.length > 0) {
-            await DoctorModel.findByIdAndUpdate(doctorId, {
+            await DoctorModel.findByIdAndUpdate(actualDoctorId, {
                 rating: stats[0].avg,
-                // We could also update 'completed' if we want, but usually that depends on booking status
             });
         }
     } 
