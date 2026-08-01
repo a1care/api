@@ -29,18 +29,19 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     }
 
     const isBroadcasted = serviceRequestDetails.status === "BROADCASTED";
+    const isReturned = serviceRequestDetails.status === "RETURNED_TO_ADMIN";
     const isPartnerAssigned = serviceRequestDetails.status === "PARTNER_ASSIGNED";
     const isAssignedToProvider =
         serviceRequestDetails.assignedProviderId?.toString?.() === providerId?.toString?.();
 
-    if (!isBroadcasted && !isAssignedToProvider) {
+    if (!isBroadcasted && !isReturned && !isAssignedToProvider) {
         if (serviceRequestDetails.status === "ACCEPTED" || serviceRequestDetails.status === "PARTNER_ASSIGNED") {
             throw new ApiError(403, "This booking has already been claimed by another partner.");
         }
         throw new ApiError(403, "This booking is not assigned to you");
     }
 
-    if (!isBroadcasted && !isPartnerAssigned && serviceRequestDetails.status !== "ACCEPTED") {
+    if (!isBroadcasted && !isReturned && !isPartnerAssigned && serviceRequestDetails.status !== "ACCEPTED") {
         throw new ApiError(400, "Only admin-assigned or broadcasted bookings can be accepted");
     }
 
@@ -96,10 +97,10 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     }
 
     // For broadcasted bookings: atomic claim — first partner wins, reject races
-    if (isBroadcasted) {
+    if (isBroadcasted || isReturned) {
         console.info(`[BOOKING] [CLAIM_ATTEMPT] [${serviceRequestId}] Partner ${providerId} attempting to claim broadcasted booking.`);
         const claimed = await serviceRequestModel.findOneAndUpdate(
-            { _id: serviceRequestId, status: "BROADCASTED" },
+            { _id: serviceRequestId, status: { $in: ["BROADCASTED", "RETURNED_TO_ADMIN"] } },
             { $set: { status: "ACCEPTED", assignedProviderId: new mongoose.Types.ObjectId(providerId!) } },
             { new: true }
         );
@@ -195,9 +196,10 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
     if (!serviceRequestDetails) throw new ApiError(404, "Service Request not found");
 
     const isBroadcasted = serviceRequestDetails.status === "BROADCASTED";
+    const isReturned = serviceRequestDetails.status === "RETURNED_TO_ADMIN";
     const isAssigned = serviceRequestDetails.assignedProviderId?.toString() === providerId;
 
-    if (!isBroadcasted && !isAssigned) {
+    if (!isBroadcasted && !isReturned && !isAssigned) {
         throw new ApiError(403, "This booking is not assigned to you");
     }
 
