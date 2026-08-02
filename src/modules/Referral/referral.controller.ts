@@ -57,7 +57,7 @@ export const getMyReferralCode = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, "Referral code fetched", {
       referralCode: user.referralCode,
-      shareMessage: `Use my code ${user.referralCode} on A1Care to get ₹${reward} off your first booking/job!\n\nhttps://api.a1carehospital.in/api/admin/referral/share-image?code=${user.referralCode}`,
+      shareMessage: `Use my code ${user.referralCode} on A1Care to get ₹${reward} off your first booking/job!\n\nhttps://api.a1carehospital.in/api/referral/redirect?code=${user.referralCode}&role=${role}`,
       rewardAmount: reward,
     })
   );
@@ -260,39 +260,16 @@ export const updateReferralConfig = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, "Config updated", config));
 });
 
-/** GET /api/referral/share-image?code=XYZ */
-export const generateShareImage = asyncHandler(async (req, res) => {
-  const code = req.query.code as string;
-  if (!code) throw new ApiError(400, "Referral code is required");
+/** GET /api/referral/redirect?code=XYZ&role=Patient */
+export const handleReferralRedirect = asyncHandler(async (req, res) => {
+  const code = (req.query.code as string) || '';
+  const role = (req.query.role as string) || 'Patient';
 
-  try {
-    const bgPath = path.resolve(process.cwd(), "public", "a1care_referral_bg.jpg");
-    const image = await Jimp.read(bgPath);
-    
-    // Load font (Jimp provides some built-in bitmap fonts)
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK);
-    
-    // Print the code on the image (centered roughly)
-    image.print(
-      font,
-      0,
-      0,
-      {
-        text: `Code: ${code.toUpperCase()}`,
-        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-        alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
-      },
-      image.bitmap.width,
-      image.bitmap.height
-    );
-
-    const buffer = await image.getBufferAsync(Jimp.MIME_JPEG);
-    
-    res.setHeader("Content-Type", "image/jpeg");
-    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
-    res.send(buffer);
-  } catch (error) {
-    console.error("[Referral] generateShareImage error:", error);
-    throw new ApiError(500, "Failed to generate share image");
+  // If the referrer is a Patient, send the invitee to the Customer App.
+  // Otherwise, if the referrer is staff (Doctor, Nurse, Ambulance, Rental), send them to the Partner App.
+  if (role === 'Patient') {
+    return res.redirect(`https://play.google.com/store/apps/details?id=com.a1care.customer&referrer=${code}`);
+  } else {
+    return res.redirect(`https://play.google.com/store/apps/details?id=com.a1care.partner&referrer=${code}`);
   }
 });

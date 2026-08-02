@@ -141,6 +141,48 @@ export const previewCoupon = asyncHandler(async (req, res) => {
   );
 });
 
+// Public - list all available coupons for the authenticated patient
+export const getAvailableCoupons = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
+  const now = new Date();
+
+  // Find all active coupons that are within their validity window
+  const activeCoupons = await Coupon.find({
+    isActive: true,
+    $and: [
+      { $or: [{ validFrom: { $lte: now } }, { validFrom: null }] },
+      { $or: [{ validTo: { $gte: now } }, { validTo: null }] }
+    ]
+  }).lean();
+
+  // Filter out coupons that have reached their global limit, or the user's personal limit
+  const availableCoupons = activeCoupons.filter((coupon: any) => {
+    // Check global limit
+    if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+      return false;
+    }
+    // Check user limit
+    const usedByUserCount = (coupon.usedBy || []).filter((u: any) => String(u.userId) === String(userId)).length;
+    if (usedByUserCount >= (coupon.usagePerUser || 1)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Map to a clean response
+  const result = availableCoupons.map((coupon: any) => ({
+    code: coupon.code,
+    description: coupon.description,
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue,
+    maxDiscountAmount: coupon.maxDiscountAmount,
+    minOrderAmount: coupon.minOrderAmount,
+    applicableTo: coupon.applicableTo
+  }));
+
+  return res.status(200).json(new ApiResponse(200, "Available coupons fetched", result));
+});
+
 // ─── Admin CRUD ──────────────────────────────────────────────────────────────
 
 export const createCoupon = asyncHandler(async (req, res) => {

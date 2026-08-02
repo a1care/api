@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { protect } from "../../middlewares/protect.js";
 import { protectAdmin } from "../../middlewares/protectAdmin.js";
-import { getMyReferralCode, validateReferralCode, getReferralStats, getReferralConfig, updateReferralConfig, getMyEarnings, generateShareImage } from "./referral.controller.js";
+import { getMyReferralCode, validateReferralCode, getReferralStats, getReferralConfig, updateReferralConfig, getMyEarnings, handleReferralRedirect } from "./referral.controller.js";
 
 const router = Router();
 
-// Public route for WhatsApp OG images
-router.get("/share-image", generateShareImage);
+// Public route for App Store Redirects
+router.get("/redirect", handleReferralRedirect);
 
 // Patient routes
 router.get("/my-code", protect, getMyReferralCode);
