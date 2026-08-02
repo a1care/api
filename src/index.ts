@@ -122,6 +122,8 @@ const startServer = async () => {
         // Background Jobs
         const { initBookingReminderJob } = await import("./jobs/bookingReminder.job.js");
         initBookingReminderJob();
+        const { initCouponReminderJob } = await import("./jobs/couponReminder.job.js");
+        initCouponReminderJob();
 
         await runSubscriptionCleanup();
         setInterval(runSubscriptionCleanup, 3600 * 1000); // Every Hour

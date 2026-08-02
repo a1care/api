@@ -20,6 +20,7 @@ const CouponSchema = new Schema(
     validFrom: { type: Date, default: Date.now },
     validTo: { type: Date },
     isActive: { type: Boolean, default: true },
+    expiryNotified: { type: Boolean, default: false },
     applicableTo: { type: String, enum: ["ALL", "SERVICE", "DOCTOR"], default: "ALL" },
   },
   { timestamps: true }
