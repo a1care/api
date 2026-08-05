@@ -30,12 +30,20 @@
       "subHeadline": "Connect with top doctors, nurses, and medical services 24/7",
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.a1care.user",
       "appStoreUrl": "https://apps.apple.com/app/a1care-user",
-      "festivalBanners": [],
+      "festivalBanners": [
+        {
+          "id": "banner_1785780441617_lykwze",
+          "title": "",
+          "imageUrl": "/uploads/app-management/asset-1785780447102-31793303.jpg",
+          "redirectUrl": "",
+          "active": true
+        }
+      ],
       "mainBanners": [
         {
           "id": "banner_1778439379932_9dks7i",
           "title": "diagnostic",
-          "imageUrl": "http://localhost:3000/uploads/app-management/asset-1778989388614-947567722.png",
+          "imageUrl": "/uploads/app-management/asset-1785778267372-165692401.jpg",
           "redirectUrl": "a1care://services?category=diagnostics&serviceId=69ff86c7a217e06e924eb480",
           "active": true
         },
@@ -54,19 +62,19 @@
           "active": true
         }
       ],
-      "knowledgeBanners": [],
-      "promotionalBanners": [
+      "knowledgeBanners": [
         {
-          "id": "banner_1785431483580_qsbo8g",
+          "id": "banner_1785781663128_b6yvtj",
           "title": "",
-          "imageUrl": "",
+          "imageUrl": "/uploads/app-management/asset-1785781671650-287674667.jpg",
           "redirectUrl": "",
           "active": true
         }
-      ]
+      ],
+      "promotionalBanners": []
     },
     "knowledgeBase": [],
-    "updatedAt": "2026-07-30T17:11:35.213Z"
+    "updatedAt": "2026-08-03T18:43:27.781Z"
   },
   "provider_app": {
     "appKey": "provider_app",

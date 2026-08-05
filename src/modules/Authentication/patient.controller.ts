@@ -64,7 +64,7 @@ export const sentOtpForPatient = asyncHandler(async (req, res) => {
   const attemptKey = `otp:attempts:patient:${cleanMobile}`;
   const attempts = await RedisClient.get(attemptKey);
   if (Number(attempts || 0) >= 5) {
-    throw new ApiError(429, "Too many OTP requests for this number. Try again in 10 minutes.");
+    throw new ApiError(429, "You've requested too many OTPs recently. For your security, please wait a few minutes before trying again.");
   }
   await RedisClient.setEx(attemptKey, 600, String(Number(attempts || 0) + 1));
 

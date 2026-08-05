@@ -109,7 +109,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
   const attemptKey = `otp:attempts:staff:${cleanMobile}`;
   const attempts = await RedisClient.get(attemptKey);
   if (Number(attempts || 0) >= 5) {
-    throw new ApiError(429, "Too many OTP requests for this number. Try again in 10 minutes.");
+    throw new ApiError(429, "You've requested too many OTPs recently. For your security, please wait a few minutes before trying again.");
   }
   await RedisClient.setEx(attemptKey, 600, String(Number(attempts || 0) + 1));
 
@@ -124,8 +124,6 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
 
   if (!result.success) {
     console.error("[OTP Send Failed]", result.message);
-    // Even if SMS fails, we'll return 200 for now to not block frontend, 
-    // but in production we'd want to handle this.
   }
 
   if (process.env.NODE_ENV !== "production") console.log(`[OTP] Sent to ${cleanMobile}`);
@@ -134,6 +132,7 @@ export const sendOtpForStaff = asyncHandler(async (req, res) => {
     new ApiResponse(200, "OTP sent successfully", { mobileNumber: cleanMobile })
   );
 });
+
 const getNormalizedRoleKey = (roleName: string): string => {
   const name = String(roleName || '').toLowerCase().trim();
   if (name.includes('doctor')) return 'doctor';

@@ -143,8 +143,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                     timeQuery.createdAt.$gte = providerCreatedAt;
                 }
             }
-
-            const fetchStatuses = status === 'Missing' ? ["RETURNED_TO_ADMIN"] : (status === 'all' ? ["BROADCASTED", "RETURNED_TO_ADMIN"] : ["BROADCASTED"]);
+            const fetchStatuses = status === 'Missing' ? ["RETURNED_TO_ADMIN"] : (status === 'all' ? ["BROADCASTED", "PENDING", "RETURNED_TO_ADMIN"] : ["BROADCASTED", "PENDING"]);
 
             let services = await ServiceRequest.find({
                 _id: { $nin: rejectedIds },
@@ -156,12 +155,25 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                 .populate("addressId")
                 .lean();
 
+            // Filter out expired pending/broadcasted bookings from the 'Pending' tab.
+            if (status !== 'Missing' && status !== 'all') {
+                const now = new Date();
+                services = services.filter((s: any) => {
+                    if ((s.status === 'PENDING' || s.status === 'BROADCASTED') && s.scheduledSlot?.endTime) {
+                         const endTime = new Date(s.scheduledSlot.endTime);
+                         if (endTime < now) return false;
+                    }
+                    return true;
+                });
+            }
+
             if (partnerRoleId) {
                 services = services.filter((s) => {
                     const allowed = (s.childServiceId as any)?.allowedRoleIds;
-                    if (!allowed || allowed.length === 0)
-                        return true;
-                    return allowed.some((r: any) => r.toString() === partnerRoleId.toString());
+                    if (!allowed || allowed.length === 0) return true;
+                    const isAllowed = allowed.some((r: any) => r.toString() === partnerRoleId.toString());
+                    if (!isAllowed) console.log(`[DEBUG] Booking ${s._id} filtered out due to role mismatch. Partner role: ${partnerRoleId}, Allowed: ${allowed}`);
+                    return isAllowed;
                 });
             }
 
@@ -171,9 +183,9 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
                     const addr = s.addressId;
                     const bookingLat = addr?.location?.lat ?? s.location?.lat;
                     const bookingLng = addr?.location?.lng ?? s.location?.lng;
-                    if (!bookingLat || !bookingLng)
-                        return true;
+                    if (!bookingLat || !bookingLng) return true;
                     const distance = calculateDistance(bookingLat, bookingLng, partnerLoc.latitude, partnerLoc.longitude);
+                    if (distance > radius) console.log(`[DEBUG] Booking ${s._id} filtered out due to distance. Distance: ${distance}, Radius: ${radius}`);
                     return distance <= radius;
                 });
             }
@@ -319,7 +331,7 @@ export const getProviderBookingDetail = asyncHandler(async (req, res) => {
         assignedProviderId: svc.assignedProviderId
     });
 
-    const allowedUnassignedStatuses = ["BROADCASTED", "MISSING", "RETURNED_TO_ADMIN"];
+    const allowedUnassignedStatuses = ["PENDING", "BROADCASTED", "MISSING", "RETURNED_TO_ADMIN"];
     if (!allowedUnassignedStatuses.includes(svc.status?.toUpperCase()) && String(svc.assignedProviderId ?? "") !== String(providerId)) {
         // If they rejected it, they should still be able to view its details (it shows up as CANCELLED in their feed)
         const hasRejected = await serviceAcceptanceModal.findOne({
