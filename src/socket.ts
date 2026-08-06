@@ -29,6 +29,14 @@ export function initSocket(server: any): Server {
             }
         });
 
+        // Relay live tracking location from partner to customer
+        socket.on('update_location', (data: any) => {
+            const { roomId, latitude, longitude, heading, speed } = data;
+            if (roomId) {
+                socket.to(roomId).emit('location_update', { latitude, longitude, heading, speed });
+            }
+        });
+
         socket.on('disconnect', (reason) => {
             console.log(`[Socket] Client disconnected: ${socket.id} - ${reason}`);
         });

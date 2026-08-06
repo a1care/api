@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { protect } from "../../middlewares/protect.js";
 import { protectAdmin } from "../../middlewares/protectAdmin.js";
-import { getMyReferralCode, validateReferralCode, getReferralStats, getReferralConfig, updateReferralConfig, getMyEarnings, handleReferralRedirect } from "./referral.controller.js";
+import { getMyReferralCode, validateReferralCode, getReferralStats, getReferralConfig, updateReferralConfig, getMyEarnings, handleReferralRedirect, approveReferral } from "./referral.controller.js";
 
 const router = Router();
 
@@ -17,5 +17,6 @@ router.post("/validate", protect, validateReferralCode);
 router.get("/stats", protectAdmin, getReferralStats);
 router.get("/config", protectAdmin, getReferralConfig);
 router.put("/config", protectAdmin, updateReferralConfig);
+router.put("/:id/approve", protectAdmin, approveReferral);
 
 export default router;

@@ -18,6 +18,16 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
     .populate("healthPackageId");
   if (!request || request.status !== "PENDING") return;
 
+  // Do not broadcast HOSPITAL_VISIT (OP bookings) to freelance partners
+  if (request.fulfillmentMode === "HOSPITAL_VISIT") {
+      await serviceRequestModel.findByIdAndUpdate(serviceRequestId, {
+          status: "ACCEPTED",
+          broadcastedAt: new Date(),
+          notes: (request.notes ? request.notes + " " : "") + "[Auto-Accepted for Hospital OP Queue]"
+      });
+      return;
+  }
+
   const userLat = request.location?.lat;
   const userLng = request.location?.lng;
 

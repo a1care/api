@@ -35,6 +35,7 @@ import DoctorAvailability from "../Doctors/slots/doctorAvailability.model.js";
 import DoctorBlockTime from "../Doctors/slots/blockTime.model.js";
 import Payout from "../Earnings/payout.model.js";
 import { enqueueEmail, enqueuePush } from "../../queues/communicationQueue.js";
+import Referral from "../Referral/referral.model.js";
 
 const ENV_ADMIN_ID = "env-super-admin";
 const APP_KEYS = ["user_app", "provider_app"] as const;
@@ -2859,4 +2860,125 @@ export const updateEmailTemplate = asyncHandler(async (req, res) => {
   if (!template) throw new ApiError(404, "Template not found");
 
   return res.status(200).json(new ApiResponse(200, "Template updated", template));
+});
+
+// --- Super Admin Wallet Overview ----------------------------------------------
+export const getSuperAdminWalletOverview = asyncHandler(async (req, res) => {
+  if (!isDbOnline()) throw new ApiError(503, "Database unavailable");
+
+  // 1. Gross Volume (All SUCCESS bookings)
+  const gmvAggr = await Order.aggregate([
+    { $match: { status: "SUCCESS", type: "BOOKING" } },
+    { $group: { _id: null, total: { $sum: "$amount" } } }
+  ]);
+  const grossVolume = gmvAggr[0]?.total || 0;
+
+  // 2. Subscription Revenue
+  const subAggr = await Order.aggregate([
+    { $match: { status: "SUCCESS", type: "SUBSCRIPTION" } },
+    { $group: { _id: null, total: { $sum: "$amount" } } }
+  ]);
+  const subscriptionRevenue = subAggr[0]?.total || 0;
+
+  // 3. Total Commission Earned (Doctor Consultations + Services)
+  const docCommissionAggr = await doctorAppointmentModel.aggregate([
+    { $match: { status: "Completed", $or: [{ paymentStatus: "COMPLETED" }, { paymentStatus: { $exists: false } }, { totalAmount: { $gt: 0 } }] } },
+    { $group: { _id: null, total: { $sum: { $ifNull: ["$commissionAmount", { $multiply: [{ $ifNull: ["$totalAmount", 0] }, 0.2] }] } } } }
+  ]);
+  
+  const svcCommissionAggr = await serviceRequestModel.aggregate([
+    { $match: { status: "COMPLETED" } },
+    { $group: { _id: null, total: { $sum: { $ifNull: ["$commissionAmount", { $multiply: [{ $ifNull: ["$price", 0] }, 0.2] }] } } } }
+  ]);
+  
+  const totalCommission = (docCommissionAggr[0]?.total || 0) + (svcCommissionAggr[0]?.total || 0);
+
+  // 4. Partner Payouts
+  const pendingPayoutsAggr = await Payout.aggregate([
+    { $match: { status: "PENDING" } },
+    { $group: { _id: null, total: { $sum: "$amount" } } }
+  ]);
+  const pendingPayouts = pendingPayoutsAggr[0]?.total || 0;
+
+  const paidPayoutsAggr = await Payout.aggregate([
+    { $match: { status: "COMPLETED" } },
+    { $group: { _id: null, total: { $sum: "$amount" } } }
+  ]);
+  const paidPayouts = paidPayoutsAggr[0]?.total || 0;
+
+  // 5. Referral Rewards Given Out
+  const referralAggr = await Referral.aggregate([
+    { $match: { status: "REWARDED" } },
+    { $group: { _id: null, total: { $sum: "$rewardAmount" } } }
+  ]);
+  const totalReferralRewards = referralAggr[0]?.total || 0;
+
+  // Net Platform Revenue = (Commission + Subscriptions) - (Referral Rewards)
+  const netRevenue = (totalCommission + subscriptionRevenue) - totalReferralRewards;
+
+  // 6. Recent Ledger (Combine recent orders, payouts, and referrals)
+  const recentOrders = await Order.find({ status: "SUCCESS" })
+    .sort({ createdAt: -1 })
+    .limit(200)
+    .lean();
+    
+  const recentPayouts = await Payout.find({ status: "COMPLETED" })
+    .sort({ processedAt: -1 })
+    .limit(200)
+    .lean();
+    
+  const recentReferrals = await Referral.find({ status: "REWARDED" })
+    .sort({ updatedAt: -1 })
+    .limit(200)
+    .lean();
+
+  const ledger: any[] = [];
+  
+  recentOrders.forEach((o: any) => {
+    ledger.push({
+      id: o._id.toString(),
+      type: o.type === 'SUBSCRIPTION' ? 'CREDIT' : 'CREDIT_GMV',
+      title: o.type === 'SUBSCRIPTION' ? 'Subscription Payment' : 'Booking Payment',
+      amount: o.amount,
+      date: o.createdAt,
+      status: o.status
+    });
+  });
+  
+  recentPayouts.forEach((p: any) => {
+    ledger.push({
+      id: p._id.toString(),
+      type: 'DEBIT',
+      title: 'Partner Payout',
+      amount: p.amount,
+      date: p.processedAt || p.updatedAt,
+      status: p.status
+    });
+  });
+  
+  recentReferrals.forEach((r: any) => {
+    ledger.push({
+      id: r._id.toString(),
+      type: 'DEBIT',
+      title: 'Referral Reward',
+      amount: r.rewardAmount,
+      date: r.updatedAt,
+      status: r.status
+    });
+  });
+
+  // Sort combined ledger by date desc and take top 500
+  ledger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const recentLedger = ledger.slice(0, 500);
+
+  return res.status(200).json(new ApiResponse(200, "Super Admin Wallet Data", {
+    grossVolume,
+    subscriptionRevenue,
+    totalCommission,
+    pendingPayouts,
+    paidPayouts,
+    totalReferralRewards,
+    netRevenue,
+    recentLedger
+  }));
 });

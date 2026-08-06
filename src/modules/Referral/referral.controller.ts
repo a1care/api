@@ -260,7 +260,6 @@ export const updateReferralConfig = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, "Config updated", config));
 });
 
-/** GET /api/referral/redirect?code=XYZ&role=Patient */
 export const handleReferralRedirect = asyncHandler(async (req, res) => {
   const code = (req.query.code as string) || '';
   const role = (req.query.role as string) || 'Patient';
@@ -273,3 +272,38 @@ export const handleReferralRedirect = asyncHandler(async (req, res) => {
     return res.redirect(`https://play.google.com/store/apps/details?id=com.a1care.partner&referrer=${code}`);
   }
 });
+
+/** PUT /api/referral/:id/approve — admin: credit the reward to referrer wallet */
+export const approveReferral = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const referral = await Referral.findById(id).populate("refereeId", "name");
+  
+  if (!referral) {
+    throw new ApiError(404, "Referral not found");
+  }
+  
+  if (referral.status === "REWARDED") {
+    throw new ApiError(400, "Referral has already been rewarded");
+  }
+
+  // Determine wallet user type
+  const userType = referral.referrerModel === 'Patient' ? 'Patient' : 'Staff';
+  const refereeName = (referral.refereeId as any)?.name || 'a friend';
+
+  // Credit the wallet
+  await creditWalletAtomic(
+    referral.referrerId.toString(),
+    referral.rewardAmount,
+    `Referral bonus for inviting ${refereeName}`,
+    userType as any
+  );
+
+  // Mark as rewarded
+  referral.status = "REWARDED";
+  await referral.save();
+
+  return res.status(200).json(
+    new ApiResponse(200, "Referral reward credited successfully", referral)
+  );
+});
+

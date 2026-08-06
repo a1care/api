@@ -140,8 +140,11 @@ app.use("/api/role", roleRoutes)
 //cms and knowledge base
 import cmsRoutes from './modules/CMS/cms.routes.js'
 import knowledgeBaseRoutes from './modules/KnowledgeBase/knowledgeBase.routes.js'
+import serviceableAreaRoutes from './modules/ServiceableAreas/serviceableArea.routes.js'
+
 app.use('/api/cms', cmsRoutes)
 app.use('/api/knowledge-base', knowledgeBaseRoutes)
+app.use('/api/serviceable-areas', serviceableAreaRoutes)
 
 //doctors
 app.use('/api/doctor', doctorRoutes)

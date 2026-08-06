@@ -174,7 +174,7 @@ export const postServiceBookingActions = async (serviceRequest: any, patientId: 
                 },
             }).catch(e => console.error("[Email] enqueue error:", e));
         }
-        if (patient?.fcmToken) {
+        if (patient?.fcmToken && serviceRequest.fulfillmentMode !== "HOSPITAL_VISIT") {
             enqueuePush({
                 recipientId: patient._id as mongoose.Types.ObjectId,
                 recipientType: "patient",

@@ -49,7 +49,8 @@ import {
   debugPartnerServiceEligibility,
   getAdminCommissionReport,
   getEmailTemplates,
-  updateEmailTemplate
+  updateEmailTemplate,
+  getSuperAdminWalletOverview
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -164,5 +165,8 @@ adminRoutes.post("/coupons", protectAdmin, requireAdminRole(["super_admin"]), cr
 adminRoutes.get("/coupons", protectAdmin, requireAdminRole(["admin", "super_admin"]), listCoupons);
 adminRoutes.put("/coupons/:id", protectAdmin, requireAdminRole(["super_admin"]), updateCoupon);
 adminRoutes.delete("/coupons/:id", protectAdmin, requireAdminRole(["super_admin"]), deleteCoupon);
+
+// Super Admin Wallet Overview
+adminRoutes.get("/super-admin-wallet", protectAdmin, requireAdminRole(["super_admin"]), getSuperAdminWalletOverview);
 
 export default adminRoutes;
