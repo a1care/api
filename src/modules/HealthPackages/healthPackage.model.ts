@@ -9,6 +9,8 @@ export interface HealthPackageDocument extends Document {
   badge?: string; // e.g. "BEST SELLER", "NEW", "POPULAR"
   color: string;  // hex color for the card gradient
   testsIncluded: string[];
+  coveredServices: string[];
+  usageLimit: number;
   validityDays: number;
   allowedRoleIds?: mongoose.Types.ObjectId[];
   isActive: boolean;
@@ -26,6 +28,8 @@ const healthPackageSchema = new Schema<HealthPackageDocument>(
     badge: { type: String },
     color: { type: String, default: "#2F80ED" },
     testsIncluded: { type: [String], default: [] },
+    coveredServices: { type: [String], default: [] }, // e.g. 'OP_TICKET', 'PHYSIOTHERAPY'
+    usageLimit: { type: Number, default: 1 }, // how many times the package can be used
     validityDays: { type: Number, default: 30 },
     allowedRoleIds: [{ type: Schema.Types.ObjectId, ref: "Role" }],
     isActive: { type: Boolean, default: true, index: true },

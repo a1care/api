@@ -11,12 +11,18 @@ import {
     seedHealthPackages,
 } from "./healthPackage.controller.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
+import { getMyActivePackages, purchaseHealthPackage } from "./userPackage.controller.js";
+import { protect } from "../../middlewares/protect.js";
 
 const router = express.Router();
 
 // Public
 router.get("/", getHealthPackages);
 router.get("/detail/:id", getHealthPackageById);
+
+// User
+router.get("/my-active", protect, getMyActivePackages as any);
+router.post("/purchase", protect, purchaseHealthPackage as any);
 
 // Admin — previously unprotected; the /admin/ prefix was cosmetic only.
 const adminOnly = [protectAdmin, requireAdminRole(["admin", "super_admin"])];

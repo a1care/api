@@ -50,7 +50,7 @@ const serviceRequestValiation = z.object({
     assignRoleId: objectId.optional(),
     bookingType: z.enum(["SCHEDULED", "ON_DEMAND"]),
     price: z.number(),
-    paymentMode: z.enum(["ONLINE", "OFFLINE", "COD", "WALLET"]).optional(),
+    paymentMode: z.enum(["ONLINE", "OFFLINE", "COD", "WALLET", "PACKAGE"]).optional(),
     paymentStatus: z.enum(["PENDING", "COMPLETED", "FAILED"]).optional(),
     notes: z.string().optional(),
     urgency: z.enum(["NORMAL", "URGENT", "CRITICAL"]).optional(),

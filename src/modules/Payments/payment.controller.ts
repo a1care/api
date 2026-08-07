@@ -60,7 +60,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     const { amount, type, referenceId } = req.body;
 
     if (!amount || amount <= 0) throw new ApiError(400, "Invalid amount");
-    if (!["WALLET_TOPUP", "BOOKING"].includes(type)) throw new ApiError(400, "Invalid order type");
+    if (!["WALLET_TOPUP", "BOOKING", "PACKAGE"].includes(type)) throw new ApiError(400, "Invalid order type");
 
     // For BOOKING orders, verify the amount against the actual booking price to prevent tampering
     if (type === "BOOKING" && referenceId) {
@@ -72,6 +72,18 @@ export const createOrder = asyncHandler(async (req, res) => {
         const expectedAmount = Number((booking as any).totalAmount ?? (booking as any).price ?? 0);
         if (expectedAmount > 0 && Math.abs(Number(amount) - expectedAmount) > 0.01) {
             throw new ApiError(400, "Amount does not match booking price");
+        }
+    }
+    
+    // For PACKAGE orders, verify against UserPackage
+    if (type === "PACKAGE" && referenceId) {
+        const { UserPackageModel } = await import("../HealthPackages/userPackage.model.js");
+        const userPkg = await UserPackageModel.findById(referenceId).select("purchasePrice status").lean();
+        if (!userPkg) throw new ApiError(404, "Package purchase not found");
+        if (userPkg.status === "ACTIVE") throw new ApiError(400, "Package already paid and active");
+        const expectedAmount = Number(userPkg.purchasePrice ?? 0);
+        if (expectedAmount > 0 && Math.abs(Number(amount) - expectedAmount) > 0.01) {
+            throw new ApiError(400, "Amount does not match package price");
         }
     }
 
@@ -263,6 +275,18 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
             );
             if (service && typeof service.logEvent === 'function') {
                 await service.logEvent(order.txnId, "SUBSCRIPTION_ACTIVATED", "INFO", `Activated subscription: ${order.referenceId}`);
+            }
+        }
+    } else if (order.type === "PACKAGE" && order.referenceId) {
+        const { UserPackageModel } = await import("../HealthPackages/userPackage.model.js");
+        const userPkg = await UserPackageModel.findByIdAndUpdate(
+            order.referenceId,
+            { status: "ACTIVE" },
+            { new: true }
+        );
+        if (userPkg) {
+            if (service && typeof service.logEvent === 'function') {
+                await service.logEvent(order.txnId, "PACKAGE_ACTIVATED", "INFO", `Activated health package: ${order.referenceId}`);
             }
         }
     }

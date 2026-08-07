@@ -50,7 +50,28 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         appliedCouponCode = applied.couponCode;
         couponToConsume = { couponId: applied.couponId, usageLimit: applied.usageLimit, usagePerUser: applied.usagePerUser };
     }
-    const finalPrice = Math.max(0, basePrice - discountAmount);
+    
+    let finalPrice = Math.max(0, basePrice - discountAmount);
+
+    let appliedUserPackage: any = null;
+    if (req.body.paymentMode === 'PACKAGE') {
+        const { UserPackageModel } = await import("../../HealthPackages/userPackage.model.js");
+        if (!req.body.userPackageId) throw new ApiError(400, "userPackageId is required when paying via package");
+        
+        appliedUserPackage = await UserPackageModel.findOne({
+            _id: req.body.userPackageId,
+            userId: new mongoose.Types.ObjectId(userId),
+            status: "ACTIVE",
+            remainingUses: { $gt: 0 },
+            validityEndDate: { $gte: new Date() }
+        });
+        
+        if (!appliedUserPackage) throw new ApiError(400, "Invalid or exhausted package");
+        // For packages, the customer pays 0, but the partner still needs to earn.
+        // We set the recorded price to basePrice so the partner gets paid their commission split.
+        // The customer's actual charge is 0, which is handled because paymentStatus becomes COMPLETED.
+        finalPrice = basePrice; 
+    }
 
     // Backward compatibility for live app payloads where scheduledSlot endTime equals startTime.
     // Normalize to a default 30-minute slot to avoid validation failure.
@@ -79,7 +100,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         // WALLET: deducted immediately below.
         // ONLINE: paid via Razorpay gateway — fulfillOrder() marks it COMPLETED after verification.
         // COD/OFFLINE: collected on delivery, starts PENDING.
-        paymentStatus: req.body.paymentMode === 'WALLET' ? 'COMPLETED' : 'PENDING',
+        paymentStatus: ['WALLET', 'PACKAGE'].includes(req.body.paymentMode) ? 'COMPLETED' : 'PENDING',
         status: req.body.paymentMode === 'ONLINE' ? 'PAYMENT_PENDING' : 'PENDING',
     };
 
@@ -106,6 +127,10 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const newServiceRequest = new serviceRequestModel(payload);
     try {
         await newServiceRequest.save();
+        if (appliedUserPackage) {
+            appliedUserPackage.remainingUses -= 1;
+            await appliedUserPackage.save();
+        }
     } catch (saveErr: any) {
         // The wallet was already debited above — if persisting the booking fails we must
         // refund so the patient never loses money for a booking that doesn't exist.
