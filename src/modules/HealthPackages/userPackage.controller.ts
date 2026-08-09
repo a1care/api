@@ -63,6 +63,19 @@ export const purchaseHealthPackage = asyncHandler(async (req, res) => {
     const validityEndDate = new Date();
     validityEndDate.setDate(validityEndDate.getDate() + healthPkg.validityDays);
 
+    // Check if the user already has an active instance of this package with remaining uses
+    const existingActivePackage = await UserPackageModel.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        packageId: healthPkg._id,
+        status: "ACTIVE",
+        remainingUses: { $gt: 0 },
+        validityEndDate: { $gte: new Date() }
+    });
+
+    if (existingActivePackage) {
+        throw new ApiError(400, "You already have an active subscription for this package. Please use it before purchasing again.");
+    }
+
     const userPkg = new UserPackageModel({
         userId: new mongoose.Types.ObjectId(userId),
         packageId: healthPkg._id,

@@ -21,6 +21,7 @@ export interface PatientDocument extends Document {
   deletedAt?: Date | null;
   isDeleted?: boolean;
   tokenVersion?: number;
+  familyMembers?: string[];
 }
 
 const PatientSchema = new Schema<PatientDocument>(
@@ -109,6 +110,10 @@ const PatientSchema = new Schema<PatientDocument>(
       type: Number,
       default: 0
     },
+    familyMembers: {
+      type: [String],
+      default: []
+    }
   },
   {
     timestamps: true

@@ -59,6 +59,6 @@ router.get('/slots/:doctorId/:date', protect, availableSlotByDoctorId)
 
 // a partner's own stored weekly availability
 router.get('/slot/availability/:doctorId', protect, getDoctorAvailabilitybyDoctorId)
-router.get('/staff/role/', protect, getStaffByRoleId)
+router.get('/staff/role/', getStaffByRoleId)
 
 export default router

@@ -1217,7 +1217,13 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
   const query: any = {};
 
   if (status && status !== "All") query.status = status;
-  if (payment && payment !== "All") query.paymentStatus = payment;
+  if (payment && payment !== "All") {
+    if (payment === "PACKAGE") {
+      query.paymentMode = "PACKAGE";
+    } else {
+      query.paymentStatus = payment;
+    }
+  }
 
   if (subService && subService !== "All") {
     // Specialization filter: Find doctors with this specialization first
@@ -1309,7 +1315,13 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
 
   const query: any = {};
   if (status && status !== "All") query.status = status;
-  if (payment && payment !== "All") query.paymentStatus = payment;
+  if (payment && payment !== "All") {
+    if (payment === "PACKAGE") {
+      query.paymentMode = "PACKAGE";
+    } else {
+      query.paymentStatus = payment;
+    }
+  }
   if (fulfillmentMode && fulfillmentMode !== "All") query.fulfillmentMode = fulfillmentMode;
 
   if (doctor && doctor !== "All") {

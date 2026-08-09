@@ -304,6 +304,14 @@ export const updatePatientFcmToken = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, "FCM Token updated", {}));
 });
 
+export const updateFamilyMembers = asyncHandler(async (req, res) => {
+  const patientId = req.user?.id;
+  const { familyMembers } = req.body;
+  if (!Array.isArray(familyMembers)) throw new ApiError(400, "familyMembers must be an array");
+  await Patient.findByIdAndUpdate(patientId, { familyMembers });
+  return res.status(200).json(new ApiResponse(200, "Family members updated", {}));
+});
+
 // Patient self-service account deletion request — surfaces in the admin Deletion
 // Requests queue (admin finalises via /admin/deletion-approve/:id).
 export const requestPatientDeletion = asyncHandler(async (req, res) => {

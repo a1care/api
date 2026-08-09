@@ -25,7 +25,7 @@ export const createMedicalRecord = asyncHandler(async (req, res) => {
   const role = req.user?.role;
   if (!requesterId) throw new ApiError(401, "Unauthorized");
 
-  const { appointmentId, clinicalNotes = "", diagnosis = "" } = req.body;
+  const { appointmentId, clinicalNotes = "", diagnosis = "", recordFor = "Self" } = req.body;
   
   let patientId: string = requesterId;
   let doctorId: string | null = null;
@@ -56,7 +56,8 @@ export const createMedicalRecord = asyncHandler(async (req, res) => {
     clinicalNotes,
     diagnosis,
     prescriptions,
-    labReports
+    labReports,
+    recordFor
   });
 
   return res.status(201).json(new ApiResponse(201, "Medical record created", record));

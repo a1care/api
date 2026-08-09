@@ -8,10 +8,15 @@ export interface MedicalRecordDocument extends Document {
   diagnosis?: string;
   prescriptions: string[];
   labReports: string[];
+  recordFor?: string;
 }
 
 const MedicalRecordSchema = new Schema<MedicalRecordDocument>(
   {
+    recordFor: {
+      type: String,
+      default: "Self"
+    },
     patientId: {
       type: Schema.Types.ObjectId,
       ref: "Patient",
