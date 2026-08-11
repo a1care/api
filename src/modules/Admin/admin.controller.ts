@@ -2353,7 +2353,7 @@ export const getAdminPayouts = asyncHandler(async (req, res) => {
       (p.staffId?.mobileNumber?.toLowerCase() || "").includes(s) ||
       (p.bankDetails?.bankName?.toLowerCase() || "").includes(s) ||
       (p.bankDetails?.accountNumber?.toLowerCase() || "").includes(s) ||
-      (p._id || "").toLowerCase().includes(s) ||
+      (String(p._id) || "").toLowerCase().includes(s) ||
       (String(p.amount || "")).includes(s)
     );
   }
@@ -2371,12 +2371,60 @@ export const getAdminPayouts = asyncHandler(async (req, res) => {
 
 export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, adminNote } = req.body;
+  const { status, adminNote, fromStatus } = req.body;
 
   if (!status) throw new ApiError(400, "Status is required");
+  if (!fromStatus) throw new ApiError(400, "Expected previous status (fromStatus) is required");
 
-  const payout = await Payout.findByIdAndUpdate(id, { status, adminNote }, { new: true });
-  if (!payout) throw new ApiError(404, "Payout not found");
+  // Enforce valid state transitions
+  const validTransitions: Record<string, string[]> = {
+    "PENDING": ["APPROVED", "REJECTED"],
+    "APPROVED": ["COMPLETED", "REJECTED"]
+  };
+
+  const allowedNextStates = validTransitions[fromStatus];
+  if (!allowedNextStates) {
+    throw new ApiError(422, `Transitions from terminal state '${fromStatus}' are not allowed.`);
+  }
+  
+  if (!allowedNextStates.includes(status)) {
+    throw new ApiError(422, `Invalid state transition from '${fromStatus}' to '${status}'.`);
+  }
+
+  // Require reason for rejection
+  if (status === "REJECTED" && (!adminNote || !adminNote.trim())) {
+    throw new ApiError(400, "A reason (adminNote) is required when rejecting a payout.");
+  }
+
+  // Find document just to check if it exists (distinguishes 404 from 409)
+  const existingPayout = await Payout.findById(id);
+  if (!existingPayout) throw new ApiError(404, "Payout not found");
+
+  // Atomic Update: Only update if the database status strictly matches the expected fromStatus
+  const payout = await Payout.findOneAndUpdate(
+    { _id: id, status: fromStatus }, 
+    { status, adminNote }, 
+    { new: true }
+  );
+
+  if (!payout) {
+    // Document exists but status didn't match, meaning a concurrent update occurred
+    throw new ApiError(409, "This payout has already changed state. Refresh the payout and try again.");
+  }
+
+  // Create Audit Log
+  await AuditLog.create({
+    actorAdminId: (req as any).user?.id,
+    actorRole: (req as any).user?.role,
+    action: "PAYOUT_STATUS_UPDATED",
+    targetType: "Payout",
+    targetId: String(payout._id),
+    metadata: { 
+      fromStatus, 
+      newStatus: status, 
+      reason: adminNote 
+    }
+  });
 
   // Notify Partner
   const partner = await Doctor.findById(payout.staffId);

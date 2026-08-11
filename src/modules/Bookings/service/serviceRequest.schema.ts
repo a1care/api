@@ -25,6 +25,7 @@ const locationSchema = z.object({
 const serviceRequestValiation = z.object({
     childServiceId: objectId.optional(),
     healthPackageId: objectId.optional(),
+    userPackageId: objectId.optional(),
     userId: objectId,
     roleId: z.array(objectId).optional(),
     status: z.enum([

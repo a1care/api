@@ -196,45 +196,74 @@ export const sendAppointmentConfirmationEmail = async (data: {
     location: string;
     price?: string | number;
     paymentMode?: string;
+    isOP?: boolean;
 }) => {
+    const isOP = data.isOP || (data.location && data.location.includes("A1 Care Hospital"));
+    const directionsUrl = isOP ? "https://maps.google.com/?daddr=17.385044,78.486671" : "";
+
     const body = `
-        <div style="text-align:center; margin-bottom:40px;">
-            <div style="width:70px; height:70px; background-color:#F0FDF4; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">✅</div>
-            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#0F172A;">Appointment Confirmed</h2>
-            <p style="color:#64748B;font-size:15px;">Your healthcare provider is scheduled!</p>
+        <div style="text-align:center; margin-bottom:30px;">
+            <img src="https://img.icons8.com/fluency/96/000000/ok.png" alt="Success" width="64" height="64" style="margin-bottom:15px;"/>
+            <h2 style="font-size:28px;font-weight:900;margin:0 0 10px;color:#0F172A;letter-spacing:-0.5px;">Booking Confirmed!</h2>
+            <p style="color:#64748B;font-size:16px;margin:0;">Hi ${data.fullName}, your appointment is successfully booked.</p>
         </div>
-        <div style="background-color:#F8FAFC;padding:32px;border-radius:24px;margin-bottom:30px;border:1px solid #E2E8F0;">
-            <div style="margin-bottom:20px;">
-                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Service</p>
-                <p style="margin:4px 0 0; font-size:17px; font-weight:700; color:#0D2E6E;">${data.serviceName}</p>
+        
+        <div style="background-color:#ffffff;padding:0;border-radius:24px;margin-bottom:30px;border:1px solid #E2E8F0;box-shadow:0 4px 6px -1px rgba(0, 0, 0, 0.05);overflow:hidden;">
+            <!-- Header of the Card -->
+            <div style="background-color:${isOP ? '#EFF6FF' : '#F8FAFC'};padding:24px;border-bottom:1px solid #E2E8F0;">
+                <p style="margin:0; font-size:12px; font-weight:700; color:#1A6FDB; text-transform:uppercase; letter-spacing:0.1em;">${isOP ? 'Hospital OP Visit' : 'Home Service'}</p>
+                <p style="margin:8px 0 0; font-size:22px; font-weight:800; color:#0F172A;">${data.serviceName}</p>
             </div>
-            <div style="margin-bottom:20px; display:table; width:100%;">
-                <div style="display:table-cell; width:50%;">
-                    <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Date</p>
-                    <p style="margin:4px 0 0; font-size:15px; font-weight:700;">${data.date}</p>
-                </div>
-                <div style="display:table-cell; width:50%;">
-                    <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Time</p>
-                    <p style="margin:4px 0 0; font-size:15px; font-weight:700;">${data.time}</p>
-                </div>
-            </div>
-            <div style="margin-bottom:20px; border-top:1px solid #E2E8F0; padding-top:20px;">
-                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Location</p>
-                <p style="margin:4px 0 0; font-size:14px; font-weight:600; color:#475569;">${data.location}</p>
-            </div>
-            <div style="display:table; width:100%; background-color:#EFF6FF; padding:16px; border-radius:16px; margin-top:10px;">
-                <div style="display:table-cell; vertical-align:middle;">
-                   <p style="margin:0; font-size:10px; font-weight:800; color:#1A6FDB; text-transform:uppercase;">Estimated Cost</p>
-                   <p style="margin:2px 0 0; font-size:18px; font-weight:900; color:#0D2E6E;">₹${data.price || 'N/A'}</p>
-                </div>
-                <div style="display:table-cell; text-align:right; vertical-align:middle;">
-                   <p style="margin:0; font-size:10px; font-weight:800; color:#1A6FDB; text-transform:uppercase;">Payment Mode</p>
-                   <p style="margin:2px 0 0; font-size:13px; font-weight:700; color:#1e40af;">${data.paymentMode || 'COD'}</p>
+            
+            <!-- Details Grid -->
+            <div style="padding:24px;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                    <tr>
+                        <td width="50%" style="padding-bottom:16px;">
+                            <p style="margin:0; font-size:12px; font-weight:600; color:#64748B;">Date</p>
+                            <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#0F172A;">${data.date}</p>
+                        </td>
+                        <td width="50%" style="padding-bottom:16px;">
+                            <p style="margin:0; font-size:12px; font-weight:600; color:#64748B;">Time</p>
+                            <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#0F172A;">${data.time}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <p style="margin:0; font-size:12px; font-weight:600; color:#64748B;">Location</p>
+                            <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#0F172A; line-height:1.5;">${data.location}</p>
+                            ${isOP ? `<a href="${directionsUrl}" style="display:inline-block; margin-top:10px; font-size:14px; font-weight:700; color:#1A6FDB; text-decoration:none;">📍 Get Directions on Maps &rarr;</a>` : ''}
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Payment Box -->
+                <div style="background-color:#F8FAFC; padding:16px; border-radius:12px; display:table; width:100%; box-sizing:border-box;">
+                    <div style="display:table-cell; vertical-align:middle;">
+                       <p style="margin:0; font-size:12px; font-weight:600; color:#64748B;">Amount</p>
+                       <p style="margin:4px 0 0; font-size:18px; font-weight:800; color:#0F172A;">₹${data.price || 'N/A'}</p>
+                    </div>
+                    <div style="display:table-cell; text-align:right; vertical-align:middle;">
+                       <p style="margin:0; font-size:12px; font-weight:600; color:#64748B;">Payment Mode</p>
+                       <span style="display:inline-block; margin-top:4px; padding:4px 12px; background-color:#D1FAE5; color:#065F46; border-radius:999px; font-size:12px; font-weight:700;">${data.paymentMode || 'COD'}</span>
+                    </div>
                 </div>
             </div>
         </div>
-        <div style="text-align:center; padding-top:20px;">
-            <a href="https://a1care.in/download" style="font-size:14px; font-weight:700; color:#1A6FDB; text-decoration:none;">Manage Booking in App →</a>
+        
+        ${isOP ? `
+        <div style="background-color:#FFFBEB; border:1px solid #FEF3C7; padding:20px; border-radius:16px; margin-bottom:30px; text-align:left;">
+            <p style="margin:0 0 10px; font-size:15px; font-weight:800; color:#B45309;">⚠️ Important Instructions</p>
+            <ul style="margin:0; padding-left:20px; font-size:14px; color:#92400E; line-height:1.6; font-weight:500;">
+                <li style="margin-bottom:6px;">Please arrive at least 10 minutes prior to your scheduled time.</li>
+                <li style="margin-bottom:6px;">Carry a valid ID and any relevant past medical records.</li>
+                <li>Show this confirmation email at the reception upon arrival.</li>
+            </ul>
+        </div>
+        ` : ''}
+        
+        <div style="text-align:center; padding-top:10px;">
+            <a href="https://a1care.in/download" style="display:inline-block;background-color:#0F172A;color:#ffffff;padding:16px 36px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">View Booking in App</a>
         </div>
     `;
     return sendEmail({ to: data.email, subject: `Appointment Confirmed: ${data.serviceName} - A1Care 24/7`, html: baseTemplate("Booking Confirmed", body) });

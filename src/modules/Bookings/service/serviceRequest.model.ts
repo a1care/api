@@ -32,6 +32,11 @@ const ServiceRequestSchema = new Schema(
       required: true
     },
 
+    checkInPin: {
+      type: String,
+      default: null
+    },
+
     // slot only for scheduled services
     scheduledSlot: {
       startTime: {

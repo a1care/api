@@ -60,16 +60,24 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         
         appliedUserPackage = await UserPackageModel.findOne({
             _id: req.body.userPackageId,
-            userId: new mongoose.Types.ObjectId(userId),
-            status: "ACTIVE",
-            remainingUses: { $gt: 0 },
-            validityEndDate: { $gte: new Date() }
+            userId: new mongoose.Types.ObjectId(userId)
         });
         
-        if (!appliedUserPackage) throw new ApiError(400, "Invalid or exhausted package");
+        if (!appliedUserPackage) {
+            throw new ApiError(400, `Package not found for this user. ID: ${req.body.userPackageId}`);
+        }
+        
+        if (appliedUserPackage.status !== "ACTIVE") {
+            throw new ApiError(400, `Package is not active. Status is: ${appliedUserPackage.status}`);
+        }
+        if (appliedUserPackage.remainingUses <= 0) {
+            throw new ApiError(400, `Package uses exhausted. Remaining: ${appliedUserPackage.remainingUses}`);
+        }
+        if (appliedUserPackage.validityEndDate && appliedUserPackage.validityEndDate < new Date()) {
+            throw new ApiError(400, `Package expired on ${appliedUserPackage.validityEndDate}`);
+        }
+        
         // For packages, the customer pays 0, but the partner still needs to earn.
-        // We set the recorded price to basePrice so the partner gets paid their commission split.
-        // The customer's actual charge is 0, which is handled because paymentStatus becomes COMPLETED.
         finalPrice = basePrice; 
     }
 
@@ -95,8 +103,9 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         price: finalPrice,
         couponCode: appliedCouponCode,
         discountAmount,
-        bookingType: (childSvc as any)?.bookingType ?? "SCHEDULED", // Default for health packages
-        fulfillmentMode: (childSvc as any)?.fulfillmentMode ?? "HOME_VISIT", // Default for health packages
+        bookingType: req.body.bookingType || (childSvc as any)?.bookingType || "SCHEDULED", // Default for health packages
+        fulfillmentMode: req.body.fulfillmentMode || (childSvc as any)?.fulfillmentMode || "HOME_VISIT", // Default for health packages
+        checkInPin: (req.body.fulfillmentMode || (childSvc as any)?.fulfillmentMode) === "HOSPITAL_VISIT" ? Math.floor(1000 + Math.random() * 9000).toString() : null,
         // WALLET: deducted immediately below.
         // ONLINE: paid via Razorpay gateway — fulfillOrder() marks it COMPLETED after verification.
         // COD/OFFLINE: collected on delivery, starts PENDING.
@@ -125,13 +134,45 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     }
 
     const newServiceRequest = new serviceRequestModel(payload);
+    let atomicallyUpdatedPackage: any = null;
+
     try {
-        await newServiceRequest.save();
         if (appliedUserPackage) {
-            appliedUserPackage.remainingUses -= 1;
-            await appliedUserPackage.save();
+            const { UserPackageModel } = await import("../../HealthPackages/userPackage.model.js");
+            // Atomically decrement remaining uses ONLY IF it is > 0
+            atomicallyUpdatedPackage = await UserPackageModel.findOneAndUpdate(
+                { 
+                    _id: appliedUserPackage._id, 
+                    userId: new mongoose.Types.ObjectId(userId),
+                    remainingUses: { $gt: 0 },
+                    status: "ACTIVE"
+                },
+                { $inc: { remainingUses: -1 } },
+                { new: true }
+            );
+
+            if (!atomicallyUpdatedPackage) {
+                throw new ApiError(409, "Package redemption conflict: Package uses exhausted or status changed.");
+            }
+            // Trigger pre-save hooks (like setting status to EXHAUSTED) by saving again
+            await atomicallyUpdatedPackage.save();
         }
+
+        await newServiceRequest.save();
     } catch (saveErr: any) {
+        // Rollback package usage if booking creation failed
+        if (atomicallyUpdatedPackage) {
+            const { UserPackageModel } = await import("../../HealthPackages/userPackage.model.js");
+            const rolledBackPkg = await UserPackageModel.findOneAndUpdate(
+                { _id: atomicallyUpdatedPackage._id },
+                { $inc: { remainingUses: 1 } },
+                { new: true }
+            );
+            if (rolledBackPkg) {
+                // Trigger pre-save hook again to potentially revert EXHAUSTED -> ACTIVE
+                await rolledBackPkg.save();
+            }
+        }
         // The wallet was already debited above — if persisting the booking fails we must
         // refund so the patient never loses money for a booking that doesn't exist.
         if (payload.paymentMode === "WALLET" && finalPrice > 0) {
@@ -187,15 +228,16 @@ export const postServiceBookingActions = async (serviceRequest: any, patientId: 
     try {
         const patient = await Patient.findById(patientId);
         if (patient?.email) {
+            const isOP = serviceRequest.fulfillmentMode === "HOSPITAL_VISIT";
             enqueueEmail({
                 kind: "appointment",
                 data: {
                     email: patient.email,
                     fullName: patient.name || "Customer",
-                    serviceName: serviceRequest.bookingType || "Home Care Service",
+                    serviceName: isOP ? `OP Consultation (${bookingName})` : (serviceRequest.bookingType || "Home Care Service"),
                     date: new Date().toDateString(),
-                    time: "Awaiting admin assignment",
-                    location: patient.primaryAddressId ? "Stored Patient Address" : "Current Location",
+                    time: isOP ? "Please arrive 10 minutes early" : "Awaiting admin assignment",
+                    location: isOP ? "A1 Care Hospital, Main Branch" : (patient.primaryAddressId ? "Stored Patient Address" : "Current Location"),
                 },
             }).catch(e => console.error("[Email] enqueue error:", e));
         }
@@ -259,15 +301,45 @@ export const getPendingRequest = asyncHandler(async (req, res) => {
 
 export const getSerivceRequestById = asyncHandler(async (req, res) => {
     const { requestId } = req.params;
-    if (!requestId) throw new ApiError(401, "Please Provide request Id");
-    const requestDetails = await serviceRequestModel
-        .findOne({ _id: new mongoose.Types.ObjectId(requestId) })
-        .populate("childServiceId")
-        .populate("healthPackageId")
-        .populate("addressId");
-    if (!requestDetails) throw new ApiError(404, "Service request not found");
-    return res.status(200).json(new ApiResponse(200, "Request Found", requestDetails));
-});
+
+    const request = await serviceRequestModel.findById(requestId)
+        .populate("childServiceId", "name type price")
+        .populate("healthPackageId", "name type price")
+        .populate("assignedProviderId", "name specialization")
+        .populate("userId", "name mobile")
+        .populate("addressId")
+
+    if (!request) {
+        throw new ApiError(404, "Service request not found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, "Service request fetched successfully", request)
+    )
+})
+
+export const verifyCheckInPin = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { pin } = req.body;
+
+    if (!pin) throw new ApiError(400, "PIN is required");
+
+    const request = await serviceRequestModel.findById(id);
+    if (!request) throw new ApiError(404, "Booking not found");
+
+    if (request.fulfillmentMode !== "HOSPITAL_VISIT") {
+        throw new ApiError(400, "PIN verification is only for OP tokens");
+    }
+
+    if (request.checkInPin !== pin) {
+        throw new ApiError(400, "Invalid PIN");
+    }
+
+    request.status = "IN_PROGRESS";
+    await request.save();
+
+    return res.status(200).json(new ApiResponse(200, "PIN verified successfully, status updated to IN_PROGRESS", request));
+});;
 
 export const getServiceRequestForProvider = asyncHandler(async (req, res) => {
     const { roleId } = req.params;

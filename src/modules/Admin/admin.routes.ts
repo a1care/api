@@ -117,6 +117,8 @@ adminRoutes.get("/bookings/services", protectAdmin, requireAdminRole(["admin", "
 adminRoutes.get("/bookings/services/debug-eligibility", protectAdmin, requireAdminRole(["admin", "super_admin"]), debugPartnerServiceEligibility);
 adminRoutes.get("/bookings/services/returned", protectAdmin, requireAdminRole(["admin", "super_admin"]), getReturnedToAdminServiceBookings);
 adminRoutes.put("/bookings/services/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateServiceBookingStatus);
+import { verifyCheckInPin } from '../Bookings/service/serviceRequest.controller.js';
+adminRoutes.post("/bookings/services/verify-pin/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), verifyCheckInPin);
 adminRoutes.get("/bookings/hospital", protectAdmin, requireAdminRole(["admin", "super_admin"]), getHospitalBookings);
 
 adminRoutes.get("/audit/logs", protectAdmin, requireAdminRole(["super_admin"]), listAuditLogs);

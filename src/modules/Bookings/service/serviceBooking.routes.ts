@@ -16,6 +16,10 @@ router.post('/reject-assignment/:serviceRequestId', protect, rejectAssignment)
 //update services status
 router.patch("/status/:id", protect, updateServiceRequestStatus)
 
+// Verify check-in PIN
+import { verifyCheckInPin } from './serviceRequest.controller.js'
+router.post("/verify-pin/:id", protect, verifyCheckInPin)
+
 //get requested services by userId
 router.get('/user', protect, getServiceRequestByUser)
 router.get("/get/pending", protect, getPendingRequest)
