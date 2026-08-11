@@ -234,10 +234,12 @@ export const postServiceBookingActions = async (serviceRequest: any, patientId: 
                 data: {
                     email: patient.email,
                     fullName: patient.name || "Customer",
-                    serviceName: isOP ? `OP Consultation (${bookingName})` : (serviceRequest.bookingType || "Home Care Service"),
+                    serviceName: isOP ? `OP Consultation (${bookingName})` : bookingName,
                     date: new Date().toDateString(),
                     time: isOP ? "Please arrive 10 minutes early" : "Awaiting admin assignment",
                     location: isOP ? "A1 Care Hospital, Main Branch" : (patient.primaryAddressId ? "Stored Patient Address" : "Current Location"),
+                    price: serviceRequest.price,
+                    paymentMode: serviceRequest.paymentMode
                 },
             }).catch(e => console.error("[Email] enqueue error:", e));
         }
@@ -496,6 +498,8 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
                         date: new Date().toDateString(),
                         time: "Service Update",
                         location: "Confirmed Location",
+                        price: existing.price,
+                        paymentMode: existing.paymentMode
                     },
                 });
             } catch (e) {

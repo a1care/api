@@ -62,14 +62,14 @@ const baseTemplate = (title: string, body: string) => `
             <td align="center">
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:600px;background-color:#16191f;box-shadow:0 20px 40px rgba(0,0,0,0.5);border-radius:32px;overflow:hidden;">
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0a369d 0%, #1A6FDB 100%); padding:60px 40px; text-align:center;">
+                        <td style="background: linear-gradient(135deg, #0a369d 0%, #1A6FDB 100%); padding:40px 30px; text-align:center;">
                             <h1 style="color:#ffffff;margin:0;font-size:34px;font-weight:900;letter-spacing:-0.03em;">A1Care <span style="color:#7FCFFF;">24/7</span></h1>
-                            <div style="height:2px; width:40px; background-color:rgba(255,255,255,0.2); margin:20px auto;"></div>
+                            <div style="height:2px; width:40px; background-color:rgba(255,255,255,0.2); margin:16px auto;"></div>
                             <p style="color:rgba(255,255,255,0.9);margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;">Premium Healthcare at Home</p>
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding:60px 40px;color:#cbd5e1;line-height:1.8;">
+                        <td style="padding:30px 30px 10px 30px;color:#cbd5e1;line-height:1.8;">
                             ${body}
                         </td>
                     </tr>
@@ -240,7 +240,7 @@ export const sendAppointmentConfirmationEmail = async (data: {
                 <div style="background-color:#16191f; padding:16px; border-radius:12px; display:table; width:100%; box-sizing:border-box;">
                     <div style="display:table-cell; vertical-align:middle;">
                        <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Amount</p>
-                       <p style="margin:4px 0 0; font-size:18px; font-weight:800; color:#f8fafc;">₹${data.price || 'N/A'}</p>
+                       <p style="margin:4px 0 0; font-size:18px; font-weight:800; color:#f8fafc;">₹${data.price !== undefined && data.price !== null && data.price !== '' ? data.price : 'N/A'}</p>
                     </div>
                     <div style="display:table-cell; text-align:right; vertical-align:middle;">
                        <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Payment Mode</p>
