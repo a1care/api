@@ -263,7 +263,7 @@ export const sendAppointmentConfirmationEmail = async (data: {
         ` : ''}
         
         <div style="text-align:center; padding-top:10px;">
-            <a href="https://a1care.in/download" style="display:inline-block;background-color:#0F172A;color:#ffffff;padding:16px 36px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">View Booking in App</a>
+            <a href="a1care://bookings" style="display:inline-block;background-color:#3b82f6;color:#ffffff;padding:16px 36px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">View Booking in App</a>
         </div>
     `;
     return sendEmail({ to: data.email, subject: `Appointment Confirmed: ${data.serviceName} - A1Care 24/7`, html: baseTemplate("Booking Confirmed", body) });
