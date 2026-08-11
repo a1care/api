@@ -46,7 +46,15 @@ export const sendEmail = async (options: EmailOptions) => {
     }
 };
 
-const EMAIL_PRIMARY_COLOR = "#2F80ED";
+const escapeHtml = (unsafe: string | undefined | null | number) => {
+    if (unsafe === undefined || unsafe === null) return '';
+    return String(unsafe)
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+};
 
 const baseTemplate = (title: string, body: string) => `
 <!DOCTYPE html>
@@ -54,35 +62,36 @@ const baseTemplate = (title: string, body: string) => `
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title} - A1Care 24/7</title>
+    <title>${escapeHtml(title)} - A1Care</title>
 </head>
-<body style="margin:0;padding:0;background-color:#0f1115;font-family:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#0f1115;padding:40px 15px;">
+<body style="margin:0;padding:0;background-color:#F5F7FA;font-family:Inter, Arial, Helvetica, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#F5F7FA;padding:24px 0;">
         <tr>
             <td align="center">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:600px;background-color:#16191f;box-shadow:0 20px 40px rgba(0,0,0,0.5);border-radius:32px;overflow:hidden;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:620px;background-color:#F5F7FA;">
+                    <!-- HEADER -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #0a369d 0%, #1A6FDB 100%); padding:40px 30px; text-align:center;">
-                            <h1 style="color:#ffffff;margin:0;font-size:34px;font-weight:900;letter-spacing:-0.03em;">A1Care <span style="color:#7FCFFF;">24/7</span></h1>
-                            <div style="height:2px; width:40px; background-color:rgba(255,255,255,0.2); margin:16px auto;"></div>
-                            <p style="color:rgba(255,255,255,0.9);margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;">Premium Healthcare at Home</p>
+                        <td style="padding:16px 20px 24px;text-align:center;">
+                            <h1 style="color:#0F172A;margin:0;font-size:24px;font-weight:700;letter-spacing:-0.5px;">A1Care <span style="color:#3B82F6;">24/7</span></h1>
+                            <p style="color:#64748B;margin:4px 0 0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Premium Healthcare at Home</p>
                         </td>
                     </tr>
+                    <!-- BODY CONTENT -->
                     <tr>
-                        <td style="padding:30px 30px 10px 30px;color:#cbd5e1;line-height:1.8;">
+                        <td style="padding:0 20px;">
                             ${body}
                         </td>
                     </tr>
+                    <!-- FOOTER -->
                     <tr>
-                        <td style="background-color:#0f1115;padding:40px;text-align:center;border-top:1px solid #1e293b;">
-                            <p style="font-size:12px;color:#64748b;margin:0;line-height:20px;">
-                                © ${new Date().getFullYear()} A1Care 24/7. All rights reserved.<br/>
-                                📍 Hitech City, Hyderabad, India
-                            </p>
-                            <div style="margin-top:20px; border-top:1px solid #1e293b; padding-top:20px;">
-                                <a href="https://a1care.in/terms" style="color:#3b82f6;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Terms</a>
-                                <a href="https://a1care.in/privacy" style="color:#3b82f6;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Privacy</a>
-                                <a href="https://a1care.in/support" style="color:#3b82f6;text-decoration:none;font-size:11px;font-weight:800;margin:0 12px;text-transform:uppercase;letter-spacing:0.05em;">Support</a>
+                        <td style="padding:32px 20px;text-align:center;border-top:1px solid #E5E7EB;margin-top:24px;">
+                            <p style="color:#64748B;margin:0 0 8px;font-size:12px;">© ${new Date().getFullYear()} A1Care 24/7. All rights reserved.<br/>Hitech City, Hyderabad, India</p>
+                            <div>
+                                <a href="https://a1care.in/terms" style="color:#64748B;text-decoration:none;font-size:12px;margin:0 4px;">Terms</a>
+                                <span style="color:#CBD5E1;">•</span>
+                                <a href="https://a1care.in/privacy" style="color:#64748B;text-decoration:none;font-size:12px;margin:0 4px;">Privacy</a>
+                                <span style="color:#CBD5E1;">•</span>
+                                <a href="https://a1care.in/support" style="color:#64748B;text-decoration:none;font-size:12px;margin:0 4px;">Support</a>
                             </div>
                         </td>
                     </tr>
@@ -99,18 +108,17 @@ const getDynamicTemplate = async (code: string, fallbackSubject: string, fallbac
 
     try {
         const template = await EmailTemplate.findOne({ code }).lean();
-        if (template) {
-            subject = template.subject;
+        if (template && template.htmlBody && template.htmlBody.includes("{{")) {
+            subject = template.subject || fallbackSubject;
             body = template.htmlBody;
         }
     } catch (error) {
         console.error(`[EmailTemplate] Failed to fetch template for ${code}`, error);
     }
 
-    // Replace all placeholders {{key}} with actual data
     for (const [key, value] of Object.entries(data)) {
         const regex = new RegExp(`{{${key}}}`, 'g');
-        const strVal = String(value || "");
+        const strVal = escapeHtml(value);
         subject = subject.replace(regex, strVal);
         body = body.replace(regex, strVal);
     }
@@ -118,195 +126,191 @@ const getDynamicTemplate = async (code: string, fallbackSubject: string, fallbac
     return { subject, body };
 };
 
+// --- Reusable UI Components ---
+
+const renderStatusBadge = (status: string, semanticType: "SUCCESS" | "WARNING" | "CRITICAL" | "INFO") => {
+    let bg, color;
+    switch (semanticType) {
+        case "SUCCESS": bg = "#DCFCE7"; color = "#166534"; break;
+        case "WARNING": bg = "#FEF3C7"; color = "#92400E"; break;
+        case "CRITICAL": bg = "#FEE2E2"; color = "#991B1B"; break;
+        case "INFO": bg = "#DBEAFE"; color = "#1E40AF"; break;
+    }
+    return `<span style="display:inline-block;padding:4px 10px;border-radius:999px;background-color:${bg};color:${color};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(status)}</span>`;
+};
+
+const renderCTA = (url: string, label: string) => {
+    if (!url) return '';
+    return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;margin-bottom:24px;">
+            <tr>
+                <td align="center">
+                    <a href="${url}" style="display:inline-block;background-color:#2563EB;color:#FFFFFF;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;min-width:200px;text-align:center;">${escapeHtml(label)}</a>
+                </td>
+            </tr>
+        </table>
+    `;
+};
+
+const renderHero = (title: string, subtitle: string, customerName?: string) => `
+    <div style="text-align:center;padding:16px 20px 24px;">
+        <h2 style="margin:0 0 12px;font-size:26px;font-weight:700;color:#0F172A;letter-spacing:-0.5px;">${escapeHtml(title)}</h2>
+        ${customerName && customerName !== 'Customer' ? `<p style="margin:0 0 8px;font-size:16px;color:#475569;">Hello ${escapeHtml(customerName)},</p>` : ''}
+        <p style="margin:0;font-size:15px;color:#64748B;">${escapeHtml(subtitle)}</p>
+    </div>
+`;
+
+// --- Scenarios ---
+
 export const sendWelcomeEmail = async (data: { email: string; fullName: string }) => {
     const body = `
-        <div style="text-align:center;">
-            <div style="width:80px; height:80px; background-color:#EFF6FF; border-radius:40px; display:inline-block; line-height:80px; font-size:40px; margin-bottom:30px;">👋</div>
-            <h2 style="font-size:26px;font-weight:900;margin-bottom:15px;color:#0F172A;letter-spacing:-0.02e;">Welcome, ${data.fullName}!</h2>
-            <p style="font-size:16px;color:#64748B;line-height:26px;margin-bottom:40px;">You are now part of the A1Care community. We're here to provide professional medical care right at your doorstep, whenever you need it.</p>
-            <a href="https://a1care.in/download" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:18px 40px;border-radius:18px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 10px 20px rgba(26,111,219,0.2);">Get Started Now</a>
-            <p style="margin-top:50px;font-size:14px;color:#94A3B8;font-style:italic;">Best regards,<br/>Team A1Care 24/7</p>
-        </div>
+        ${renderHero("Welcome to A1Care 24/7", "Your account has been successfully created.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td align="center">
+                    <p style="margin:0 0 16px;font-size:15px;color:#334155;">We bring professional medical care right to your doorstep, whenever you need it.</p>
+                </td>
+            </tr>
+        </table>
+        ${renderCTA("https://a1care.in/app", "Explore A1Care")}
     `;
-    return sendEmail({ to: data.email, subject: "Welcome to A1Care 24/7 - Quality Care at Home", html: baseTemplate("Welcome", body) });
-};
-
-export const sendPartnerWelcomeEmail = async (data: { email: string; fullName: string }) => {
-    const fallbackBody = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Welcome to the A1Care Partner Network!</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
-        <p style="margin-bottom:20px;">We're thrilled to have you join us as a healthcare partner. A1Care 24/7 is on a mission to bring high-quality healthcare directly to patients' homes, and your expertise is key to making that happen.</p>
-        <p style="margin-bottom:20px;">Your profile is currently under review. Once verified, you'll be able to receive and manage service requests, track your earnings, and grow your practice with us.</p>
-        <p style="margin-bottom:30px;">Download the A1Care Partner app to stay updated on your status and start receiving bookings once you're active.</p>
-        <a href="https://a1care.in/partner" style="display:inline-block;background-color:${EMAIL_PRIMARY_COLOR};color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Go to Partner App</a>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
-    `;
-    const { subject, body } = await getDynamicTemplate("partner_welcome", "Welcome to A1Care Partner - Let's Grow Together", fallbackBody, data);
-    return sendEmail({ to: data.email, subject, html: baseTemplate("Welcome Partner", body) });
-};
-
-export const sendPartnerApprovalEmail = async (data: { email: string; fullName: string }) => {
-    const fallbackBody = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#059669;">Your Partner Account is Approved</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
-        <p style="margin-bottom:20px;">Great news. Your A1Care partner profile and documents have been verified successfully.</p>
-        <p style="margin-bottom:20px;">You can now go online in the A1Care Partner app and start receiving eligible booking requests.</p>
-        <a href="https://a1care.in/partner" style="display:inline-block;background-color:#059669;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Open Partner App</a>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
-    `;
-    const { subject, body } = await getDynamicTemplate("partner_approved", "A1Care Partner KYC Approved", fallbackBody, data);
-    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner Approved", body) });
-};
-
-export const sendPartnerRejectionEmail = async (data: { email: string; fullName: string; reason: string }) => {
-    const fallbackBody = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#e11d48;">Partner KYC Needs Updates</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>{{fullName}}</strong>,</p>
-        <p style="margin-bottom:20px;">We reviewed your A1Care partner application, but we could not approve it yet.</p>
-        <div style="background-color:#fff1f2;padding:24px;border-radius:16px;margin-bottom:24px;border:1px solid #fecdd3;">
-            <p style="margin:0 0 8px;font-size:11px;font-weight:800;color:#be123c;text-transform:uppercase;letter-spacing:0.08em;">Reason</p>
-            <p style="margin:0;font-size:15px;color:#881337;font-weight:600;">{{reason}}</p>
-        </div>
-        <p style="margin-bottom:20px;">Please update the required details or re-upload the correct documents in the A1Care Partner app. Our team will review your profile again after resubmission.</p>
-        <a href="https://a1care.in/partner" style="display:inline-block;background-color:#e11d48;color:#ffffff;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">Update Application</a>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
-    `;
-    const { subject, body } = await getDynamicTemplate("partner_rejected", "A1Care Partner KYC Update Required", fallbackBody, data);
-    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner KYC Update Required", body) });
-};
-
-export const sendJobAcknowledgmentEmail = async (data: { email: string; fullName: string; jobTitle: string }) => {
-    const body = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Application Received</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
-        <p style="margin-bottom:20px;">Thank you for applying for the <strong>${data.jobTitle}</strong> position. We have received your application and our team is currently reviewing it.</p>
-        <p style="margin-bottom:20px;">If your profile matches our requirements, we will contact you for further rounds of interviews.</p>
-        <p style="margin-top:30px;font-size:14px;color:#4b5563;">Best regards,<br/>The HR Team, A1Care 24/7</p>
-    `;
-    return sendEmail({ to: data.email, subject: `Application Received: ${data.jobTitle} - A1Care 24/7`, html: baseTemplate("Application Received", body) });
+    return sendEmail({ to: data.email, subject: "Welcome to A1Care 24/7", html: baseTemplate("Welcome", body) });
 };
 
 export const sendAppointmentConfirmationEmail = async (data: { 
     email: string; 
     fullName: string; 
     serviceName: string; 
-    date: string; 
-    time: string; 
-    location: string;
-    price?: string | number;
-    paymentMode?: string;
-    isOP?: boolean;
+    bookingId: string;
+    bookingStatus: string;
+    serviceCategory?: string | undefined;
+    date?: string | undefined; 
+    time?: string | undefined; 
+    patientAddress?: string | undefined;
+    partnerName?: string | undefined;
+    doctorName?: string | undefined;
+    hospitalName?: string | undefined;
+    serviceAmount?: number | undefined;
+    discountAmount?: number | undefined;
+    totalAmount?: number | undefined;
+    paymentMethod?: string | undefined;
+    isOP?: boolean | undefined;
 }) => {
-    const isOP = data.isOP || (data.location && data.location.includes("A1 Care Hospital"));
-    const directionsUrl = isOP ? "https://maps.google.com/?daddr=17.385044,78.486671" :     const body = `
-        <div style="text-align:center; margin-bottom:30px;">
-            <div style="background-color:#22c55e;width:64px;height:64px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:15px;box-shadow:0 0 20px rgba(34, 197, 94, 0.4);">
-                <img src="https://img.icons8.com/fluency-systems-filled/96/ffffff/checkmark.png" alt="Check" width="32" height="32" />
-            </div>
-            <h2 style="font-size:28px;font-weight:900;margin:0 0 10px;color:#ffffff;letter-spacing:-0.5px;">Booking Confirmed!</h2>
-            <p style="color:#94a3b8;font-size:16px;margin:0;">Hi ${data.fullName}, your appointment is successfully booked.</p>
-        </div>
-        
-        <div style="background-color:#0f1115;padding:0;border-radius:24px;margin-bottom:30px;border:1px solid #1e293b;overflow:hidden;">
-            <!-- Header of the Card -->
-            <div style="background-color:#16191f;padding:24px;border-bottom:1px solid #1e293b;">
-                <p style="margin:0; font-size:12px; font-weight:700; color:#3b82f6; text-transform:uppercase; letter-spacing:0.1em;">${isOP ? 'Hospital OP Visit' : 'Home Service'}</p>
-                <p style="margin:8px 0 0; font-size:22px; font-weight:800; color:#f8fafc;">${data.serviceName}</p>
-            </div>
-            
-            <!-- Details Grid -->
-            <div style="padding:24px;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
-                    <tr>
-                        <td width="50%" style="padding-bottom:16px;">
-                            <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Date</p>
-                            <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#f8fafc;">${data.date}</p>
-                        </td>
-                        <td width="50%" style="padding-bottom:16px;">
-                            <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Time</p>
-                            <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#f8fafc;">${data.time}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Location</p>
-                            <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#f8fafc; line-height:1.5;">${data.location}</p>
-                            ${isOP ? `<a href="${directionsUrl}" style="display:inline-block; margin-top:10px; font-size:14px; font-weight:700; color:#3b82f6; text-decoration:none;">📍 Get Directions on Maps &rarr;</a>` : ''}
-                        </td>
-                    </tr>
-                </table>
-                
-                <!-- Payment Box -->
-                <div style="background-color:#16191f; padding:16px; border-radius:12px; display:table; width:100%; box-sizing:border-box;">
-                    <div style="display:table-cell; vertical-align:middle;">
-                       <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Amount</p>
-                       <p style="margin:4px 0 0; font-size:18px; font-weight:800; color:#f8fafc;">₹${data.price !== undefined && data.price !== null && data.price !== '' ? data.price : 'N/A'}</p>
-                    </div>
-                    <div style="display:table-cell; text-align:right; vertical-align:middle;">
-                       <p style="margin:0; font-size:12px; font-weight:600; color:#64748b;">Payment Mode</p>
-                       <span style="display:inline-block; margin-top:4px; padding:4px 12px; background-color:rgba(16, 185, 129, 0.1); color:#34d399; border: 1px solid rgba(16, 185, 129, 0.2); border-radius:999px; font-size:12px; font-weight:700;">${data.paymentMode || 'COD'}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;</div>
-        
-        ${isOP ? `
-        <div style="background-color:#FFFBEB; border:1px solid #FEF3C7; padding:20px; border-radius:16px; margin-bottom:30px; text-align:left;">
-            <p style="margin:0 0 10px; font-size:15px; font-weight:800; color:#B45309;">⚠️ Important Instructions</p>
-            <ul style="margin:0; padding-left:20px; font-size:14px; color:#92400E; line-height:1.6; font-weight:500;">
-                <li style="margin-bottom:6px;">Please arrive at least 10 minutes prior to your scheduled time.</li>
-                <li style="margin-bottom:6px;">Carry a valid ID and any relevant past medical records.</li>
-                <li>Show this confirmation email at the reception upon arrival.</li>
-            </ul>
-        </div>
-        ` : ''}
-        
-        <div style="text-align:center; padding-top:10px;">
-            <a href="a1care://bookings" style="display:inline-block;background-color:#3b82f6;color:#ffffff;padding:16px 36px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">View Booking in App</a>
-        </div>
-    `;
-    return sendEmail({ to: data.email, subject: `Appointment Confirmed: ${data.serviceName} - A1Care 24/7`, html: baseTemplate("Booking Confirmed", body) });
-};
+    const rawStatus = (data.bookingStatus || 'PENDING').toUpperCase();
+    let badgeType: "SUCCESS" | "WARNING" | "CRITICAL" | "INFO" = "INFO";
+    if (rawStatus === 'CONFIRMED' || rawStatus === 'COMPLETED') badgeType = "SUCCESS";
+    else if (rawStatus === 'PENDING') badgeType = "WARNING";
+    else if (rawStatus === 'CANCELLED') badgeType = "CRITICAL";
 
-export const sendWalletTopupEmail = async (data: { email: string; fullName: string; amount: string; txnid: string }) => {
-    const body = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:#10b981;">Wallet Credited Successfully</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
-        <p style="margin-bottom:20px;">We've successfully credited your A1Care wallet.</p>
-        <div style="background-color:#ecfdf5;padding:24px;border-radius:16px;margin-bottom:30px;border:1px solid #10b981;">
-            <p style="margin:0 0 10px;font-size:24px;font-weight:900;color:#065f46;">₹${data.amount}</p>
-            <p style="margin:0;font-size:12px;color:#065f46;font-family:monospace;">TXN ID: ${data.txnid}</p>
-        </div>
-        <p style="margin-bottom:20px;">You can use this balance to pay for any future services on the A1Care platform.</p>
-    `;
-    return sendEmail({ to: data.email, subject: `Wallet Updated: Success ₹${data.amount} - A1Care 24/7`, html: baseTemplate("Wallet Credit", body) });
-};
+    const titleMap: Record<string, string> = {
+        'CONFIRMED': 'Booking Confirmed',
+        'PENDING': 'Booking Received',
+        'ASSIGNED': 'Provider Assigned',
+        'IN_PROGRESS': 'Service In Progress',
+        'COMPLETED': 'Booking Completed',
+        'CANCELLED': 'Booking Cancelled',
+    };
+    const heroTitle = titleMap[rawStatus] || 'Booking Update';
+    const heroSubtitle = rawStatus === 'CONFIRMED' ? 'Your appointment has been successfully booked.' : 'There is an update to your booking.';
 
-export const sendRefundConfirmationEmail = async (
-    email: string,
-    fullName: string,
-    amount: number | string,
-    serviceName: string,
-    bookingId: string
-) => {
+    const renderProvider = () => {
+        const name = data.doctorName || data.hospitalName || data.partnerName;
+        const type = data.doctorName ? 'Doctor' : data.hospitalName ? 'Hospital' : data.partnerName ? 'Provider' : null;
+        if (!name) return '';
+        return `<tr><td colspan="2" style="padding-top:16px;border-top:1px solid #F1F5F9;margin-top:16px;"><p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">${type}</p><p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#0F172A;">${escapeHtml(name)}</p></td></tr>`;
+    };
+
+    const renderPayment = () => {
+        if (data.totalAmount === undefined || data.totalAmount === null) return '';
+        let html = `
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr><td colspan="2" style="padding-bottom:16px;"><p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Payment Summary</p></td></tr>
+        `;
+        if (data.discountAmount && data.discountAmount > 0 && data.serviceAmount !== undefined) {
+            html += `
+            <tr>
+                <td style="padding-bottom:12px;font-size:14px;color:#475569;">Service Amount</td>
+                <td align="right" style="padding-bottom:12px;font-size:14px;color:#0F172A;font-weight:600;">₹${escapeHtml(data.serviceAmount)}</td>
+            </tr>
+            <tr>
+                <td style="padding-bottom:16px;font-size:14px;color:#475569;">Discount</td>
+                <td align="right" style="padding-bottom:16px;font-size:14px;color:#059669;font-weight:600;">-₹${escapeHtml(data.discountAmount)}</td>
+            </tr>
+            <tr><td colspan="2" style="border-top:1px solid #F1F5F9;padding-top:16px;"></td></tr>
+            `;
+        }
+        html += `
+            <tr>
+                <td style="font-size:14px;font-weight:700;color:#0F172A;">TOTAL</td>
+                <td align="right" style="font-size:16px;font-weight:800;color:#0F172A;">₹${escapeHtml(data.totalAmount)}</td>
+            </tr>
+        `;
+        if (data.paymentMethod) {
+            html += `
+            <tr>
+                <td style="padding-top:16px;font-size:14px;color:#475569;">Payment Method</td>
+                <td align="right" style="padding-top:16px;font-size:14px;color:#0F172A;font-weight:600;">${escapeHtml(data.paymentMethod)}</td>
+            </tr>
+            `;
+        }
+        html += `</table>`;
+        return html;
+    };
+
+    const bookingUrl = `https://a1care.in/app/bookings/${encodeURIComponent(data.bookingId)}`;
+
     const body = `
-        <div style="text-align:center; margin-bottom:35px;">
-            <div style="width:70px; height:70px; background-color:#ECFDF5; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">💰</div>
-            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#065F46;">Refund Processed</h2>
-            <p style="color:#64748B;font-size:15px;">Your refund is on its way back to you.</p>
-        </div>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${fullName}</strong>,</p>
-        <p style="margin-bottom:20px;">We've processed a refund for your booking <strong>${serviceName}</strong>. The amount has been credited back to your A1Care wallet.</p>
-        <div style="background-color:#ecfdf5;padding:24px;border-radius:16px;margin-bottom:30px;border:1px solid #10b981;">
-            <p style="margin:0 0 10px;font-size:11px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.1em;">Refund Amount</p>
-            <p style="margin:0 0 12px;font-size:26px;font-weight:900;color:#065f46;">₹${amount}</p>
-            <p style="margin:0;font-size:12px;color:#065f46;font-family:monospace;">Booking ID: ${bookingId}</p>
-        </div>
-        <p style="margin-bottom:20px;">If you have any questions about this refund, please reach out to our support team.</p>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Team A1Care 24/7</p>
+        ${renderHero(heroTitle, heroSubtitle, data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:16px;padding:24px;">
+            <tr>
+                <td colspan="2" style="padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#3B82F6;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(data.serviceCategory || (data.isOP ? 'Hospital Visit' : 'Home Service'))}</p>
+                    <p style="margin:0 0 16px;font-size:18px;font-weight:700;color:#0F172A;">${escapeHtml(data.serviceName)}</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td width="50%">
+                                <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Status</p>
+                                <div style="margin-top:4px;">${renderStatusBadge(rawStatus, badgeType)}</div>
+                            </td>
+                            <td width="50%">
+                                <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Booking ID</p>
+                                <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">#${escapeHtml(data.bookingId.slice(-8).toUpperCase())}</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top:16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td width="50%">
+                                <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Date</p>
+                                <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">${escapeHtml(data.date || 'TBD')}</p>
+                            </td>
+                            <td width="50%">
+                                <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Time</p>
+                                <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">${escapeHtml(data.time || 'TBD')}</p>
+                            </td>
+                        </tr>
+                        ${renderProvider()}
+                    </table>
+                </td>
+            </tr>
+        </table>
+        ${data.patientAddress ? `
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:16px;padding:24px;">
+            <tr>
+                <td>
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Service Location</p>
+                    <p style="margin:8px 0 0;font-size:14px;color:#334155;line-height:1.5;">📍 ${escapeHtml(data.patientAddress)}</p>
+                </td>
+            </tr>
+        </table>` : ''}
+        ${renderPayment()}
+        ${renderCTA(bookingUrl, "View Booking")}
     `;
-    return sendEmail({ to: email, subject: `Refund Processed: ₹${amount} - A1Care 24/7`, html: baseTemplate("Refund Processed", body) });
+    return sendEmail({ to: data.email, subject: `${heroTitle}: ${data.serviceName}`, html: baseTemplate("Booking Confirmation", body) });
 };
 
 export const sendServiceCompletedEmail = async (
@@ -318,68 +322,98 @@ export const sendServiceCompletedEmail = async (
     date: string
 ) => {
     const body = `
-        <div style="text-align:center; margin-bottom:35px;">
-            <div style="width:70px; height:70px; background-color:#EFF6FF; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">🎉</div>
-            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#0D2E6E;">Service Completed</h2>
-            <p style="color:#64748B;font-size:15px;">We hope you had a great experience!</p>
-        </div>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${fullName}</strong>,</p>
-        <p style="margin-bottom:20px;">Your service <strong>${serviceName}</strong> has been marked as completed. Thank you for choosing A1Care.</p>
-        <div style="background-color:#F8FAFC;padding:32px;border-radius:24px;margin-bottom:30px;border:1px solid #E2E8F0;">
-            <div style="margin-bottom:18px;">
-                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Service</p>
-                <p style="margin:4px 0 0; font-size:16px; font-weight:700; color:#0D2E6E;">${serviceName}</p>
-            </div>
-            <div style="margin-bottom:18px; display:table; width:100%;">
-                <div style="display:table-cell; width:50%;">
-                    <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Provider</p>
-                    <p style="margin:4px 0 0; font-size:15px; font-weight:700;">${partnerName}</p>
-                </div>
-                <div style="display:table-cell; width:50%;">
-                    <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Date</p>
-                    <p style="margin:4px 0 0; font-size:15px; font-weight:700;">${date}</p>
-                </div>
-            </div>
-            <div style="border-top:1px solid #E2E8F0; padding-top:18px;">
-                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Amount</p>
-                <p style="margin:4px 0 0; font-size:18px; font-weight:900; color:#0D2E6E;">₹${amount}</p>
-            </div>
-        </div>
-        <div style="text-align:center; padding-top:10px;">
-            <a href="https://a1care.in/download" style="display:inline-block;background-color:#1A6FDB;color:#ffffff;padding:16px 32px;border-radius:14px;text-decoration:none;font-weight:800;font-size:15px;">Rate Your Experience →</a>
-        </div>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;text-align:center;">Best regards,<br/>Team A1Care 24/7</p>
+        ${renderHero("Service Completed", "Your healthcare service has been successfully completed.", fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td colspan="2" style="padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Service</p>
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#0F172A;">${escapeHtml(serviceName)}</p>
+                </td>
+            </tr>
+            <tr>
+                <td width="50%" style="padding-top:16px;">
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Provider</p>
+                    <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">${escapeHtml(partnerName)}</p>
+                </td>
+                <td width="50%" style="padding-top:16px;">
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Date</p>
+                    <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">${escapeHtml(date)}</p>
+                </td>
+            </tr>
+            ${amount !== undefined && amount !== null ? `
+            <tr>
+                <td colspan="2" style="padding-top:16px;border-top:1px solid #F1F5F9;margin-top:16px;">
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Final Amount</p>
+                    <p style="margin:4px 0 0;font-size:20px;font-weight:800;color:#0F172A;">₹${escapeHtml(amount)}</p>
+                </td>
+            </tr>` : ''}
+        </table>
+        ${renderCTA("https://a1care.in/app/bookings", "View Booking")}
     `;
-    return sendEmail({ to: email, subject: `Service Completed: ${serviceName} - A1Care 24/7`, html: baseTemplate("Service Completed", body) });
+    return sendEmail({ to: email, subject: `Service Completed: ${serviceName}`, html: baseTemplate("Service Completed", body) });
 };
 
-export const sendPayoutStatusEmail = async (
+export const sendRefundConfirmationEmail = async (
     email: string,
     fullName: string,
     amount: number | string,
-    status: string,
-    adminNote?: string
+    serviceName: string,
+    bookingId: string
 ) => {
-    const isApproved = /complete|approve|paid|success/i.test(status);
-    const accent = isApproved ? "#059669" : /reject|fail|declin/i.test(status) ? "#e11d48" : "#1A6FDB";
-    const accentBg = isApproved ? "#ecfdf5" : /reject|fail|declin/i.test(status) ? "#fff1f2" : "#EFF6FF";
+    const bookingUrl = `https://a1care.in/app/bookings/${encodeURIComponent(bookingId)}`;
     const body = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;color:${accent};">Payout ${status}</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${fullName}</strong>,</p>
-        <p style="margin-bottom:20px;">Here is an update on your payout request with A1Care.</p>
-        <div style="background-color:${accentBg};padding:24px;border-radius:16px;margin-bottom:24px;border:1px solid ${accent};">
-            <p style="margin:0 0 8px;font-size:11px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:0.1em;">Amount</p>
-            <p style="margin:0 0 12px;font-size:26px;font-weight:900;color:${accent};">₹${amount}</p>
-            <p style="margin:0;font-size:13px;font-weight:700;color:${accent};">Status: ${status}</p>
-        </div>
-        ${adminNote ? `<div style="background-color:#F8FAFC;padding:20px;border-radius:14px;margin-bottom:24px;border:1px solid #E2E8F0;">
-            <p style="margin:0 0 6px;font-size:11px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.08em;">Note</p>
-            <p style="margin:0;font-size:14px;color:#475569;">${adminNote}</p>
-        </div>` : ""}
-        <p style="margin-bottom:20px;">You can view your full earnings and payout history in the A1Care Partner app.</p>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Partner Support Team, A1Care 24/7</p>
+        ${renderHero("Refund Processed", "Your refund has been processed successfully.", fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td style="text-align:center;padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Refund Amount</p>
+                    <p style="margin:0;font-size:32px;font-weight:800;color:#059669;">₹${escapeHtml(amount)}</p>
+                    <div style="margin-top:8px;">${renderStatusBadge("PROCESSED", "SUCCESS")}</div>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top:16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td width="50%">
+                                <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Original Service</p>
+                                <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">${escapeHtml(serviceName)}</p>
+                            </td>
+                            <td width="50%">
+                                <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Booking ID</p>
+                                <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">#${escapeHtml(bookingId.slice(-8).toUpperCase())}</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        ${renderCTA(bookingUrl, "View Booking")}
     `;
-    return sendEmail({ to: email, subject: `Payout Update: ${status} ₹${amount} - A1Care 24/7`, html: baseTemplate("Payout Update", body) });
+    return sendEmail({ to: email, subject: `Refund Processed: ₹${amount}`, html: baseTemplate("Refund Processed", body) });
+};
+
+export const sendWalletTopupEmail = async (data: { email: string; fullName: string; amount: string; txnid: string }) => {
+    const body = `
+        ${renderHero("Wallet Top-up Successful", "We've successfully credited your A1Care wallet.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td style="text-align:center;padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Amount Added</p>
+                    <p style="margin:0;font-size:32px;font-weight:800;color:#0F172A;">₹${escapeHtml(data.amount)}</p>
+                    <div style="margin-top:8px;">${renderStatusBadge("SUCCESS", "SUCCESS")}</div>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top:16px;text-align:center;">
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Transaction ID</p>
+                    <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">${escapeHtml(data.txnid)}</p>
+                </td>
+            </tr>
+        </table>
+        ${renderCTA("https://a1care.in/app/wallet", "View Wallet")}
+    `;
+    return sendEmail({ to: data.email, subject: `Wallet Top-up Successful: ₹${data.amount}`, html: baseTemplate("Wallet Top-up", body) });
 };
 
 export const sendTicketReceiptEmail = async (data: {
@@ -389,43 +423,173 @@ export const sendTicketReceiptEmail = async (data: {
     ticketId: string;
     priority: string;
 }) => {
+    let badgeType: "SUCCESS" | "WARNING" | "CRITICAL" | "INFO" = "INFO";
+    const prio = data.priority.toUpperCase();
+    if (prio === 'HIGH' || prio === 'CRITICAL') badgeType = "CRITICAL";
+    else if (prio === 'MEDIUM') badgeType = "WARNING";
+
+    const ticketUrl = `https://a1care.in/app/support/tickets/${encodeURIComponent(data.ticketId)}`;
+
     const body = `
-        <div style="text-align:center; margin-bottom:35px;">
-            <div style="width:70px; height:70px; background-color:#EFF6FF; border-radius:35px; display:inline-block; line-height:70px; font-size:32px; margin-bottom:25px;">🎫</div>
-            <h2 style="font-size:24px;font-weight:900;margin-bottom:10px;color:#0D2E6E;">Support Ticket Received</h2>
-            <p style="color:#64748B;font-size:15px;">We've got your message and will respond shortly.</p>
-        </div>
-        <p style="font-size:16px;margin-bottom:20px;">Dear <strong>${data.fullName}</strong>,</p>
-        <p style="margin-bottom:20px;">Thank you for reaching out. Your support ticket has been created and our team is reviewing it.</p>
-        <div style="background-color:#F8FAFC;padding:32px;border-radius:24px;margin-bottom:30px;border:1px solid #E2E8F0;">
-            <div style="margin-bottom:18px;">
-                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Ticket ID</p>
-                <p style="margin:4px 0 0; font-size:13px; font-weight:700; color:#0D2E6E; font-family:monospace;">#${data.ticketId}</p>
-            </div>
-            <div style="margin-bottom:18px;">
-                <p style="margin:0; font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Subject</p>
-                <p style="margin:4px 0 0; font-size:15px; font-weight:700; color:#1E293B;">${data.subject}</p>
-            </div>
-            <div style="display:inline-block; padding:6px 16px; border-radius:20px; background-color:${data.priority === 'Critical' ? '#FEF2F2' : data.priority === 'High' ? '#FFF7ED' : '#F0FDF4'}; border:1px solid ${data.priority === 'Critical' ? '#FECACA' : data.priority === 'High' ? '#FED7AA' : '#BBF7D0'};">
-                <p style="margin:0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:${data.priority === 'Critical' ? '#DC2626' : data.priority === 'High' ? '#EA580C' : '#16A34A'};">Priority: ${data.priority}</p>
-            </div>
-        </div>
-        <p style="margin-bottom:20px;color:#64748B;">Our typical response time is within 24 hours. You can track your ticket status in the app.</p>
-        <p style="margin-top:40px;font-size:14px;color:#4b5563;">Best regards,<br/>Support Team, A1Care 24/7</p>
+        ${renderHero("Ticket Received", "We've received your support request.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td colspan="2" style="padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Subject</p>
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#0F172A;">${escapeHtml(data.subject)}</p>
+                </td>
+            </tr>
+            <tr>
+                <td width="50%" style="padding-top:16px;">
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Ticket ID</p>
+                    <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0F172A;">#${escapeHtml(data.ticketId)}</p>
+                </td>
+                <td width="50%" style="padding-top:16px;">
+                    <p style="margin:0;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Priority</p>
+                    <div style="margin-top:4px;">${renderStatusBadge(data.priority, badgeType)}</div>
+                </td>
+            </tr>
+        </table>
+        ${renderCTA(ticketUrl, "View Ticket")}
     `;
-    return sendEmail({ to: data.email, subject: `Support Ticket #${data.ticketId} Received – A1Care 24/7`, html: baseTemplate("Support Ticket", body) });
+    return sendEmail({ to: data.email, subject: `Support Ticket Received: #${data.ticketId}`, html: baseTemplate("Support Ticket", body) });
+};
+
+export const sendPartnerWelcomeEmail = async (data: { email: string; fullName: string }) => {
+    let { subject, body } = await getDynamicTemplate(
+        "partner_welcome", 
+        "Welcome to A1Care Partner Network", 
+        `
+        ${renderHero("Welcome to A1Care", "Your partner registration has been received.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td align="center">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Profile Status</p>
+                    ${renderStatusBadge("KYC UNDER REVIEW", "WARNING")}
+                    <p style="margin:16px 0 0;font-size:14px;color:#475569;">Our team is currently verifying your details. You will be notified once your profile is approved.</p>
+                </td>
+            </tr>
+        </table>
+        ${renderCTA("https://a1care.in/app/partner", "Open Partner Dashboard")}
+        `, 
+        data
+    );
+    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner Welcome", body) });
+};
+
+export const sendPartnerApprovalEmail = async (data: { email: string; fullName: string }) => {
+    let { subject, body } = await getDynamicTemplate(
+        "partner_approved",
+        "A1Care Partner Application Approved",
+        `
+        ${renderHero("Partner Approved", "Congratulations, your profile has been approved.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td align="center">
+                    ${renderStatusBadge("APPROVED", "SUCCESS")}
+                    <p style="margin:16px 0 0;font-size:14px;color:#475569;">You can now accept eligible service requests and manage your bookings through the partner dashboard.</p>
+                </td>
+            </tr>
+        </table>
+        ${renderCTA("https://a1care.in/app/partner", "Open Partner Dashboard")}
+        `,
+        data
+    );
+    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner Approved", body) });
+};
+
+export const sendPartnerRejectionEmail = async (data: { email: string; fullName: string; reason: string }) => {
+    let { subject, body } = await getDynamicTemplate(
+        "partner_rejected",
+        "KYC Review Update",
+        `
+        ${renderHero("Profile Review Update", "Your partner application requires attention.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td align="center" style="padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Status</p>
+                    ${renderStatusBadge("REJECTED", "CRITICAL")}
+                </td>
+            </tr>
+            ${data.reason ? `
+            <tr>
+                <td style="padding-top:16px;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#991B1B;text-transform:uppercase;">Reason</p>
+                    <p style="margin:0;font-size:14px;color:#7F1D1D;font-weight:600;">${escapeHtml(data.reason)}</p>
+                </td>
+            </tr>` : ''}
+        </table>
+        ${renderCTA("https://a1care.in/app/partner", "Review Profile")}
+        `,
+        data
+    );
+    return sendEmail({ to: data.email, subject, html: baseTemplate("Partner Rejected", body) });
+};
+
+export const sendPayoutStatusEmail = async (
+    email: string,
+    fullName: string,
+    amount: number | string,
+    status: string,
+    adminNote?: string
+) => {
+    const rawStatus = (status || '').toUpperCase();
+    let badgeType: "SUCCESS" | "WARNING" | "CRITICAL" | "INFO" = "INFO";
+    if (rawStatus === 'PROCESSED') badgeType = "SUCCESS";
+    else if (rawStatus === 'PENDING' || rawStatus === 'PROCESSING') badgeType = "WARNING";
+    else if (rawStatus === 'FAILED' || rawStatus === 'REJECTED') badgeType = "CRITICAL";
+
+    const body = `
+        ${renderHero("Payout Update", `Your payout is currently ${rawStatus.toLowerCase()}.`, fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td style="text-align:center;padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.05em;">Payout Amount</p>
+                    <p style="margin:0;font-size:32px;font-weight:800;color:#0F172A;">₹${escapeHtml(amount)}</p>
+                    <div style="margin-top:8px;">${renderStatusBadge(rawStatus, badgeType)}</div>
+                </td>
+            </tr>
+            ${adminNote ? `
+            <tr>
+                <td style="padding-top:16px;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;">Note</p>
+                    <p style="margin:0;font-size:14px;color:#475569;">${escapeHtml(adminNote)}</p>
+                </td>
+            </tr>` : ''}
+        </table>
+        ${renderCTA("https://a1care.in/app/partner/earnings", "View Earnings")}
+    `;
+    return sendEmail({ to: email, subject: `Payout Update: ${rawStatus} - A1Care Partner`, html: baseTemplate("Payout Update", body) });
+};
+
+// --- Untouched/Non-10-Scenario functions kept for compatibility ---
+
+export const sendJobAcknowledgmentEmail = async (data: { email: string; fullName: string; jobTitle: string }) => {
+    const body = `
+        ${renderHero("Application Received", "We have received your application.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td>
+                    <p style="margin:0;font-size:14px;color:#475569;">Thank you for applying for the <strong>${escapeHtml(data.jobTitle)}</strong> position. Our team is currently reviewing it.</p>
+                </td>
+            </tr>
+        </table>
+    `;
+    return sendEmail({ to: data.email, subject: `Application Received: ${data.jobTitle}`, html: baseTemplate("Application Received", body) });
 };
 
 export const sendOTPFallbackEmail = async (data: { email: string; otp: string }) => {
     const body = `
-        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">Verification Code</h2>
-        <p style="font-size:16px;margin-bottom:20px;">Use the following code to complete your sign-in/verification process.</p>
-        <div style="background-color:#f3f4f6;padding:30px;text-align:center;border-radius:16px;margin-bottom:30px;">
-            <p style="margin:0;font-size:36px;font-weight:900;letter-spacing:10px;color:${EMAIL_PRIMARY_COLOR};">${data.otp}</p>
-        </div>
-        <p style="font-size:12px;color:#6b7280;text-align:center;">This code will expire in 10 minutes. Do not share this code with anyone.</p>
+        ${renderHero("Verification Code", "Use the following code to complete your verification.", "User")}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td align="center">
+                    <p style="margin:0;font-size:36px;font-weight:900;letter-spacing:10px;color:#2563EB;">${escapeHtml(data.otp)}</p>
+                </td>
+            </tr>
+        </table>
     `;
-    return sendEmail({ to: data.email, subject: "A1Care 24/7 Verification Code", html: baseTemplate("Security Code", body) });
+    return sendEmail({ to: data.email, subject: "A1Care Verification Code", html: baseTemplate("Security Code", body) });
 };
 
 export const sendInvoiceReceiptEmail = async (data: {
@@ -441,65 +605,33 @@ export const sendInvoiceReceiptEmail = async (data: {
     paymentMode: string;
 }) => {
     const body = `
-        <div style="text-align:center; margin-bottom:30px;">
-            <div style="width:60px; height:60px; background-color:#EFF6FF; border-radius:30px; display:inline-block; line-height:60px; font-size:28px; margin-bottom:20px;">🧾</div>
-            <h2 style="font-size:22px;font-weight:900;margin-bottom:8px;color:#0D2E6E;">Payment Receipt</h2>
-            <p style="color:#64748B;font-size:14px;margin:0;">Thank you for choosing A1Care 24/7.</p>
-        </div>
-        <div style="background-color:#ffffff;padding:32px;border-radius:16px;border:1px solid #E2E8F0;margin-bottom:30px;box-shadow:0 4px 6px rgba(0,0,0,0.02);">
-            <div style="display:table; width:100%; margin-bottom:24px;">
-                <div style="display:table-cell; width:50%;">
-                    <p style="margin:0; font-size:10px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Invoice For</p>
-                    <p style="margin:4px 0 0; font-size:14px; font-weight:700; color:#1E293B;">${data.fullName}</p>
-                </div>
-                <div style="display:table-cell; width:50%; text-align:right;">
-                    <p style="margin:0; font-size:10px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Date & Time</p>
-                    <p style="margin:4px 0 0; font-size:14px; font-weight:700; color:#1E293B;">${data.date}</p>
-                </div>
-            </div>
-            
-            <div style="margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid #E2E8F0;">
-                <p style="margin:0; font-size:10px; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.1em;">Service Details</p>
-                <div style="display:table; width:100%; margin-top:12px;">
-                    <div style="display:table-cell; width:70%;">
-                        <p style="margin:0; font-size:15px; font-weight:700; color:#0D2E6E;">${data.serviceName}</p>
-                        <p style="margin:2px 0 0; font-size:12px; color:#64748B;">ID: ${data.bookingId}</p>
-                    </div>
-                    <div style="display:table-cell; width:30%; text-align:right; vertical-align:top;">
-                        <p style="margin:0; font-size:15px; font-weight:700; color:#1E293B;">₹${data.subtotal}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div style="display:table; width:100%; margin-bottom:12px;">
-                <div style="display:table-cell; width:70%; text-align:right; padding-right:16px;">
-                    <p style="margin:0; font-size:13px; color:#64748B;">Taxes & Fees</p>
-                </div>
-                <div style="display:table-cell; width:30%; text-align:right;">
-                    <p style="margin:0; font-size:13px; font-weight:600; color:#1E293B;">₹${data.tax}</p>
-                </div>
-            </div>
+        ${renderHero("Payment Receipt", "Thank you for choosing A1Care 24/7.", data.fullName)}
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:24px;padding:24px;">
+            <tr>
+                <td colspan="2" style="padding-bottom:16px;border-bottom:1px solid #F1F5F9;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#3B82F6;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(data.serviceName)}</p>
+                    <p style="margin:0 0 4px;font-size:12px;color:#64748B;">ID: ${escapeHtml(data.bookingId)}</p>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top:16px;padding-bottom:12px;font-size:14px;color:#475569;">Subtotal</td>
+                <td align="right" style="padding-top:16px;padding-bottom:12px;font-size:14px;color:#0F172A;font-weight:600;">₹${escapeHtml(data.subtotal)}</td>
+            </tr>
+            <tr>
+                <td style="padding-bottom:12px;font-size:14px;color:#475569;">Taxes & Fees</td>
+                <td align="right" style="padding-bottom:12px;font-size:14px;color:#0F172A;font-weight:600;">₹${escapeHtml(data.tax)}</td>
+            </tr>
             ${data.discount ? `
-            <div style="display:table; width:100%; margin-bottom:16px;">
-                <div style="display:table-cell; width:70%; text-align:right; padding-right:16px;">
-                    <p style="margin:0; font-size:13px; font-weight:600; color:#10B981;">Discount Applied</p>
-                </div>
-                <div style="display:table-cell; width:30%; text-align:right;">
-                    <p style="margin:0; font-size:13px; font-weight:700; color:#10B981;">- ₹${data.discount}</p>
-                </div>
-            </div>` : ''}
-
-            <div style="display:table; width:100%; background-color:#F8FAFC; padding:16px; border-radius:12px; margin-top:20px;">
-                <div style="display:table-cell; width:60%; vertical-align:middle;">
-                    <p style="margin:0; font-size:16px; font-weight:800; color:#0D2E6E;">Total Amount Paid</p>
-                    <p style="margin:4px 0 0; font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase;">Via ${data.paymentMode}</p>
-                </div>
-                <div style="display:table-cell; width:40%; text-align:right; vertical-align:middle;">
-                    <p style="margin:0; font-size:24px; font-weight:900; color:#0D2E6E;">₹${data.totalAmount}</p>
-                </div>
-            </div>
-        </div>
-        <p style="font-size:13px;color:#94A3B8;text-align:center;">This is a computer-generated receipt and does not require a physical signature.</p>
+            <tr>
+                <td style="padding-bottom:16px;font-size:14px;color:#475569;">Discount</td>
+                <td align="right" style="padding-bottom:16px;font-size:14px;color:#059669;font-weight:600;">-₹${escapeHtml(data.discount)}</td>
+            </tr>` : ''}
+            <tr><td colspan="2" style="border-top:1px solid #F1F5F9;padding-top:16px;"></td></tr>
+            <tr>
+                <td style="font-size:14px;font-weight:700;color:#0F172A;">TOTAL (via ${escapeHtml(data.paymentMode)})</td>
+                <td align="right" style="font-size:16px;font-weight:800;color:#0F172A;">₹${escapeHtml(data.totalAmount)}</td>
+            </tr>
+        </table>
     `;
-    return sendEmail({ to: data.email, subject: `Payment Receipt for ${data.serviceName} - A1Care 24/7`, html: baseTemplate("Payment Receipt", body) });
+    return sendEmail({ to: data.email, subject: `Payment Receipt: ${data.serviceName}`, html: baseTemplate("Payment Receipt", body) });
 };

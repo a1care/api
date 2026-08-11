@@ -235,11 +235,16 @@ export const postServiceBookingActions = async (serviceRequest: any, patientId: 
                     email: patient.email,
                     fullName: patient.name || "Customer",
                     serviceName: isOP ? `OP Consultation (${bookingName})` : bookingName,
+                    bookingId: String(serviceRequest._id),
+                    bookingStatus: serviceRequest.status || "PENDING",
+                    serviceCategory: serviceRequest.bookingType,
                     date: new Date().toDateString(),
                     time: isOP ? "Please arrive 10 minutes early" : "Awaiting admin assignment",
-                    location: isOP ? "A1 Care Hospital, Main Branch" : (patient.primaryAddressId ? "Stored Patient Address" : "Current Location"),
-                    price: serviceRequest.price,
-                    paymentMode: serviceRequest.paymentMode
+                    patientAddress: !isOP && serviceRequest.addressId ? serviceRequest.addressId.address || "Stored Patient Address" : (isOP ? "A1 Care Hospital, Main Branch" : "Current Location"),
+                    serviceAmount: serviceRequest.price ? serviceRequest.price + (serviceRequest.discountAmount || 0) : undefined,
+                    discountAmount: serviceRequest.discountAmount || 0,
+                    totalAmount: serviceRequest.price,
+                    paymentMethod: serviceRequest.paymentMode
                 },
             }).catch(e => console.error("[Email] enqueue error:", e));
         }
@@ -494,12 +499,17 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
                     data: {
                         email: patientFull.email,
                         fullName: patientFull.name || "Customer",
-                        serviceName: `${serviceName} [${status}]`,
+                        serviceName: serviceName,
+                        bookingId: String(booking._id),
+                        bookingStatus: status,
+                        serviceCategory: existing.bookingType,
                         date: new Date().toDateString(),
                         time: "Service Update",
-                        location: "Confirmed Location",
-                        price: existing.price,
-                        paymentMode: existing.paymentMode
+                        patientAddress: existing.addressId ? "Service Location Confirmed" : undefined,
+                        serviceAmount: existing.price ? existing.price + (existing.discountAmount || 0) : undefined,
+                        discountAmount: existing.discountAmount || 0,
+                        totalAmount: existing.price,
+                        paymentMethod: existing.paymentMode
                     },
                 });
             } catch (e) {

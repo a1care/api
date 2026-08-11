@@ -185,9 +185,11 @@ export const postDoctorBookingActions = async (appointment: any, patientId: stri
                     email: patient.email,
                     fullName: patient.name || "Customer",
                     serviceName: `Consultation with Dr. ${doctor?.name || "Doctor"}`,
+                    bookingId: String(appointment._id),
+                    bookingStatus: appointment.status || "PENDING",
                     date: new Date(appointment.date).toDateString(),
                     time: `${appointment.startingTime} - ${appointment.endingTime}`,
-                    location: "Clinic / In-App Video",
+                    patientAddress: "Clinic / In-App Video",
                 },
             });
         }
@@ -407,9 +409,11 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
                         email: patient.email,
                         fullName: patient.name || "Customer",
                         serviceName: `Consultation with Dr. ${doctorName} [${status}]`,
+                        bookingId: String(appointment._id),
+                        bookingStatus: status,
                         date: dateStr,
                         time: timeStr,
-                        location: "Confirmed via Mobile App",
+                        patientAddress: "Confirmed via Mobile App",
                     },
                 });
             } catch (e) {
