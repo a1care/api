@@ -18,6 +18,7 @@ export interface DoctorAppointmentDocument extends Document {
   serviceName?: string;
   couponCode?: string;
   discountAmount?: number;
+  consultationType?: 'OP' | 'VIRTUAL' | 'HOME_VISIT';
 }
 
 const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
@@ -95,6 +96,11 @@ const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
     discountAmount: {
       type: Number,
       default: 0
+    },
+    consultationType: {
+      type: String,
+      enum: ['OP', 'VIRTUAL', 'HOME_VISIT'],
+      default: 'OP'
     }
   },
   {

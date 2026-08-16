@@ -9,7 +9,7 @@
     },
     "branding": {
       "appName": "A1Care 24/7",
-      "logoUrl": "https://a1care247.com/logo.png",
+      "logoUrl": "/uploads/app-management/asset-1786633244284-122121103.jpeg",
       "splashImageUrl": "https://a1care247.com/splash.png",
       "primaryColor": "#1d4ed8",
       "secondaryColor": "#0f172a",
@@ -74,7 +74,7 @@
       "promotionalBanners": []
     },
     "knowledgeBase": [],
-    "updatedAt": "2026-08-03T18:43:27.781Z"
+    "updatedAt": "2026-08-15T01:47:02.331Z"
   },
   "provider_app": {
     "appKey": "provider_app",

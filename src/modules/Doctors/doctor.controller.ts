@@ -54,7 +54,7 @@ export const getStaffByRoleId = asyncHandler(async (req, res) => {
     .filter((id) => mongoose.Types.ObjectId.isValid(id))
     .map((id) => new mongoose.Types.ObjectId(id));
 
-  const query: any = { roleId: { $in: roleIds }, status: 'Active' };
+  const query: any = { roleId: { $in: roleIds }, isDeleted: { $ne: true } };
 
   if (specialization) {
     const raw = String(specialization).trim().toLowerCase();

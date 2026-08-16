@@ -26,7 +26,9 @@ import {
   deleteUser,
   getUserDetails,
   getDoctorBookings,
+  getDoctorBookingById,
   getServiceBookings,
+  getServiceBookingById,
   getReturnedToAdminServiceBookings,
   updateDoctorBookingStatus,
   updateServiceBookingStatus,
@@ -111,9 +113,11 @@ adminRoutes.post("/users/:category/:userId/wallet-adjust", protectAdmin, require
 adminRoutes.delete("/users/:category/:id", protectAdmin, requireAdminRole(["super_admin"]), deleteUser);
 
 adminRoutes.get("/bookings/doctors", protectAdmin, requireAdminRole(["admin", "super_admin"]), getDoctorBookings);
+adminRoutes.get("/bookings/doctors/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), getDoctorBookingById);
 adminRoutes.put("/bookings/doctors/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateDoctorBookingStatus);
 
 adminRoutes.get("/bookings/services", protectAdmin, requireAdminRole(["admin", "super_admin"]), getServiceBookings);
+adminRoutes.get("/bookings/services/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), getServiceBookingById);
 adminRoutes.get("/bookings/services/debug-eligibility", protectAdmin, requireAdminRole(["admin", "super_admin"]), debugPartnerServiceEligibility);
 adminRoutes.get("/bookings/services/returned", protectAdmin, requireAdminRole(["admin", "super_admin"]), getReturnedToAdminServiceBookings);
 adminRoutes.put("/bookings/services/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateServiceBookingStatus);

@@ -133,15 +133,15 @@ export const sendMessage = asyncHandler(async (req, res) => {
     }
     
     if (recipientId) {
-        // Emit to the recipient's personal room to trigger a global flash notification (toast)
-        emitToRoom(`user_${recipientId}`, 'flash_notification', {
-            title,
-            body: message.slice(0, 100),
-            threadId,
-            type: ticketId ? "TICKET_CHAT" : "BOOKING_CHAT",
-            senderName: (req.user as any)?.name || "Support",
-            message: newMessage
-        });
+        // // Emit to the recipient's personal room to trigger a global flash notification (toast)
+        // emitToRoom(`user_${recipientId}`, 'flash_notification', {
+        //     title,
+        //     body: message.slice(0, 100),
+        //     threadId,
+        //     type: ticketId ? "TICKET_CHAT" : "BOOKING_CHAT",
+        //     senderName: (req.user as any)?.name || "Support",
+        //     message: newMessage
+        // });
     }
 
     return res.status(201).json(new ApiResponse(201, "Message sent", newMessage));

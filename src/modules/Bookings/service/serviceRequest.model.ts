@@ -37,6 +37,12 @@ const ServiceRequestSchema = new Schema(
       default: null
     },
 
+    // Sequential token number for hospital OP queue (e.g. "ORTHO-20260815-007")
+    tokenNumber: {
+      type: String,
+      default: null
+    },
+
     // slot only for scheduled services
     scheduledSlot: {
       startTime: {
@@ -96,6 +102,8 @@ const ServiceRequestSchema = new Schema(
         "ACCEPTED",
         "RETURNED_TO_ADMIN",
         "IN_PROGRESS",
+        "CHECKED_IN",
+        "NO_SHOW",
         "COMPLETED",
         "CANCELLED"
       ],

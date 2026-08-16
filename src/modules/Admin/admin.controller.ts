@@ -1280,13 +1280,14 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
     .populate("patientId", "name mobileNumber")
     .sort({ createdAt: -1 });
 
-  const total = await doctorAppointmentModel.countDocuments(query);
   const bookings = await bookingsQuery.skip(skip).limit(Number(limit));
+  const total = await doctorAppointmentModel.countDocuments(query);
 
   const formatted = bookings.map(b => {
     const obj = b.toObject() as any;
     return {
       ...obj,
+      isServiceRequest: false,
       doctorId: obj.doctorId || { name: "Awaiting Doctor", specialization: [] },
       patientId: (obj.patientId && typeof obj.patientId === 'object' && obj.patientId._id) ? {
         name: obj.patientId.name || "",
@@ -1296,16 +1297,92 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
         mobile: obj.patientId ? obj.patientId.toString() : "N/A"
       },
       totalAmount: obj.totalAmount || 0,
-      paymentStatus: obj.paymentStatus || "PENDING"
+      paymentStatus: obj.paymentStatus || "PENDING",
+      mappedStatus: obj.status 
     };
   });
 
+  // 2. Fetch OP Service Requests
+  let serviceBookings: any[] = [];
+  const OP_TOKEN_CHILD_SERVICE_ID = "69ff86c8a217e06e924eb4d4";
+  const srQuery: any = { childServiceId: OP_TOKEN_CHILD_SERVICE_ID };
+  if (query.createdAt) srQuery.createdAt = query.createdAt;
+  
+  let srs = await serviceRequestModel.find(srQuery)
+    .populate("userId", "name mobileNumber")
+    .lean();
+
+  if (search && search !== "") {
+    const term = String(search).trim();
+    const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    srs = srs.filter((obj: any) => 
+      rx.test(obj.notes) ||
+      rx.test(obj.status) ||
+      rx.test(obj.tokenNumber) ||
+      (obj.userId && (rx.test(obj.userId.name) || rx.test(obj.userId.mobileNumber)))
+    );
+  }
+
+  if (payment && payment !== "All") {
+    srs = srs.filter((obj: any) => obj.paymentStatus === payment || obj.paymentMode === payment);
+  }
+
+  const formattedSrs = srs.map((obj: any) => {
+    let mappedStatus = "Pending";
+    const st = obj.status?.toUpperCase() || "";
+    if (["ACCEPTED", "ARRIVED", "STARTED", "RESCHEDULED", "CHECKED_IN"].includes(st)) mappedStatus = "Confirmed";
+    if (st === "COMPLETED") mappedStatus = "Completed";
+    if (st === "CANCELLED" || st === "NO_SHOW") mappedStatus = "Cancelled";
+    if (st === "RETURNED_TO_ADMIN") mappedStatus = "Needs Reassignment";
+
+    const deptRaw = (obj.notes || "").match(/OP Department:\s*([^[]+)/i);
+    const deptName = deptRaw ? deptRaw[1].trim() : "OP";
+
+    return {
+      ...obj,
+      isServiceRequest: true,
+      doctorId: { name: `OP Token (${deptName})`, specialization: ["Hospital Service"] },
+      patientId: (obj.userId && typeof obj.userId === 'object' && (obj.userId as any)._id) ? {
+        name: (obj.userId as any).name || "",
+        mobile: (obj.userId as any).mobileNumber || "No Profile"
+      } : {
+        name: "Missing Profile",
+        mobile: obj.userId ? obj.userId.toString() : "N/A"
+      },
+      totalAmount: obj.price || 0,
+      paymentStatus: obj.paymentStatus || "PENDING",
+      status: mappedStatus, 
+      mappedStatus,
+      tokenNumber: obj.tokenNumber || null,
+      checkInPin: obj.checkInPin || null
+    };
+  });
+
+  let allBookings = [...formatted, ...formattedSrs];
+  if (status && status !== "All") {
+    allBookings = allBookings.filter(b => b.mappedStatus === status || b.status === status);
+  }
+  
+  allBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const totalCombined = allBookings.length;
+  const paginated = allBookings.slice(skip, skip + Number(limit));
+
+  const getCombinedCount = (s: string) => allBookings.filter(b => b.mappedStatus === s || b.status === s).length;
+  const combinedStats = {
+    all: totalCombined,
+    pending: getCombinedCount("Pending"),
+    confirmed: getCombinedCount("Confirmed"),
+    completed: getCombinedCount("Completed"),
+    cancelled: getCombinedCount("Cancelled"),
+  };
+
   res.status(200).json(new ApiResponse(200, "Doctor bookings fetched successfully", {
-    items: formatted,
-    total,
+    items: paginated,
+    total: totalCombined,
     page: Number(page),
-    totalPages: Math.ceil(total / Number(limit)),
-    stats
+    totalPages: Math.ceil(totalCombined / Number(limit)),
+    stats: combinedStats
   }));
 });
 
@@ -1450,40 +1527,53 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
   };
   const normalizedStatus = STATUS_MAP[status] ?? status;
 
-  let existing = await doctorAppointmentModel.findById(id);
+  let isServiceRequest = false;
+  let existing: any = await doctorAppointmentModel.findById(id);
   if (!existing) {
-    const hosp = await HospitalBooking.findById(id);
-    if (hosp && hosp.bookingType === 'doctor') {
-      id = String(hosp.bookingId);
-      existing = await doctorAppointmentModel.findById(id);
+    existing = await serviceRequestModel.findById(id);
+    if (existing) {
+      isServiceRequest = true;
+    } else {
+      const hosp = await HospitalBooking.findById(id);
+      if (hosp && hosp.bookingType === 'doctor') {
+        id = String(hosp.bookingId);
+        existing = await doctorAppointmentModel.findById(id);
+      }
     }
   }
 
   if (!existing) throw new ApiError(404, "Booking not found");
 
   // Guard: cannot cancel an already in-progress/completed/cancelled appointment
-  if (normalizedStatus === "Cancelled" && ["Completed", "Cancelled"].includes(existing.status)) {
-    throw new ApiError(400, `Cannot cancel a booking that is already ${existing.status}`);
+  if (normalizedStatus === "Cancelled" && ["Completed", "Cancelled"].includes((existing as any).status)) {
+    throw new ApiError(400, `Cannot cancel a booking that is already ${(existing as any).status}`);
   }
 
   let didRefund = false;
   if (
     normalizedStatus === "Cancelled" &&
-    existing.status !== "Cancelled" &&
-    existing.paymentStatus === "COMPLETED" &&
-    (existing.totalAmount ?? 0) > 0
+    (existing as any).status !== "Cancelled" &&
+    (existing as any).paymentStatus === "COMPLETED" &&
+    ((existing as any).totalAmount ?? 0) > 0
   ) {
-    await creditWalletAtomic(String(existing.patientId), Number(existing.totalAmount || 0), `REFUND:APPOINTMENT:${id}`);
+    await creditWalletAtomic(String((existing as any).patientId || (existing as any).userId), Number((existing as any).totalAmount || (existing as any).price || 0), `REFUND:APPOINTMENT:${id}`);
     didRefund = true;
   }
 
+  let finalStatus = normalizedStatus;
+  if (isServiceRequest) {
+    if (normalizedStatus === "Confirmed") finalStatus = "CHECKED_IN";
+    if (normalizedStatus === "Completed") finalStatus = "COMPLETED";
+    if (normalizedStatus === "Cancelled") finalStatus = "CANCELLED";
+  }
+
   // Build update doc; calculate commission on completion (parity with partner-side)
-  const updateDoc: any = { status: normalizedStatus };
-  if (normalizedStatus === "Completed" && existing.status !== "Completed" && existing.doctorId) {
+  const updateDoc: any = { status: isServiceRequest ? finalStatus : normalizedStatus };
+  if (!isServiceRequest && normalizedStatus === "Completed" && (existing as any).status !== "Completed" && (existing as any).doctorId) {
     try {
       const { getActiveCommissionRate } = await import("../PartnerSubscription/subscription.controller.js");
-      const commissionPct = await getActiveCommissionRate(existing.doctorId.toString());
-      const totalAmt = existing.totalAmount || 0;
+      const commissionPct = await getActiveCommissionRate((existing as any).doctorId.toString());
+      const totalAmt = (existing as any).totalAmount || 0;
       const commissionAmt = (totalAmt * commissionPct) / 100;
       updateDoc.commissionPercentage = commissionPct;
       updateDoc.commissionAmount = commissionAmt;
@@ -1493,18 +1583,21 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
     }
   }
 
-  const booking = await doctorAppointmentModel.findByIdAndUpdate(id, updateDoc, { new: true }).populate("doctorId").populate("patientId");
+  let booking;
+  if (isServiceRequest) {
+    booking = await serviceRequestModel.findByIdAndUpdate(id, updateDoc, { new: true }).populate("userId");
+  } else {
+    booking = await doctorAppointmentModel.findByIdAndUpdate(id, updateDoc, { new: true }).populate("doctorId").populate("patientId");
+  }
   if (!booking) throw new ApiError(404, "Booking not found");
 
-  if (normalizedStatus === "Confirmed") {
+  if (!isServiceRequest && normalizedStatus === "Confirmed") {
     await HospitalBooking.findOneAndUpdate(
       { bookingId: booking._id },
       {
         bookingId: booking._id,
         bookingType: 'doctor',
-        patientId: booking.patientId._id,
-        serviceName: (booking as any).serviceName || (booking.doctorId as any)?.specialization?.[0] || 'Doctor Consult',
-        totalAmount: booking.totalAmount || 0,
+        totalAmount: (booking as any).totalAmount || 0,
         paymentStatus: (booking as any).paymentStatus || 'PENDING',
         status: 'ACCEPTED',
         acceptedAt: new Date()
@@ -1513,8 +1606,8 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
     );
     // Notify the doctor/partner that their appointment has been confirmed by admin
     try {
-      const doctor = booking.doctorId as any;
-      const patient = booking.patientId as any;
+      const doctor = (booking as any).doctorId;
+      const patient = (booking as any).patientId;
       if (doctor?._id) {
         await enqueuePush({
           recipientId: doctor._id,
@@ -1538,7 +1631,7 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
   // ── Refund confirmation email (only if money was actually returned) ──
   if (didRefund) {
     try {
-      const patient = booking.patientId as any;
+      const patient = (booking as any).patientId;
       if (patient?.email) {
         const { enqueueEmail } = await import("../../queues/communicationQueue.js");
         await enqueueEmail({
@@ -1546,8 +1639,8 @@ export const updateDoctorBookingStatus = asyncHandler(async (req, res) => {
           data: {
             email: patient.email,
             fullName: patient.name || "Customer",
-            amount: Number(existing.totalAmount || 0),
-            serviceName: (booking as any).serviceName || `Consultation with Dr. ${(booking.doctorId as any)?.name || "Doctor"}`,
+            amount: Number((existing as any).totalAmount || 0),
+            serviceName: (booking as any).serviceName || `Consultation with Dr. ${((booking as any).doctorId)?.name || "Doctor"}`,
             bookingId: String(booking._id),
           },
         });
@@ -3041,4 +3134,71 @@ export const getSuperAdminWalletOverview = asyncHandler(async (req, res) => {
     netRevenue,
     recentLedger
   }));
+});
+export const getServiceBookingById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const booking = await serviceRequestModel.findById(id)
+    .populate("userId", "name mobileNumber email")
+    .populate("addressId")
+    .populate("childServiceId")
+    .populate("healthPackageId")
+    .populate("assignedProviderId", "name mobileNumber email type _id")
+    .populate("partnerId", "name mobileNumber email type _id")
+    .lean();
+
+  if (!booking) throw new ApiError(404, "Booking not found");
+
+  res.status(200).json(new ApiResponse(200, "Booking fetched", booking));
+});
+export const getDoctorBookingById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  let booking: any = await doctorAppointmentModel.findById(id)
+    .populate('doctorId', 'name specialization mobileNumber profileImage email type hospitalName hospitalId fee')
+    .populate('patientId', 'name mobileNumber email gender age address')
+    .lean();
+    
+  if (booking) {
+    booking.isServiceRequest = false;
+    booking.mappedStatus = booking.status;
+    return res.status(200).json(new ApiResponse(200, 'Doctor booking fetched', booking));
+  }
+  
+  booking = await serviceRequestModel.findById(id)
+    .populate('userId', 'name mobileNumber email gender age address')
+    .populate('childServiceId', 'name type')
+    .populate('assignedProviderId', 'name mobileNumber email')
+    .lean();
+    
+  if (!booking) {
+    throw new ApiError(404, 'Booking not found');
+  }
+  
+  const deptRaw = (booking.notes || '').match(/OP Department:\s*([^[]+)/i);
+  const deptName = deptRaw ? deptRaw[1].trim() : 'OP';
+  
+  let mappedStatus = 'Pending';
+  const st = booking.status?.toUpperCase() || '';
+  if (['ACCEPTED', 'ARRIVED', 'STARTED', 'RESCHEDULED', 'CHECKED_IN'].includes(st)) mappedStatus = 'Confirmed';
+  if (st === 'COMPLETED') mappedStatus = 'Completed';
+  if (st === 'CANCELLED' || st === 'NO_SHOW') mappedStatus = 'Cancelled';
+  if (st === 'RETURNED_TO_ADMIN') mappedStatus = 'Needs Reassignment';
+  
+  const formattedSr = {
+    ...booking,
+    isServiceRequest: true,
+    doctorId: { name: `OP Token (${deptName})`, specialization: ['Hospital Service'] },
+    patientId: booking.userId ? {
+      name: (booking.userId as any).name || '',
+      mobile: (booking.userId as any).mobileNumber || 'No Profile'
+    } : {
+      name: 'Missing Profile',
+      mobile: 'N/A'
+    },
+    totalAmount: booking.price || 0,
+    mappedStatus,
+    status: mappedStatus
+  };
+  
+  res.status(200).json(new ApiResponse(200, 'OP Token booking fetched', formattedSr));
 });

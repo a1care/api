@@ -106,6 +106,7 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         bookingType: req.body.bookingType || (childSvc as any)?.bookingType || "SCHEDULED", // Default for health packages
         fulfillmentMode: req.body.fulfillmentMode || (childSvc as any)?.fulfillmentMode || "HOME_VISIT", // Default for health packages
         checkInPin: (req.body.fulfillmentMode || (childSvc as any)?.fulfillmentMode) === "HOSPITAL_VISIT" ? Math.floor(1000 + Math.random() * 9000).toString() : null,
+        tokenNumber: null, // generated after save for HOSPITAL_VISIT (needs _id for uniqueness)
         // WALLET: deducted immediately below.
         // ONLINE: paid via Razorpay gateway — fulfillOrder() marks it COMPLETED after verification.
         // COD/OFFLINE: collected on delivery, starts PENDING.
@@ -220,6 +221,27 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
         .populate("healthPackageId")
         .populate("addressId");
 
+    // For hospital OP tokens: generate a sequential token number (dept + date + counter)
+    if (newServiceRequest.fulfillmentMode === "HOSPITAL_VISIT") {
+        const deptRaw = (newServiceRequest.notes || "").match(/OP Department:\s*([^[]+)/i);
+        const deptCode = (deptRaw && deptRaw[1])
+            ? deptRaw[1].trim().toUpperCase().slice(0, 5).replace(/\s+/g, '')
+            : "OP";
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+        // Count today's OP tokens for this dept to get sequential number
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+        const todayCount = await serviceRequestModel.countDocuments({
+            fulfillmentMode: "HOSPITAL_VISIT",
+            notes: { $regex: (deptRaw && deptRaw[1]) ? deptRaw[1].trim() : "OP Department", $options: 'i' },
+            createdAt: { $gte: startOfDay, $lt: endOfDay }
+        });
+        const tokenNumber = `${deptCode}-${dateStr}-${String(todayCount).padStart(3, '0')}`;
+        await serviceRequestModel.findByIdAndUpdate(newServiceRequest._id, { tokenNumber });
+        newServiceRequest.tokenNumber = tokenNumber;
+    }
+
     return res.status(201).json(new ApiResponse(201, "Service booked", serviceRequest));
 });
 
@@ -277,11 +299,13 @@ export const postServiceBookingActions = async (serviceRequest: any, patientId: 
         console.error("[Push] admin notification error:", e);
     }
 
-    // Trigger broadcast to nearby partners after a short delay so admin can also
-    // manually assign before partners see it. Fire-and-forget — never block the response.
-    scheduleBroadcastToAll(String(serviceRequest._id)).catch(e =>
-        console.error("[Booking] broadcast schedule error:", e)
-    );
+    // OP Hospital tokens do NOT need partner broadcast — patient walks in themselves.
+    // Only trigger broadcast for home/virtual services.
+    if (serviceRequest.fulfillmentMode !== "HOSPITAL_VISIT") {
+        scheduleBroadcastToAll(String(serviceRequest._id)).catch(e =>
+            console.error("[Booking] broadcast schedule error:", e)
+        );
+    }
 };
 
 export const getServiceRequestByUser = asyncHandler(async (req, res) => {
@@ -342,10 +366,10 @@ export const verifyCheckInPin = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid PIN");
     }
 
-    request.status = "IN_PROGRESS";
+    request.status = "CHECKED_IN";
     await request.save();
 
-    return res.status(200).json(new ApiResponse(200, "PIN verified successfully, status updated to IN_PROGRESS", request));
+    return res.status(200).json(new ApiResponse(200, "PIN verified successfully, token checked in", request));
 });;
 
 export const getServiceRequestForProvider = asyncHandler(async (req, res) => {
