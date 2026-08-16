@@ -55,7 +55,7 @@ router.post('/slot/create/', protect, createDoctorAvailability)
 router.post('/slot/block/:doctorId', protect, blockTiming)
 
 //available slots
-router.get('/slots/:doctorId/:date', protect, availableSlotByDoctorId)
+router.get('/slots/:doctorId/:date', availableSlotByDoctorId)
 
 // a partner's own stored weekly availability
 router.get('/slot/availability/:doctorId', protect, getDoctorAvailabilitybyDoctorId)

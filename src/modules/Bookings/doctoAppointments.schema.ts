@@ -8,7 +8,7 @@ const doctorAppoinmentValidations = z.object({
     isConfirmed:z.boolean().default(false) ,
     date:z.coerce.date() , 
     weekDay:z.number().optional() , 
-    paymentMode:z.enum(['ONLINE' , 'OFFLINE']).optional() , 
+    paymentMode:z.enum(['ONLINE' , 'OFFLINE', 'WALLET', 'PACKAGE']).optional() , 
     paymentStatus:z.enum(['PENDING' , 'COMPLETED' , 'FAILED']) ,
     totalAmount:z.number().optional() ,
     serviceName:z.string().optional() ,

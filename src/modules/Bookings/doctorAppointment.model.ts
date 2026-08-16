@@ -8,7 +8,7 @@ export interface DoctorAppointmentDocument extends Document {
   isConfirmed: boolean;
   date:Date ;
   weekDay:number;
-  paymentMode?:'ONLINE' | 'OFFLINE' ;
+  paymentMode?:'ONLINE' | 'OFFLINE' | 'WALLET' | 'PACKAGE' ;
   paymentStatus:'PENDING' | 'COMPLETED' | 'FAILED' ;
   status:'Pending' | 'Confirmed' | "Completed" | "Cancelled" , 
   totalAmount: number;
@@ -64,7 +64,7 @@ const DoctorAppointmentSchema = new Schema<DoctorAppointmentDocument>(
     } , 
     paymentMode:{ 
       type:String ,
-      enum:['ONLINE' , 'OFFLINE'],
+      enum:['ONLINE' , 'OFFLINE', 'WALLET', 'PACKAGE'],
     } , 
     paymentStatus:{
       type:String ,
