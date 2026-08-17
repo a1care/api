@@ -13,7 +13,7 @@ RUN npm install
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN NODE_OPTIONS=--max_old_space_size=512 npm run build
 
 # Prune dev dependencies for production
 RUN npm prune --omit=dev
