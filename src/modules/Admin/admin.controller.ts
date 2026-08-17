@@ -1319,7 +1319,8 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
   // 2. Fetch OP Service Requests
   let serviceBookings: any[] = [];
   const OP_TOKEN_CHILD_SERVICE_ID = "69ff86c8a217e06e924eb4d4";
-  const srQuery: any = { childServiceId: OP_TOKEN_CHILD_SERVICE_ID };
+  const DOCTOR_HOME_VISIT_SERVICE_ID = "69ff86c8a217e06e924eb4d0";
+  const srQuery: any = { childServiceId: { $in: [OP_TOKEN_CHILD_SERVICE_ID, DOCTOR_HOME_VISIT_SERVICE_ID] } };
   if (query.createdAt) srQuery.createdAt = query.createdAt;
   
   let srs = await serviceRequestModel.find(srQuery)
@@ -1404,7 +1405,10 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode, serviceType, overdue } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
-  const query: any = {};
+  const query: any = {
+    // Exclude OP bookings (Hospital tokens & Doctor home consults) from Service Bookings
+    childServiceId: { $nin: ["69ff86c8a217e06e924eb4d4", "69ff86c8a217e06e924eb4d0"] }
+  };
   if (overdue === "true") {
     // Overdue: active (non-terminal) bookings older than 1 hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
