@@ -487,12 +487,12 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         });
         await notifyAdmin(
             "🔄 Partner Cancelled — Re-broadcasting",
-            `Partner cancelled booking #${id.slice(-6).toUpperCase()} after accepting. Auto-re-broadcasting to nearby partners.`,
+            `Partner cancelled booking #${(id as string).slice(-6).toUpperCase()} after accepting. Auto-re-broadcasting to nearby partners.`,
             "ServiceRequest",
-            id
+            id as string
         );
         try {
-            await scheduleBroadcastToAll(id);
+            await scheduleBroadcastToAll(id as string);
         } catch (e) {
             console.error("[Re-broadcast] error after partner cancel:", e);
         }
@@ -646,7 +646,7 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
                     fcmToken: provider.fcmToken ?? undefined,
                     title: "❌ Booking Cancelled",
                     body: `The customer cancelled their ${serviceName} booking.`,
-                    data: { screen: `/bookings`, bookingId: id },
+                    data: { screen: `/bookings`, bookingId: String(id) },
                     refType: "ServiceRequest",
                     refId: booking._id as mongoose.Types.ObjectId,
                 });
@@ -732,9 +732,9 @@ export const reportNoShow = asyncHandler(async (req, res) => {
     // Notify admin
     await notifyAdmin(
         "⚠️ No-Show Reported",
-        `Customer reported provider did not show up for booking #${id.slice(-6).toUpperCase()}.`,
+        `Customer reported provider did not show up for booking #${(id as string).slice(-6).toUpperCase()}.`,
         "ServiceRequest",
-        id
+        id as string
     );
 
     // Notify provider
@@ -749,7 +749,7 @@ export const reportNoShow = asyncHandler(async (req, res) => {
                     fcmToken: provider.fcmToken ?? undefined,
                     title: "⚠️ No-Show Reported",
                     body: "A customer has reported that you did not arrive for a booking. Please contact support.",
-                    data: { screen: `/bookings`, bookingId: id },
+                    data: { screen: `/bookings`, bookingId: String(id) },
                     refType: "ServiceRequest",
                     refId: booking._id as any,
                 });

@@ -1098,7 +1098,7 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
     updateDoc.resubmittedAt = new Date();
   }
 
-  const user = await Doctor.findByIdAndUpdate(id, updateDoc, { new: true });
+  const user = (await Doctor.findByIdAndUpdate(id, updateDoc, { new: true })) as any;
   if (!user) throw new ApiError(404, "User not found");
 
   // Bust the cached token version so the bump takes effect immediately (not after TTL).
@@ -1405,10 +1405,16 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
   const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode, serviceType, overdue } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
-  const query: any = {
+  const query: any = {};
+  if (req.query.opType === 'token') {
+    query.childServiceId = "69ff86c8a217e06e924eb4d4";
+  } else if (req.query.opType === 'doctor') {
+    query.childServiceId = "69ff86c8a217e06e924eb4d0";
+  } else {
     // Exclude OP bookings (Hospital tokens & Doctor home consults) from Service Bookings
-    childServiceId: { $nin: ["69ff86c8a217e06e924eb4d4", "69ff86c8a217e06e924eb4d0"] }
-  };
+    query.childServiceId = { $nin: ["69ff86c8a217e06e924eb4d4", "69ff86c8a217e06e924eb4d0"] };
+  }
+  
   if (overdue === "true") {
     // Overdue: active (non-terminal) bookings older than 1 hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -1829,9 +1835,9 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       {
         const { enqueuePush } = await import("../../queues/communicationQueue.js");
         await enqueuePush({
-          recipientId: partner._id as any,
+          recipientId: (partner as any)._id as any,
           recipientType: "partner",
-          fcmToken: partner.fcmToken ?? undefined,
+          fcmToken: (partner as any).fcmToken ?? undefined,
           title: "🚨 New Booking — Accept Now!",
           body: `${serviceName} request near you. You have 5 minutes to accept.`,
           data: { screen: `/bookings`, type: "JOB_ASSIGNED", bookingId: String(booking._id) },
@@ -1980,7 +1986,7 @@ export const rebroadcastServiceBooking = asyncHandler(async (req, res) => {
   });
 
   const { scheduleBroadcastToAll } = await import("../../queues/bookingQueue.js");
-  await scheduleBroadcastToAll(id);
+  await scheduleBroadcastToAll(id as string);
 
   return res.status(200).json(new ApiResponse(200, "Booking re-broadcast initiated", null));
 });

@@ -463,7 +463,7 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
                     fcmToken: doctor.fcmToken ?? undefined,
                     title: "❌ Appointment Cancelled",
                     body: "A patient cancelled their appointment with you.",
-                    data: { screen: `/bookings`, bookingId: id },
+                    data: { screen: `/bookings`, bookingId: String(id) },
                     refType: "DoctorAppointment",
                     refId: new mongoose.Types.ObjectId(id as string),
                 });

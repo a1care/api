@@ -244,7 +244,7 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
                 if ((patient as any).email) {
                     enqueueEmail({
                         kind: "wallet_topup",
-                        data: { email: (patient as any).email, fullName: (patient as any).name || "Customer", amount: order.amount }
+                        data: { email: (patient as any).email, fullName: (patient as any).name || "Customer", amount: String(order.amount), txnid: order.razorpayOrderId || String(order._id) }
                     }).catch(() => {});
                 }
             }
@@ -475,7 +475,7 @@ export const handleWebhook = asyncHandler(async (req, res) => {
                         body: `Your payment of ₹${order.amount} could not be processed. Please try again.`,
                         data: { screen: "/wallet", type: "PAYMENT_FAILED", orderId: String(order._id) },
                         refType: "Wallet",
-                        refId: order._id,
+                        refId: order._id as any,
                     });
                 }
             } catch (e) {
@@ -605,8 +605,8 @@ export const verifyPayment = asyncHandler(async (req, res) => {
                         title: "❌ Payment Failed",
                         body: `Your payment of ₹${order.amount} could not be processed. Please try again or contact support.`,
                         data: { screen: "/wallet" },
-                        refType: "Order",
-                        refId: order._id as mongoose.Types.ObjectId,
+                        refType: "Wallet",
+                        refId: order._id as any,
                     });
                 }
             } catch (e) {
