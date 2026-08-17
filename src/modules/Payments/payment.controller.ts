@@ -512,6 +512,33 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
 
     // Response HTML for WebView to detect
     const isSuccess = (response.status === "success" || response.status === "1") && (order?.status === OrderStatus.SUCCESS || isValid);
+
+    // Notify admin + customer when a gateway-redirect failure lands here (guarded against double-fire from webhook)
+    if (!isSuccess && order && order.status !== OrderStatus.FAILED) {
+        try {
+            order.status = OrderStatus.FAILED;
+            await order.save();
+            const { notifyAdmin } = await import("../Notifications/notification.controller.js");
+            await notifyAdmin("❌ Payment Failed", `Order ${order.txnId} failed via gateway redirect. Amount: ₹${order.amount}. Status: ${response.status || "unknown"}.`, "Wallet", String(order._id));
+            const { enqueuePush } = await import("../../queues/communicationQueue.js");
+            const patient = await Patient.findById(order.userId).select("fcmToken");
+            if (patient) {
+                await enqueuePush({
+                    recipientId: patient._id as any,
+                    recipientType: "patient",
+                    fcmToken: (patient as any).fcmToken ?? undefined,
+                    title: "❌ Payment Failed",
+                    body: `Your payment of ₹${order.amount} could not be processed. Please try again.`,
+                    data: { screen: "/wallet", type: "PAYMENT_FAILED", orderId: String(order._id) },
+                    refType: "Wallet",
+                    refId: order._id,
+                });
+            }
+        } catch (e) {
+            console.error("[Push] gateway redirect failure notify error:", e);
+        }
+    }
+
     const statusMsg = isSuccess ? "Payment Successful" : "Payment Failed";
     const statusIcon = isSuccess ? "✅" : "❌";
 

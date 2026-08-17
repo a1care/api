@@ -53,7 +53,8 @@ import {
   getAdminCommissionReport,
   getEmailTemplates,
   updateEmailTemplate,
-  getSuperAdminWalletOverview
+  getSuperAdminWalletOverview,
+  issueServiceRefund
 } from "./admin.controller.js";
 import { adminListNotifications, adminBroadcastNotification, adminClearNotifications, adminDeleteNotification } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
@@ -123,6 +124,7 @@ adminRoutes.get("/bookings/services/debug-eligibility", protectAdmin, requireAdm
 adminRoutes.get("/bookings/services/returned", protectAdmin, requireAdminRole(["admin", "super_admin"]), getReturnedToAdminServiceBookings);
 adminRoutes.put("/bookings/services/:id/status", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateServiceBookingStatus);
 adminRoutes.post("/bookings/services/:id/rebroadcast", protectAdmin, requireAdminRole(["admin", "super_admin"]), rebroadcastServiceBooking);
+adminRoutes.post("/bookings/services/:id/refund", protectAdmin, requireAdminRole(["admin", "super_admin"]), issueServiceRefund);
 import { verifyCheckInPin } from '../Bookings/service/serviceRequest.controller.js';
 adminRoutes.post("/bookings/services/verify-pin/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), verifyCheckInPin);
 adminRoutes.get("/bookings/hospital", protectAdmin, requireAdminRole(["admin", "super_admin"]), getHospitalBookings);

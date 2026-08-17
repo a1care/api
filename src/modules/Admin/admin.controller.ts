@@ -1991,6 +1991,61 @@ export const rebroadcastServiceBooking = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, "Booking re-broadcast initiated", null));
 });
 
+export const issueServiceRefund = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { amount, reason } = req.body;
+  if (!amount || Number(amount) <= 0) throw new ApiError(400, "Refund amount must be positive");
+
+  const booking = await serviceRequestModel
+    .findById(id)
+    .populate("userId", "email name fcmToken")
+    .populate("childServiceId", "name");
+  if (!booking) throw new ApiError(404, "Service booking not found");
+
+  const refundAmount = Number(amount);
+  const userId = (booking as any).userId?._id ?? booking.userId;
+  await creditWalletAtomic(String(userId), refundAmount, `MANUAL_REFUND:SERVICE:${id}:${Date.now()}`);
+
+  const customer = (booking as any).userId;
+  const serviceName = (booking as any).childServiceId?.name || "Service Booking";
+
+  if (customer?.email) {
+    enqueueEmail({
+      kind: "refund",
+      data: {
+        email: customer.email,
+        fullName: customer.name || "Customer",
+        amount: refundAmount,
+        serviceName,
+        bookingId: String(booking._id),
+      },
+    }).catch(() => {});
+  }
+
+  if (customer?.fcmToken) {
+    enqueuePush({
+      recipientId: userId as mongoose.Types.ObjectId,
+      recipientType: "patient",
+      fcmToken: customer.fcmToken,
+      title: "💰 Refund Credited",
+      body: `₹${refundAmount} has been refunded to your A1Care wallet.${reason ? ` Reason: ${reason}` : ""}`,
+      data: { screen: "/wallet", type: "REFUND", bookingId: String(booking._id) },
+      refType: "ServiceRequest",
+      refId: booking._id as mongoose.Types.ObjectId,
+    }).catch(() => {});
+  }
+
+  const { notifyAdmin } = await import("../Notifications/notification.controller.js");
+  await notifyAdmin(
+    "💰 Manual Refund Issued",
+    `₹${refundAmount} refunded to ${customer?.name || "customer"} for booking #${String(booking._id).slice(-8).toUpperCase()}${reason ? `. Reason: ${reason}` : ""}.`,
+    "ServiceRequest",
+    String(booking._id)
+  );
+
+  return res.status(200).json(new ApiResponse(200, "Refund issued successfully", { refundAmount, bookingId: booking._id }));
+});
+
 export const getHospitalBookings = asyncHandler(async (req, res) => {
   const { page = 1, limit = 55, status, search } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
