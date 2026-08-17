@@ -29,19 +29,20 @@ export const createServiceAcceptance = asyncHandler(async (req, res) => {
     }
 
     const isBroadcasted = serviceRequestDetails.status === "BROADCASTED";
+    const isPending = serviceRequestDetails.status === "PENDING";
     const isReturned = serviceRequestDetails.status === "RETURNED_TO_ADMIN";
     const isPartnerAssigned = serviceRequestDetails.status === "PARTNER_ASSIGNED";
     const isAssignedToProvider =
         serviceRequestDetails.assignedProviderId?.toString?.() === providerId?.toString?.();
 
-    if (!isBroadcasted && !isReturned && !isAssignedToProvider) {
+    if (!isBroadcasted && !isPending && !isReturned && !isAssignedToProvider) {
         if (serviceRequestDetails.status === "ACCEPTED" || serviceRequestDetails.status === "PARTNER_ASSIGNED") {
             throw new ApiError(403, "This booking has already been claimed by another partner.");
         }
         throw new ApiError(403, "This booking is not assigned to you");
     }
 
-    if (!isBroadcasted && !isReturned && !isPartnerAssigned && serviceRequestDetails.status !== "ACCEPTED") {
+    if (!isBroadcasted && !isPending && !isReturned && !isPartnerAssigned && serviceRequestDetails.status !== "ACCEPTED") {
         throw new ApiError(400, "Only admin-assigned or broadcasted bookings can be accepted");
     }
 
@@ -196,10 +197,11 @@ export const createServiceRejected = asyncHandler(async (req, res) => {
     if (!serviceRequestDetails) throw new ApiError(404, "Service Request not found");
 
     const isBroadcasted = serviceRequestDetails.status === "BROADCASTED";
+    const isPending = serviceRequestDetails.status === "PENDING";
     const isReturned = serviceRequestDetails.status === "RETURNED_TO_ADMIN";
     const isAssigned = serviceRequestDetails.assignedProviderId?.toString() === providerId;
 
-    if (!isBroadcasted && !isReturned && !isAssigned) {
+    if (!isBroadcasted && !isPending && !isReturned && !isAssigned) {
         throw new ApiError(403, "This booking is not assigned to you");
     }
 
