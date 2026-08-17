@@ -154,11 +154,11 @@ export async function runBroadcastToAll(serviceRequestId: string): Promise<void>
     const req = await serviceRequestModel.findById(serviceRequestId);
     if (req) {
       const patient = await Patient.findById(req.userId).select("fcmToken");
-      if (patient?.fcmToken) {
+      if (patient) {
         await enqueuePush({
           recipientId: patient._id as mongoose.Types.ObjectId,
           recipientType: "patient",
-          fcmToken: patient.fcmToken,
+          fcmToken: patient.fcmToken ?? undefined,
           title: "🔍 Finding Your Partner",
           body: "Your booking is live! We're notifying nearby partners. You'll hear back soon.",
           data: { screen: `/booking/${serviceRequestId}` },
@@ -195,11 +195,11 @@ export async function runBroadcastTimeout(serviceRequestId: string): Promise<voi
 
   try {
     const patient = await Patient.findById(request.userId).select("fcmToken");
-    if (patient?.fcmToken) {
+    if (patient) {
       await enqueuePush({
         recipientId: patient._id as mongoose.Types.ObjectId,
         recipientType: "patient",
-        fcmToken: patient.fcmToken,
+        fcmToken: patient.fcmToken ?? undefined,
         title: "🔄 Still Working on It",
         body: "We're still finding the right partner for you. Our team will assign one shortly — hang tight!",
         data: { screen: `/booking/${serviceRequestId}` },

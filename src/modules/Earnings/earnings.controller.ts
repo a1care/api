@@ -7,6 +7,7 @@ import Payout from "./payout.model.js";
 import Doctor from "../Doctors/doctor.model.js";
 import mongoose from "mongoose";
 import { getActiveCommissionRate } from "../PartnerSubscription/subscription.controller.js";
+import { notifyAdmin } from "../Notifications/notification.controller.js";
 
 
 export const getEarningsSummary = asyncHandler(async (req, res) => {
@@ -148,6 +149,13 @@ export const requestPayout = asyncHandler(async (req, res) => {
         bankDetails: finalDetails,
         status: "PENDING"
     });
+
+    notifyAdmin(
+        "💸 Payout Request Submitted",
+        `${staff.name} requested a ₹${amount} withdrawal via ${payoutMethod || "BANK"}.`,
+        "Partner",
+        String(payout._id)
+    ).catch(() => {});
 
     return res.status(201).json(new ApiResponse(201, "Payout request submitted", payout));
 });

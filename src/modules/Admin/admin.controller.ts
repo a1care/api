@@ -1075,7 +1075,7 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, "Patient status updated", user));
   }
 
-  const nextStatus = status as "Pending" | "Active" | "Rejected" | undefined;
+  const nextStatus = status as "Pending" | "Active" | "Rejected" | "Suspended" | undefined;
   if (nextStatus === "Rejected" && (!rejectionReason || !String(rejectionReason).trim())) {
     throw new ApiError(400, "Rejection reason is required");
   }
@@ -1084,7 +1084,10 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
   if (nextStatus === "Rejected") {
     updateDoc.rejectionReason = String(rejectionReason).trim();
     updateDoc.rejectedAt = new Date();
-    // Invalidate any existing partner sessions by bumping their token version.
+    updateDoc.$inc = { tokenVersion: 1 };
+  }
+  if (nextStatus === "Suspended") {
+    updateDoc.rejectionReason = rejectionReason ? String(rejectionReason).trim() : "Account suspended by admin";
     updateDoc.$inc = { tokenVersion: 1 };
   }
   if (nextStatus === "Active") {
@@ -1154,6 +1157,17 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
           reason: String(rejectionReason).trim()
         }
       }).catch((err) => console.error("[Admin] Partner rejection email failed:", err));
+
+      enqueuePush({
+        recipientId: user._id.toString(),
+        recipientType: "partner",
+        fcmToken: user.fcmToken,
+        title: "Application Rejected",
+        body: rejectionReason ? `Reason: ${String(rejectionReason).trim()}` : "Your application was not approved. Please resubmit with corrected documents.",
+        data: { screen: "review-status" },
+        refType: "Auth",
+        refId: user._id.toString(),
+      }).catch((err: any) => console.error("[Admin] Partner rejection push failed:", err));
     }
   }
 
@@ -1387,11 +1401,18 @@ export const getDoctorBookings = asyncHandler(async (req, res) => {
 });
 
 export const getServiceBookings = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode, serviceType } = req.query;
+  const { page = 1, limit = 60, status, dateFrom, dateTo, search, payment, department, service, doctor, slot, fulfillmentMode, serviceType, overdue } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
   const query: any = {};
-  if (status && status !== "All") query.status = status;
+  if (overdue === "true") {
+    // Overdue: active (non-terminal) bookings older than 1 hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    query.status = { $in: ["PENDING", "BROADCASTED", "ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED", "RETURNED_TO_ADMIN"] };
+    query.createdAt = { $lte: oneHourAgo };
+  } else if (status && status !== "All") {
+    query.status = status;
+  }
   if (payment && payment !== "All") {
     if (payment === "PACKAGE") {
       query.paymentMode = "PACKAGE";
@@ -1787,12 +1808,12 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       });
 
       // Push notification (for when app is in background)
-      if (partner?.fcmToken) {
+      {
         const { enqueuePush } = await import("../../queues/communicationQueue.js");
         await enqueuePush({
           recipientId: partner._id as any,
           recipientType: "partner",
-          fcmToken: partner.fcmToken,
+          fcmToken: partner.fcmToken ?? undefined,
           title: "🚨 New Booking — Accept Now!",
           body: `${serviceName} request near you. You have 5 minutes to accept.`,
           data: { screen: `/bookings`, type: "JOB_ASSIGNED", bookingId: String(booking._id) },
@@ -1814,11 +1835,11 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
 
       // Partner
       const partner = await DoctorMdl.findById(assignedProviderId).select("fcmToken name");
-      if (partner?.fcmToken) {
+      if (partner) {
         await enqueuePush({
           recipientId: partner._id as any,
           recipientType: "partner",
-          fcmToken: partner.fcmToken,
+          fcmToken: partner.fcmToken ?? undefined,
           title: "📋 New Booking Assigned!",
           body: `You have been assigned a ${serviceName} booking. Tap to review and accept.`,
           data: { screen: `/booking/${String(booking._id)}`, type: "JOB_ASSIGNED" },
@@ -1830,11 +1851,11 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
       // Customer
       const patientId = (booking as any).userId?._id || (booking as any).userId;
       const patient = await Patient.findById(patientId).select("fcmToken name");
-      if (patient?.fcmToken) {
+      if (patient) {
         await enqueuePush({
           recipientId: patient._id as any,
           recipientType: "patient",
-          fcmToken: patient.fcmToken,
+          fcmToken: patient.fcmToken ?? undefined,
           title: "✅ Provider Assigned!",
           body: `${partner?.name ?? "A provider"} has been assigned to your ${serviceName} booking.`,
           data: { screen: `/booking/${String(booking._id)}`, type: "PROVIDER_ASSIGNED" },
@@ -1845,6 +1866,59 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
     } catch (e) {
       console.error("[Push] assignment notification error:", e);
     }
+  }
+
+  // ── Notify customer and partner of admin-driven status changes ──
+  try {
+    const { enqueuePush } = await import("../../queues/communicationQueue.js");
+    const serviceName = (booking as any).childServiceId?.name ?? "service";
+    const customer = (booking as any).userId;
+    const patientFull = await Patient.findById(customer?._id ?? customer).select("fcmToken");
+
+    const customerPushMap: Record<string, { title: string; body: string }> = {
+      CANCELLED:    { title: "❌ Booking Cancelled",   body: `Your ${serviceName} booking was cancelled by support.` },
+      COMPLETED:    { title: "✅ Booking Completed",   body: `Your ${serviceName} booking has been marked complete.` },
+      IN_PROGRESS:  { title: "🚀 Service Started",     body: `Your ${serviceName} service is now in progress.` },
+      ACCEPTED:     { title: "✅ Provider Confirmed",   body: `A provider has been confirmed for your ${serviceName} booking.` },
+    };
+    const cpush = customerPushMap[status];
+    if (cpush && patientFull) {
+      await enqueuePush({
+        recipientId: patientFull._id as any,
+        recipientType: "patient",
+        fcmToken: patientFull.fcmToken ?? undefined,
+        title: cpush.title,
+        body: cpush.body,
+        data: { screen: `/booking/${String(booking._id)}` },
+        refType: "ServiceRequest",
+        refId: booking._id as any,
+      });
+    }
+
+    if (existing.assignedProviderId && !isNewAssignment) {
+      const DoctorMdl = (await import("../Doctors/doctor.model.js")).default;
+      const provider = await DoctorMdl.findById(existing.assignedProviderId).select("fcmToken");
+      const partnerPushMap: Record<string, { title: string; body: string }> = {
+        CANCELLED:   { title: "❌ Booking Cancelled",  body: `A ${serviceName} booking assigned to you was cancelled by support.` },
+        COMPLETED:   { title: "✅ Marked Complete",    body: `Your ${serviceName} booking was marked complete by support.` },
+        IN_PROGRESS: { title: "🚀 Status Updated",     body: `Your ${serviceName} booking is now marked in progress.` },
+      };
+      const ppush = partnerPushMap[status];
+      if (ppush && provider) {
+        await enqueuePush({
+          recipientId: provider._id as any,
+          recipientType: "partner",
+          fcmToken: provider.fcmToken ?? undefined,
+          title: ppush.title,
+          body: ppush.body,
+          data: { screen: `/bookings`, bookingId: String(booking._id) },
+          refType: "ServiceRequest",
+          refId: booking._id as any,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[Push] admin status update notify error:", e);
   }
 
   res.status(200).json(new ApiResponse(200, "Service booking status updated", booking));
@@ -1869,6 +1943,28 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
   }));
 
   res.status(200).json(new ApiResponse(200, "Returned-to-admin bookings fetched", formatted));
+});
+
+export const rebroadcastServiceBooking = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const booking = await serviceRequestModel.findById(id);
+  if (!booking) throw new ApiError(404, "Booking not found");
+
+  if (["COMPLETED", "CANCELLED"].includes(booking.status)) {
+    throw new ApiError(400, `Cannot re-broadcast a ${booking.status} booking`);
+  }
+
+  await serviceRequestModel.findByIdAndUpdate(id, {
+    status: "PENDING",
+    assignedProviderId: null,
+    assignedRoleId: null,
+    broadcastedAt: null,
+  });
+
+  const { scheduleBroadcastToAll } = await import("../../queues/bookingQueue.js");
+  await scheduleBroadcastToAll(id);
+
+  return res.status(200).json(new ApiResponse(200, "Booking re-broadcast initiated", null));
 });
 
 export const getHospitalBookings = asyncHandler(async (req, res) => {
@@ -2521,7 +2617,7 @@ export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
 
   // Notify Partner
   const partner = await Doctor.findById(payout.staffId);
-  if (partner?.fcmToken) {
+  if (partner) {
     const title = status === "COMPLETED" ? "Payment Settled! 💰" : "Payout Update";
     const body = status === "COMPLETED"
       ? `₹${payout.amount} has been transferred to your bank account.`
@@ -2529,8 +2625,8 @@ export const updateAdminPayoutStatus = asyncHandler(async (req, res) => {
 
     await (await import("../../queues/communicationQueue.js")).enqueuePush({
       recipientId: String(partner._id),
-      recipientType: "staff" as any,
-      fcmToken: partner.fcmToken,
+      recipientType: "partner",
+      fcmToken: partner.fcmToken ?? undefined,
       title,
       body,
       data: { type: "PAYOUT_UPDATE", payoutId: String(payout._id), status }

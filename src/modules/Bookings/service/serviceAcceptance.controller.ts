@@ -316,6 +316,26 @@ export const rejectAssignment = asyncHandler(async (req, res) => {
         serviceRequestId
     );
 
+    // Notify customer their assigned provider is gone
+    try {
+        const patientId = booking.userId;
+        const patient = await Patient.findById(patientId).select("fcmToken");
+        if (patient) {
+            await enqueuePush({
+                recipientId: patient._id as mongoose.Types.ObjectId,
+                recipientType: "patient",
+                fcmToken: patient.fcmToken ?? undefined,
+                title: "🔄 Finding a New Partner",
+                body: "Your assigned provider couldn't take this job. We're working on getting you someone else.",
+                data: { screen: `/booking/${serviceRequestId}` },
+                refType: "ServiceRequest",
+                refId: new mongoose.Types.ObjectId(serviceRequestId),
+            });
+        }
+    } catch (e) {
+        console.error("[Push] rejectAssignment customer notify error:", e);
+    }
+
     const { emitToRoom: emit } = await import("../../../socket.js");
     emit("admin", "booking:partner_rejected", {
         bookingId: serviceRequestId,

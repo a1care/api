@@ -369,6 +369,41 @@ export const verifyCheckInPin = asyncHandler(async (req, res) => {
     request.status = "CHECKED_IN";
     await request.save();
 
+    // Notify patient and assigned provider
+    try {
+        const patient = await Patient.findById(request.userId).select("fcmToken");
+        if (patient) {
+            await enqueuePush({
+                recipientId: patient._id as any,
+                recipientType: "patient",
+                fcmToken: patient.fcmToken ?? undefined,
+                title: "✅ Checked In!",
+                body: "Your OP token has been verified. Please wait to be called.",
+                data: { screen: `/booking/${String(request._id)}` },
+                refType: "ServiceRequest",
+                refId: request._id as any,
+            });
+        }
+        if (request.assignedProviderId) {
+            const { default: Doctor } = await import("../../Doctors/doctor.model.js");
+            const provider = await Doctor.findById(request.assignedProviderId).select("fcmToken");
+            if (provider) {
+                await enqueuePush({
+                    recipientId: provider._id as any,
+                    recipientType: "partner",
+                    fcmToken: provider.fcmToken ?? undefined,
+                    title: "🏥 Patient Checked In",
+                    body: "Your patient has checked in for their OP visit.",
+                    data: { screen: `/booking/${String(request._id)}` },
+                    refType: "ServiceRequest",
+                    refId: request._id as any,
+                });
+            }
+        }
+    } catch (e) {
+        console.error("[Push] CHECKED_IN notification error:", e);
+    }
+
     return res.status(200).json(new ApiResponse(200, "PIN verified successfully, token checked in", request));
 });;
 
@@ -441,6 +476,41 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
 
     if (status === "CANCELLED") {
         console.info(`[BOOKING] [CANCEL] [${id}] Cancelled by ${isPatient ? 'Patient' : 'Provider'} (${requesterId})`);
+    }
+
+    // Partner-initiated cancellation of an already-accepted booking → re-broadcast instead of hard cancel
+    if (status === "CANCELLED" && isAssignedProvider && ["ACCEPTED", "IN_PROGRESS"].includes(existing.status)) {
+        await serviceRequestModel.findByIdAndUpdate(id, {
+            status: "PENDING",
+            assignedProviderId: null,
+            assignedRoleId: null,
+        });
+        await notifyAdmin(
+            "🔄 Partner Cancelled — Re-broadcasting",
+            `Partner cancelled booking #${id.slice(-6).toUpperCase()} after accepting. Auto-re-broadcasting to nearby partners.`,
+            "ServiceRequest",
+            id
+        );
+        try {
+            await scheduleBroadcastToAll(id);
+        } catch (e) {
+            console.error("[Re-broadcast] error after partner cancel:", e);
+        }
+        // Notify customer
+        const patientFull2 = await Patient.findById(existing.userId).select("fcmToken name email");
+        if (patientFull2) {
+            await enqueuePush({
+                recipientId: patientFull2._id as mongoose.Types.ObjectId,
+                recipientType: "patient",
+                fcmToken: patientFull2.fcmToken ?? null,
+                title: "🔄 Finding a New Provider",
+                body: "Your provider had to cancel. We're finding you a replacement now.",
+                data: { screen: `/booking/${id}` },
+                refType: "ServiceRequest",
+                refId: new mongoose.Types.ObjectId(id as string),
+            });
+        }
+        return res.status(200).json(new ApiResponse(200, "Booking re-broadcast to find a new provider", null));
     }
 
     // Auto-refund if a paid service booking is cancelled.
@@ -542,6 +612,50 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         }
     }
 
+    // ── Notify partner their earning was credited on completion ──
+    if (status === "COMPLETED" && existing.status !== "COMPLETED" && existing.assignedProviderId && updateData.partnerEarning) {
+        try {
+            const { default: Doctor } = await import("../../Doctors/doctor.model.js");
+            const provider = await Doctor.findById(existing.assignedProviderId).select("fcmToken");
+            if (provider) {
+                await enqueuePush({
+                    recipientId: provider._id as any,
+                    recipientType: "partner",
+                    fcmToken: provider.fcmToken ?? undefined,
+                    title: "💰 Earning Credited!",
+                    body: `₹${Number(updateData.partnerEarning).toFixed(0)} has been credited for your ${serviceName} job.`,
+                    data: { screen: `/earnings` },
+                    refType: "ServiceRequest",
+                    refId: booking!._id as mongoose.Types.ObjectId,
+                });
+            }
+        } catch (e) {
+            console.error("[Push] partner earning notify error:", e);
+        }
+    }
+
+    // ── Notify provider when patient cancels ──
+    if (status === "CANCELLED" && isPatient && existing.assignedProviderId) {
+        try {
+            const { default: Doctor } = await import("../../Doctors/doctor.model.js");
+            const provider = await Doctor.findById(existing.assignedProviderId).select("fcmToken");
+            if (provider) {
+                await enqueuePush({
+                    recipientId: provider._id as any,
+                    recipientType: "partner",
+                    fcmToken: provider.fcmToken ?? undefined,
+                    title: "❌ Booking Cancelled",
+                    body: `The customer cancelled their ${serviceName} booking.`,
+                    data: { screen: `/bookings`, bookingId: id },
+                    refType: "ServiceRequest",
+                    refId: booking._id as mongoose.Types.ObjectId,
+                });
+            }
+        } catch (e) {
+            console.error("[Push] patient cancel → provider notify error:", e);
+        }
+    }
+
     // ── Refund confirmation email (only if money was actually returned) ──
     if (didRefund && patientFull?.email) {
         try {
@@ -603,6 +717,51 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
  * Partner confirms they collected cash for an OFFLINE payment booking.
  * Can only be called by the assigned provider.
  */
+export const reportNoShow = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const requesterId = req.user?.id;
+    if (!requesterId) throw new ApiError(401, "Not authorized");
+
+    const booking = await serviceRequestModel.findById(id);
+    if (!booking) throw new ApiError(404, "Booking not found");
+    if (booking.userId?.toString() !== requesterId.toString()) throw new ApiError(403, "Only the customer can report a no-show");
+    if (!["ACCEPTED", "IN_PROGRESS"].includes(booking.status)) throw new ApiError(400, "Can only report a no-show for an accepted or in-progress booking");
+
+    await serviceRequestModel.findByIdAndUpdate(id, { status: "NO_SHOW" });
+
+    // Notify admin
+    await notifyAdmin(
+        "⚠️ No-Show Reported",
+        `Customer reported provider did not show up for booking #${id.slice(-6).toUpperCase()}.`,
+        "ServiceRequest",
+        id
+    );
+
+    // Notify provider
+    try {
+        if (booking.assignedProviderId) {
+            const { default: Doctor } = await import("../../Doctors/doctor.model.js");
+            const provider = await Doctor.findById(booking.assignedProviderId).select("fcmToken");
+            if (provider) {
+                await enqueuePush({
+                    recipientId: provider._id as any,
+                    recipientType: "partner",
+                    fcmToken: provider.fcmToken ?? undefined,
+                    title: "⚠️ No-Show Reported",
+                    body: "A customer has reported that you did not arrive for a booking. Please contact support.",
+                    data: { screen: `/bookings`, bookingId: id },
+                    refType: "ServiceRequest",
+                    refId: booking._id as any,
+                });
+            }
+        }
+    } catch (e) {
+        console.error("[Push] no-show provider notify error:", e);
+    }
+
+    return res.status(200).json(new ApiResponse(200, "No-show reported", null));
+});
+
 export const markServiceCashCollected = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const providerId = req.user?.id;
@@ -662,6 +821,25 @@ export async function runPartnerAcceptanceTimeout(serviceRequestId: string, part
         "ServiceRequest",
         serviceRequestId
     );
+
+    // Notify customer that their assigned provider is gone
+    try {
+        const patient = await Patient.findById((booking as any).userId).select("fcmToken");
+        if (patient) {
+            await enqueuePush({
+                recipientId: patient._id as mongoose.Types.ObjectId,
+                recipientType: "patient",
+                fcmToken: (patient as any).fcmToken ?? undefined,
+                title: "🔄 Still Finding Your Partner",
+                body: "Your previously assigned provider didn't respond in time. We're finding you a replacement.",
+                data: { screen: `/booking/${serviceRequestId}` },
+                refType: "ServiceRequest",
+                refId: new mongoose.Types.ObjectId(serviceRequestId),
+            });
+        }
+    } catch (e) {
+        console.error("[Push] acceptance timeout customer notify error:", e);
+    }
 
     // Emit socket event to admin room
     const { emitToRoom } = await import("../../../socket.js");

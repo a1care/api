@@ -293,11 +293,11 @@ export const approveSubscription = async (req: Request, res: Response) => {
 
         // Notify Partner
         const partner = await doctorModel.findById(sub.partnerId);
-        if (partner?.fcmToken) {
+        if (partner) {
             await enqueuePush({
                 recipientId: String(partner._id),
-                recipientType: "staff" as any, // staff/doctor as per schema
-                fcmToken: partner.fcmToken,
+                recipientType: "partner",
+                fcmToken: partner.fcmToken ?? undefined,
                 title: "Plan Activated! 🚀",
                 body: "Your subscription has been approved. You're now ready to accept more jobs.",
                 data: { type: "SUBSCRIPTION_ACTIVE", subId: String(sub._id) }

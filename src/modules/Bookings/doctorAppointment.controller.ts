@@ -429,6 +429,50 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         }
     }
 
+    // ── Notify doctor their earning was credited on completion ──
+    if (status === "Completed" && existing.status !== "Completed" && updateData.partnerEarning) {
+        try {
+            const doctorDoc = await (await import("../Doctors/doctor.model.js")).default
+                .findById(existing.doctorId).select("fcmToken");
+            if (doctorDoc) {
+                await enqueuePush({
+                    recipientId: doctorDoc._id as any,
+                    recipientType: "partner",
+                    fcmToken: doctorDoc.fcmToken ?? undefined,
+                    title: "💰 Earning Credited!",
+                    body: `₹${Number(updateData.partnerEarning).toFixed(0)} has been credited for your consultation.`,
+                    data: { screen: `/earnings` },
+                    refType: "DoctorAppointment",
+                    refId: new mongoose.Types.ObjectId(id as string),
+                });
+            }
+        } catch (e) {
+            console.error("[Push] doctor earning notify error:", e);
+        }
+    }
+
+    // ── Notify doctor when patient cancels ──
+    if ((status === "Cancelled" || status === "CANCELLED") && isPatient) {
+        try {
+            const doctor = await (await import("../Doctors/doctor.model.js")).default
+                .findById(existing.doctorId).select("fcmToken");
+            if (doctor) {
+                await enqueuePush({
+                    recipientId: doctor._id as any,
+                    recipientType: "partner",
+                    fcmToken: doctor.fcmToken ?? undefined,
+                    title: "❌ Appointment Cancelled",
+                    body: "A patient cancelled their appointment with you.",
+                    data: { screen: `/bookings`, bookingId: id },
+                    refType: "DoctorAppointment",
+                    refId: new mongoose.Types.ObjectId(id as string),
+                });
+            }
+        } catch (e) {
+            console.error("[Push] patient cancel → doctor notify error:", e);
+        }
+    }
+
     // ── Refund confirmation email (only if money was actually returned) ──
     if (didRefund && patient?.email) {
         try {

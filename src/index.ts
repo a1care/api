@@ -122,6 +122,8 @@ const startServer = async () => {
         // Background Jobs
         const { initBookingReminderJob } = await import("./jobs/bookingReminder.job.js");
         initBookingReminderJob();
+        const { initBookingHealthCheckJob } = await import("./jobs/bookingHealthCheck.job.js");
+        initBookingHealthCheckJob();
         const { initCouponReminderJob } = await import("./jobs/couponReminder.job.js");
         initCouponReminderJob();
 

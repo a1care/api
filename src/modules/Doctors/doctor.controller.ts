@@ -182,6 +182,10 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
       }
 
+      if (staff && staff.status === "Suspended") {
+        throw new ApiError(403, "Your account has been suspended. Please contact support.");
+      }
+
       if (staff && staff.isRegistered && role) {
         let roleName = staff.role?.name;
         if (!roleName && staff.roleId) {
@@ -252,6 +256,10 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
     if (staff && (staff.isDeleted || staff.deletedAt)) {
         throw new ApiError(403, "Your account is deleted to restore your account, contact newadmin@a1care.com");
+    }
+
+    if (staff && staff.status === "Suspended") {
+        throw new ApiError(403, "Your account has been suspended. Please contact support.");
     }
 
     if (staff && staff.isRegistered && role) {

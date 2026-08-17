@@ -3,6 +3,9 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface TicketDocument extends Document {
     staffId?: mongoose.Types.ObjectId;
     userId?: mongoose.Types.ObjectId;
+    bookingId?: mongoose.Types.ObjectId;
+    bookingType?: "ServiceRequest" | "DoctorAppointment";
+    category?: "General" | "Billing" | "Dispute" | "Technical" | "Other";
     subject: string;
     description: string;
     status: "Pending" | "In Progress" | "Resolved" | "Closed";
@@ -18,6 +21,18 @@ const TicketSchema = new Schema<TicketDocument>(
         userId: {
             type: Schema.Types.ObjectId,
             ref: "Patient",
+        },
+        bookingId: {
+            type: Schema.Types.ObjectId,
+        },
+        bookingType: {
+            type: String,
+            enum: ["ServiceRequest", "DoctorAppointment"],
+        },
+        category: {
+            type: String,
+            enum: ["General", "Billing", "Dispute", "Technical", "Other"],
+            default: "General",
         },
         subject: {
             type: String,

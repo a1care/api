@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import asyncHandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
@@ -7,6 +8,7 @@ import { RazorpayService } from "./razorpay.service.js";
 import { getSystemSettings } from "../Admin/admin.controller.js";
 import { Patient } from "../Authentication/patient.model.js";
 import { creditWalletAtomic } from "../Wallet/wallet.controller.js";
+import { enqueuePush } from "../../queues/communicationQueue.js";
 import { v4 as uuidv4 } from "uuid";
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
@@ -224,6 +226,31 @@ const fulfillOrder = async (order: any, response: any, service: any) => {
         if (service && typeof service.logEvent === 'function') {
             await service.logEvent(order.txnId, "WALLET_CREDITED", "INFO", `Credited ${order.amount} to wallet`);
         }
+        // Notify patient of wallet credit (parity with Easebuzz direct top-up path)
+        try {
+            const { enqueuePush, enqueueEmail } = await import("../../queues/communicationQueue.js");
+            const patient = await Patient.findById(order.userId).select("fcmToken email name");
+            if (patient) {
+                await enqueuePush({
+                    recipientId: patient._id as any,
+                    recipientType: "patient",
+                    fcmToken: (patient as any).fcmToken ?? undefined,
+                    title: "💰 Wallet Topped Up!",
+                    body: `₹${order.amount} has been added to your A1 Wallet.`,
+                    data: { screen: "/wallet", type: "WALLET_TOPUP" },
+                    refType: "Wallet",
+                    refId: order._id,
+                });
+                if ((patient as any).email) {
+                    enqueueEmail({
+                        kind: "wallet_topup",
+                        data: { email: (patient as any).email, fullName: (patient as any).name || "Customer", amount: order.amount }
+                    }).catch(() => {});
+                }
+            }
+        } catch (e) {
+            console.error("[Push] wallet topup notify error:", e);
+        }
     }
     else if (order.type === "BOOKING" && order.referenceId) {
         // Try Doctor Appointment
@@ -365,6 +392,13 @@ export const verifyRazorpay = asyncHandler(async (req, res) => {
 
     if (!isValid) {
         await razorService.logEvent(order.txnId, "RAZOR_SIGNATURE_INVALID", "ERROR", "Invalid Razorpay signature received", req.body);
+        const { notifyAdmin } = await import("../Notifications/notification.controller.js");
+        notifyAdmin(
+            "⚠️ Invalid Payment Signature",
+            `Order ${order.txnId} received an invalid Razorpay signature. Possible tampering or double-submit. Amount: ₹${order.amount}.`,
+            "Wallet",
+            String(order._id)
+        ).catch(() => {});
         throw new ApiError(400, "Invalid payment signature");
     }
 
@@ -426,6 +460,27 @@ export const handleWebhook = asyncHandler(async (req, res) => {
             order.status = OrderStatus.FAILED;
             await order.save();
             await ezService.logEvent(order.txnId, "PAYMENT_FAILED", "WARN", `Payment failed: ${response.error_Message || "Unknown reason"}`, response);
+            // Notify admin and customer of failed payment
+            try {
+                const { notifyAdmin } = await import("../Notifications/notification.controller.js");
+                await notifyAdmin("❌ Payment Failed", `Order ${order.txnId} failed. Amount: ₹${order.amount}. Reason: ${response.error_Message || "Unknown"}.`, "Wallet", String(order._id));
+                const { enqueuePush } = await import("../../queues/communicationQueue.js");
+                const patient = await Patient.findById(order.userId).select("fcmToken");
+                if (patient) {
+                    await enqueuePush({
+                        recipientId: patient._id as any,
+                        recipientType: "patient",
+                        fcmToken: (patient as any).fcmToken ?? undefined,
+                        title: "❌ Payment Failed",
+                        body: `Your payment of ₹${order.amount} could not be processed. Please try again.`,
+                        data: { screen: "/wallet", type: "PAYMENT_FAILED", orderId: String(order._id) },
+                        refType: "Wallet",
+                        refId: order._id,
+                    });
+                }
+            } catch (e) {
+                console.error("[Push] payment failed notify error:", e);
+            }
         }
     }
 
@@ -531,6 +586,32 @@ export const verifyPayment = asyncHandler(async (req, res) => {
         } else if (gatewayStatus !== "pending") {
             order.status = OrderStatus.FAILED;
             await order.save();
+
+            const { notifyAdmin } = await import("../Notifications/notification.controller.js");
+            notifyAdmin(
+                "❌ Payment Failed (Poll)",
+                `Order ${order.txnId} failed at gateway (status: ${gatewayStatus}). Amount: ₹${order.amount}.`,
+                "Wallet",
+                String(order._id)
+            ).catch(() => {});
+
+            try {
+                const patient = await Patient.findById(order.userId).select("fcmToken");
+                if (patient) {
+                    await enqueuePush({
+                        recipientId: patient._id as mongoose.Types.ObjectId,
+                        recipientType: "patient",
+                        fcmToken: patient.fcmToken ?? undefined,
+                        title: "❌ Payment Failed",
+                        body: `Your payment of ₹${order.amount} could not be processed. Please try again or contact support.`,
+                        data: { screen: "/wallet" },
+                        refType: "Order",
+                        refId: order._id as mongoose.Types.ObjectId,
+                    });
+                }
+            } catch (e) {
+                console.error("[Push] payment failed poll notify error:", e);
+            }
         }
     } else {
         // Handle FAILURE or PENDING messages

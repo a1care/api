@@ -6,7 +6,7 @@ export interface DoctorDocument extends Document {
   gender: "Male" | "Female" | "Other";
   startExperience: Date;
   specialization: string[];
-  status: "Pending" | "Active" | "Rejected";
+  status: "Pending" | "Active" | "Rejected" | "Suspended";
   rejectionReason?: string;
   rejectedAt?: Date | null;
   resubmittedAt?: Date | null;
@@ -67,7 +67,7 @@ const DoctorSchema = new Schema<DoctorDocument>(
 
     status: {
       type: String,
-      enum: ["Pending", "Active", "Rejected"],
+      enum: ["Pending", "Active", "Rejected", "Suspended"],
       default: "Pending"
     },
     rejectionReason: {

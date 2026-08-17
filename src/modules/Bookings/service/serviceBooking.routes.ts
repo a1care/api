@@ -1,5 +1,5 @@
 import express from 'express'
-import { createServiceRequest, getPendingRequest, getSerivceRequestById, getServiceRequestByUser, getServiceRequestForProvider, updateServiceRequestStatus, markServiceCashCollected } from './serviceRequest.controller.js'
+import { createServiceRequest, getPendingRequest, getSerivceRequestById, getServiceRequestByUser, getServiceRequestForProvider, updateServiceRequestStatus, markServiceCashCollected, reportNoShow } from './serviceRequest.controller.js'
 import { protect } from '../../../middlewares/protect.js'
 import { createServiceAcceptance, createServiceRejected, rejectAssignment } from './serviceAcceptance.controller.js'
 const router = express.Router()
@@ -30,5 +30,8 @@ router.get('/provider/:roleId', protect, getServiceRequestForProvider)
 
 // Mark OFFLINE payment as collected (partner confirms cash received)
 router.patch('/cash/:id', protect, markServiceCashCollected)
+
+// Customer reports provider did not show up
+router.patch('/no-show/:id', protect, reportNoShow)
 
 export default router

@@ -71,22 +71,33 @@ export const createPatientTicket = asyncHandler(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, "Not authorized to access");
 
-    const { subject, description, priority } = req.body;
+    const { subject, description, priority, bookingId, bookingType, category } = req.body;
     if (!subject || !description) throw new ApiError(400, "Subject and description are required");
 
-    const newTicket = await TicketModel.create({
+    const createData: any = {
         userId: new mongoose.Types.ObjectId(userId),
         subject,
         description,
-        priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium"
-    });
+        priority: ["Low", "Medium", "High", "Critical"].includes(priority) ? priority : "Medium",
+        category: ["General", "Billing", "Dispute", "Technical", "Other"].includes(category) ? category : "General",
+    };
+    if (bookingId && mongoose.Types.ObjectId.isValid(bookingId)) {
+        createData.bookingId = new mongoose.Types.ObjectId(bookingId);
+    }
+    if (bookingType && ["ServiceRequest", "DoctorAppointment"].includes(bookingType)) {
+        createData.bookingType = bookingType;
+    }
 
-    await notifyAdmin(
-        "🎫 New Support Ticket",
-        `A customer raised a ticket: "${subject}"`,
-        "Ticket",
-        String(newTicket._id)
-    );
+    const newTicket = await TicketModel.create(createData);
+
+    const adminTitle = category === "Dispute"
+        ? "🚨 Dispute Ticket Raised"
+        : "🎫 New Support Ticket";
+    const adminBody = category === "Dispute"
+        ? `A customer raised a dispute${bookingId ? ` on booking #${String(bookingId).slice(-8).toUpperCase()}` : ""}: "${subject}"`
+        : `A customer raised a ticket: "${subject}"`;
+
+    await notifyAdmin(adminTitle, adminBody, "Ticket", String(newTicket._id));
 
     const patient = await Patient.findById(userId).select("email name").lean();
     if (patient?.email) {
