@@ -200,7 +200,14 @@ export const postDoctorBookingActions = async (appointment: any, patientId: stri
     // ── Push: notify the doctor of new appointment ────────────────────────────
     try {
         const patient = await Patient.findById(patientId).select("name");
-        if (doctor) {
+        
+        // Determine if this is a Hospital OP booking (which shouldn't notify partners)
+        const isHospitalBooking = 
+            doctor?.role?.name?.toLowerCase().includes("hospital") || 
+            parsedData?.serviceName?.toLowerCase().includes("hospital") ||
+            doctor?.fulfillmentMode === 'HOSPITAL_VISIT';
+
+        if (doctor && !isHospitalBooking) {
             await enqueuePush({
                 recipientId: doctor._id as mongoose.Types.ObjectId,
                 recipientType: "partner",
