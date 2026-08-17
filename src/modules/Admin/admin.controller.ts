@@ -1415,7 +1415,13 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     query.status = { $in: ["PENDING", "BROADCASTED", "ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED", "RETURNED_TO_ADMIN"] };
     query.createdAt = { $lte: oneHourAgo };
   } else if (status && status !== "All") {
-    query.status = status;
+    if (status === "PENDING") {
+      query.status = { $in: ["PENDING", "BROADCASTED", "RETURNED_TO_ADMIN"] };
+    } else if (status === "CONFIRMED") {
+      query.status = { $in: ["ACCEPTED", "CONFIRMED"] };
+    } else {
+      query.status = status;
+    }
   }
   if (payment && payment !== "All") {
     if (payment === "PACKAGE") {
@@ -1492,12 +1498,20 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
     if (Array.isArray(s)) return statsData.filter((x: any) => s.includes(x._id)).reduce((acc: number, x: any) => acc + x.count, 0);
     return statsData.find((x: any) => x._id === s)?.count || 0;
   };
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const overdueCount = await serviceRequestModel.countDocuments({
+    ...statsQuery,
+    status: { $in: ["PENDING", "BROADCASTED", "ACCEPTED", "IN_PROGRESS", "PARTNER_ASSIGNED", "RETURNED_TO_ADMIN"] },
+    createdAt: { $lte: oneHourAgo }
+  });
+
   const stats = {
     all: statsData.reduce((sum: number, x: any) => sum + x.count, 0),
     pending: getCount(["PENDING", "BROADCASTED", "RETURNED_TO_ADMIN"]),
     confirmed: getCount(["ACCEPTED", "CONFIRMED"]),
     completed: getCount("COMPLETED"),
     cancelled: getCount("CANCELLED"),
+    overdue: overdueCount,
   };
 
   // Paginated fetch — DB-level skip/limit
