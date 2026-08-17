@@ -9,6 +9,8 @@ on:
       - 'src/**'
       - 'a1care backend/**'
       - 'docker-compose.yml'
+      - 'Dockerfile'
+      - '.github/workflows/**'
       - 'nginx/**'
       - 'package.json'
       - 'tsconfig.json'
