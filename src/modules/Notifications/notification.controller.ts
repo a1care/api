@@ -277,3 +277,18 @@ export const adminClearNotifications = asyncHandler(async (req, res) => {
     await NotificationModel.deleteMany({ recipientType: "admin" });
     return res.json(new ApiResponse(200, "All system alerts cleared", null));
 });
+
+/**
+ * @desc    Admin: Delete a specific notification by ID
+ * @route   DELETE /api/admin/notifications/:id
+ * @access  Private (Admin)
+ */
+export const adminDeleteNotification = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const notification = await NotificationModel.findByIdAndDelete(id);
+    if (!notification) {
+        throw new ApiError(404, "Notification not found");
+    }
+    return res.json(new ApiResponse(200, "Notification deleted successfully", null));
+});
+

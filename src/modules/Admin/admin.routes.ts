@@ -54,7 +54,7 @@ import {
   updateEmailTemplate,
   getSuperAdminWalletOverview
 } from "./admin.controller.js";
-import { adminListNotifications, adminBroadcastNotification, adminClearNotifications } from "../Notifications/notification.controller.js";
+import { adminListNotifications, adminBroadcastNotification, adminClearNotifications, adminDeleteNotification } from "../Notifications/notification.controller.js";
 import { getAllReviews, updateReviewStatus } from "../Reviews/review.controller.js";
 import { protectAdmin, requireAdminRole } from "../../middlewares/protectAdmin.js";
 import { adminListOrders, adminGetLogsForTxn } from "../Payments/payment.controller.js";
@@ -146,6 +146,7 @@ adminRoutes.put("/email-templates/:id", protectAdmin, requireAdminRole(["super_a
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
 adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);
 adminRoutes.delete("/notifications/clear", protectAdmin, adminClearNotifications);
+adminRoutes.delete("/notifications/:id", protectAdmin, adminDeleteNotification);
 
 adminRoutes.get("/payouts", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminPayouts);
 adminRoutes.put("/payouts/:id", protectAdmin, requireAdminRole(["admin", "super_admin"]), updateAdminPayoutStatus);
