@@ -182,3 +182,5 @@ create-test-admin.ts
 update-admin.ts
 tempSeed.mjs
 test-mongo.ts
+
+data/app-config.json
