@@ -148,6 +148,7 @@ export const getProviderUnifiedFeed = asyncHandler(async (req, res) => {
             let services = await ServiceRequest.find({
                 _id: { $nin: rejectedIds },
                 status: { $in: fetchStatuses },
+                fulfillmentMode: { $ne: "HOSPITAL_VISIT" },
                 ...timeQuery
             })
                 .populate("userId", "name mobileNumber profileImage")
