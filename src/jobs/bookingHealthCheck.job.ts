@@ -2,6 +2,7 @@ import cron from "node-cron";
 import mongoose from "mongoose";
 import serviceRequestModel from "../modules/Bookings/service/serviceRequest.model.js";
 import { notifyAdmin } from "../modules/Notifications/notification.controller.js";
+import { NotificationModel } from "../modules/Notifications/notification.model.js";
 import { enqueuePush } from "../queues/communicationQueue.js";
 import { Patient } from "../modules/Authentication/patient.model.js";
 
@@ -86,7 +87,15 @@ export const initBookingHealthCheckJob = () => {
                 updatedAt: { $lt: new Date(now.getTime() - 4 * 60 * 60 * 1000) },
             }).select("_id").lean();
 
+            const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
             for (const b of overdue) {
+                // Skip if an alert for this booking was already created in the last 24 hours
+                const exists = await NotificationModel.exists({
+                    refId: b._id,
+                    title: "🔴 Booking Overdue (IN_PROGRESS > 4h)",
+                    createdAt: { $gte: oneDayAgo },
+                });
+                if (exists) continue;
                 await notifyAdmin(
                     "🔴 Booking Overdue (IN_PROGRESS > 4h)",
                     `Booking #${String(b._id).slice(-6).toUpperCase()} has been in progress for over 4 hours. Please investigate.`,
