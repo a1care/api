@@ -351,10 +351,14 @@ export const registerStaff = asyncHandler(async (req, res) => {
 
   // Build update object only with provided fields
   const updateData: any = {};
+  // Note: 'role' is intentionally excluded — it is derived server-side from roleId.
+  // 'status' is excluded for partner-initiated updates; admin sets status via the
+  // admin endpoint. The only partner-permitted status transition (→ Active) is
+  // handled explicitly below after subscription/KYC checks.
   const fields = [
     'name', 'gender', 'startExperience', 'specialization', 'about',
-    'workingHours', 'serviceRadius', 'roleId', 'role', 'consultationFee', 'homeConsultationFee',
-    'onlineConsultationFee', 'documents', 'status', 'bankDetails', 'profileImage', 'email', 'dateOfBirth',
+    'workingHours', 'serviceRadius', 'roleId', 'consultationFee', 'homeConsultationFee',
+    'onlineConsultationFee', 'documents', 'bankDetails', 'profileImage', 'email', 'dateOfBirth',
     'vehicleNumber', 'vehicleType', 'businessName', 'gstNumber'
   ];
 
@@ -363,6 +367,26 @@ export const registerStaff = asyncHandler(async (req, res) => {
       updateData[field] = req.body[field];
     }
   });
+
+  // Derive role label from roleId — never accept a client-supplied role label
+  if (updateData.roleId) {
+    try {
+      const roleDoc = await mongoose.model("Role").findById(updateData.roleId).select("name").lean() as any;
+      if (roleDoc) {
+        updateData.role = { _id: roleDoc._id, name: roleDoc.name };
+      }
+    } catch (_e) {
+      // Non-fatal — role label stays as-is from DB
+    }
+  }
+
+  // Only allow partner to explicitly request Active status (with subscription/KYC gate below).
+  // All other status values (Rejected, Inactive, Pending) are admin-only.
+  if (req.body.status !== undefined && req.body.status !== "Active") {
+    delete updateData.status;
+  } else if (req.body.status === "Active") {
+    updateData.status = "Active";
+  }
 
   // 🔄 Handle 'experience' (years) -> 'startExperience' (Date) mapping
   if (req.body.experience !== undefined) {
@@ -397,17 +421,39 @@ export const registerStaff = asyncHandler(async (req, res) => {
     }
   }
 
-  // Handle specific overrides if necessary
-  if (req.body.isRegistered !== undefined) {
-    updateData.isRegistered = req.body.isRegistered;
-  }
+  // Required documents per role — mirrors the client-side REQUIRED_DOCUMENTS map.
+  // Validated server-side before allowing isRegistered: true.
+  const ROLE_REQUIRED_DOCS: Record<string, string[]> = {
+    doctor:    ["Selfie", "Aadhar Card", "PAN Card", "Medical Degree Certificate", "MCI/State Registration"],
+    nurse:     ["Selfie", "Aadhar Card", "PAN Card", "Nursing Certificate", "Registration Document"],
+    ambulance: ["Selfie", "Aadhar Card", "PAN Card", "Vehicle RC", "Commercial DL", "Fitness Certificate"],
+    rental:    ["Selfie", "Aadhar Card", "PAN Card", "Business Registration"],
+  };
 
-  // Handle specific overrides if necessary
-  if (req.body.isRegistered !== undefined) {
-    updateData.isRegistered = req.body.isRegistered;
-  } else if (!findStaff.isRegistered && req.body.name) {
-    // If name is being set for the first time, maybe consider it partially registered
+  const wantsRegistered =
+    (req.body.isRegistered === true) ||
+    (!findStaff.isRegistered && req.body.name !== undefined);
+
+  if (wantsRegistered) {
+    const allDocs: { type: string }[] = [
+      ...((findStaff.documents as any[]) ?? []),
+      ...((updateData.documents as any[]) ?? []),
+    ];
+    const uploadedTypes = new Set(allDocs.map((d) => String(d.type).trim()));
+
+    // Determine the role key from roleId (already resolved above) or existing role
+    const roleNameRaw = updateData.role?.name || findStaff.role?.name || "";
+    const roleKey = String(roleNameRaw).toLowerCase();
+    const required = ROLE_REQUIRED_DOCS[roleKey] ?? [];
+    const missing = required.filter((r) => !uploadedTypes.has(r));
+
+    if (missing.length > 0) {
+      throw new ApiError(400, `Missing required documents for ${roleNameRaw || "your role"}: ${missing.join(", ")}`);
+    }
+
     updateData.isRegistered = true;
+  } else if (req.body.isRegistered === false) {
+    updateData.isRegistered = false;
   }
 
   // If previously rejected and partner re-submits details, move back to Pending for admin review.

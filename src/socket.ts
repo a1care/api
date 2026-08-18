@@ -2,6 +2,10 @@ import { Server } from 'socket.io';
 
 let _io: Server | null = null;
 
+// Track which booking rooms each socket is actively streaming location to.
+// Used to emit provider_disconnected when a partner's socket drops.
+const socketTrackingRooms = new Map<string, Set<string>>();
+
 export function initSocket(server: any): Server {
     _io = new Server(server, {
         cors: { origin: '*' },
@@ -34,11 +38,24 @@ export function initSocket(server: any): Server {
             const { roomId, latitude, longitude, heading, speed } = data;
             if (roomId) {
                 socket.to(roomId).emit('location_update', { latitude, longitude, heading, speed });
+                // Record that this socket is streaming location to this room
+                if (!socketTrackingRooms.has(socket.id)) {
+                    socketTrackingRooms.set(socket.id, new Set());
+                }
+                socketTrackingRooms.get(socket.id)!.add(roomId);
             }
         });
 
         socket.on('disconnect', (reason) => {
             console.log(`[Socket] Client disconnected: ${socket.id} - ${reason}`);
+            // Notify any booking rooms this partner was streaming to
+            const rooms = socketTrackingRooms.get(socket.id);
+            if (rooms && _io) {
+                for (const roomId of rooms) {
+                    _io.to(roomId).emit('provider_disconnected', { roomId });
+                }
+            }
+            socketTrackingRooms.delete(socket.id);
         });
     });
 
