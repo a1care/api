@@ -148,8 +148,8 @@ adminRoutes.get("/email-templates", protectAdmin, requireAdminRole(["super_admin
 adminRoutes.put("/email-templates/:id", protectAdmin, requireAdminRole(["super_admin"]), updateEmailTemplate);
 
 adminRoutes.get("/notifications", protectAdmin, adminListNotifications);
-adminRoutes.post("/notifications/broadcast", protectAdmin, adminBroadcastNotification);
-adminRoutes.delete("/notifications/clear", protectAdmin, adminClearNotifications);
+adminRoutes.post("/notifications/broadcast", protectAdmin, requireAdminRole(["super_admin"]), adminBroadcastNotification);
+adminRoutes.delete("/notifications/clear", protectAdmin, requireAdminRole(["super_admin"]), adminClearNotifications);
 adminRoutes.delete("/notifications/:id", protectAdmin, adminDeleteNotification);
 
 adminRoutes.get("/payouts", protectAdmin, requireAdminRole(["admin", "super_admin"]), getAdminPayouts);

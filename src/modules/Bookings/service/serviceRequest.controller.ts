@@ -513,11 +513,45 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, "Booking re-broadcast to find a new provider", null));
     }
 
-    // Auto-refund if a paid service booking is cancelled.
+    let updateData: any = { status };
+
+    // Calculate Commission if Completed — computed before atomic write
+    if (status === "COMPLETED" && existing.assignedProviderId) {
+        const commissionPercentage = await getActiveCommissionRate(existing.assignedProviderId.toString());
+        const totalPrice = existing.price || 0;
+        const commissionAmount = (totalPrice * commissionPercentage) / 100;
+        const partnerEarning = totalPrice - commissionAmount;
+        updateData.commissionPercentage = commissionPercentage;
+        updateData.commissionAmount = commissionAmount;
+        updateData.partnerEarning = partnerEarning;
+    }
+
+    // ATOMIC write: precondition on current status prevents cancel-vs-accept and
+    // complete-vs-admin-cancel races. A null result means another request won the race.
+    const statusPrecondition: Record<string, any> = {
+        CANCELLED: { status: { $nin: ["IN_PROGRESS", "COMPLETED", "CANCELLED", "ACCEPTED", "CONFIRMED", "PARTNER_ASSIGNED"] } },
+        COMPLETED: { status: { $nin: ["COMPLETED", "CANCELLED"] } },
+    };
+    const filter: any = { _id: id, ...(statusPrecondition[status] ?? {}) };
+    if (status === "CANCELLED") {
+        updateData.paymentStatus = (existing as any).paymentStatus === "COMPLETED" ? "REFUNDED" : (existing as any).paymentStatus;
+    }
+
+    const booking = await serviceRequestModel
+        .findOneAndUpdate(filter, updateData, { new: true })
+        .populate("childServiceId")
+        .populate("userId")
+        .populate("addressId");
+
+    if (!booking) {
+        if (status === "CANCELLED") throw new ApiError(409, "Cannot cancel — the booking was already accepted or is in progress");
+        throw new ApiError(404, "Service request not found");
+    }
+
+    // Side effects fire only after the atomic write confirmed
     let didRefund = false;
     if (
         status === "CANCELLED" &&
-        existing.status !== "CANCELLED" &&
         (existing as any).paymentStatus === "COMPLETED" &&
         (existing.price ?? 0) > 0
     ) {
@@ -525,31 +559,6 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res) => {
         await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), refundDescription);
         didRefund = true;
     }
-
-    let updateData: any = { status };
-    if (didRefund) {
-        updateData.paymentStatus = "REFUNDED";
-    }
-
-    // Calculate Commission if Completed
-    if (status === "COMPLETED" && existing.status !== "COMPLETED" && existing.assignedProviderId) {
-        const commissionPercentage = await getActiveCommissionRate(existing.assignedProviderId.toString());
-        const totalPrice = existing.price || 0;
-        const commissionAmount = (totalPrice * commissionPercentage) / 100;
-        const partnerEarning = totalPrice - commissionAmount;
-
-        updateData.commissionPercentage = commissionPercentage;
-        updateData.commissionAmount = commissionAmount;
-        updateData.partnerEarning = partnerEarning;
-    }
-
-    const booking = await serviceRequestModel
-        .findByIdAndUpdate(id, updateData, { new: true })
-        .populate("childServiceId")
-        .populate("userId")
-        .populate("addressId");
-
-    if (!booking) throw new ApiError(404, "Service request not found");
 
     const serviceName = (booking.childServiceId as any)?.name ?? "service";
     const patient = booking.userId as any;

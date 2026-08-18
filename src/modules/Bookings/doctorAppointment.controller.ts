@@ -282,6 +282,12 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
     const isDoctor = existing.doctorId.toString() === requesterId.toString();
     if (!isPatient && !isDoctor) throw new ApiError(403, "Not allowed to modify this appointment");
 
+    // Guard: cannot cancel a completed or already-cancelled appointment
+    const NON_CANCELLABLE_APPT = ["Completed", "COMPLETED", "IN_PROGRESS", "Cancelled", "CANCELLED"];
+    if ((status === "Cancelled" || status === "CANCELLED") && NON_CANCELLABLE_APPT.includes(existing.status)) {
+        throw new ApiError(400, `Cannot cancel an appointment that is already ${existing.status}`);
+    }
+
     // Guard: Prevent early execution of future bookings
     if ((status === "IN_PROGRESS" || status === "Completed") && existing.date) {
         const scheduledDate = new Date(existing.date);
@@ -336,11 +342,45 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         }
     }
 
-    // Auto-refund if a paid appointment is cancelled.
+    let updateData: any = { status };
+
+    // Calculate Commission if Completed — computed before atomic write
+    if (status === "Completed" && existing.status !== "Completed") {
+        const commissionPercentage = await getActiveCommissionRate(existing.doctorId.toString());
+        const totalAmount = existing.totalAmount || 0;
+        const commissionAmount = (totalAmount * commissionPercentage) / 100;
+        const partnerEarning = totalAmount - commissionAmount;
+        updateData.commissionPercentage = commissionPercentage;
+        updateData.commissionAmount = commissionAmount;
+        updateData.partnerEarning = partnerEarning;
+    }
+
+    if (status === "Cancelled" || status === "CANCELLED") {
+        updateData.paymentStatus = existing.paymentStatus === "COMPLETED" ? "REFUNDED" : existing.paymentStatus;
+    }
+
+    // Atomic write: precondition prevents a Completed appointment from being cancelled
+    const apptFilter: any = { _id: id };
+    if (status === "Cancelled" || status === "CANCELLED") {
+        apptFilter.status = { $nin: NON_CANCELLABLE_APPT };
+    } else if (status === "Completed") {
+        apptFilter.status = { $nin: ["Completed", "COMPLETED", "Cancelled", "CANCELLED"] };
+    }
+
+    const appointment = await doctorAppointmentModel
+        .findOneAndUpdate(apptFilter, updateData, { new: true })
+        .populate("doctorId")
+        .populate("patientId");
+
+    if (!appointment) {
+        if (status === "Cancelled" || status === "CANCELLED") throw new ApiError(409, "Cannot cancel — the appointment is already completed or cancelled");
+        throw new ApiError(404, "Appointment not found");
+    }
+
+    // Side effects fire only after the atomic write confirmed
     let didRefund = false;
     if (
-        status === "Cancelled" &&
-        existing.status !== "Cancelled" &&
+        (status === "Cancelled" || status === "CANCELLED") &&
         existing.paymentStatus === "COMPLETED" &&
         (existing.totalAmount ?? 0) > 0
     ) {
@@ -348,30 +388,6 @@ export const updateDoctorAppointmentStatus = asyncHandler(async (req, res) => {
         await creditWalletAtomic(String(existing.patientId), Number(existing.totalAmount || 0), refundDescription);
         didRefund = true;
     }
-
-    let updateData: any = { status };
-    if (didRefund) {
-        updateData.paymentStatus = "REFUNDED";
-    }
-
-    // Calculate Commission if Completed
-    if (status === "Completed" && existing.status !== "Completed") {
-        const commissionPercentage = await getActiveCommissionRate(existing.doctorId.toString());
-        const totalAmount = existing.totalAmount || 0;
-        const commissionAmount = (totalAmount * commissionPercentage) / 100;
-        const partnerEarning = totalAmount - commissionAmount;
-
-        updateData.commissionPercentage = commissionPercentage;
-        updateData.commissionAmount = commissionAmount;
-        updateData.partnerEarning = partnerEarning;
-    }
-
-    const appointment = await doctorAppointmentModel
-        .findByIdAndUpdate(id, updateData, { new: true })
-        .populate("doctorId")
-        .populate("patientId");
-
-    if (!appointment) throw new ApiError(404, "Appointment not found");
 
     const patient = await Patient.findById((appointment.patientId as any)?._id).select("fcmToken name email");
     const doctorName = (appointment.doctorId as any)?.name ?? "your doctor";

@@ -1716,17 +1716,6 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
 
   if (!existing) throw new ApiError(404, "Service booking not found");
 
-  let didServiceRefund = false;
-  if (
-    status === "CANCELLED" &&
-    existing.status !== "CANCELLED" &&
-    (existing as any).paymentStatus === "COMPLETED" &&
-    (existing.price ?? 0) > 0
-  ) {
-    await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), `REFUND:SERVICE:${id}`);
-    didServiceRefund = true;
-  }
-
   const updatePayload: any = { status };
   const isDirectAssign = assignedProviderId && ["ACCEPTED", "CONFIRMED", "Confirmed", "PARTNER_ASSIGNED"].includes(status);
   if (isDirectAssign) {
@@ -1739,12 +1728,32 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
     updatePayload.status = "PARTNER_ASSIGNED";
   }
 
+  // Atomic write: precondition prevents admin-cancel racing a concurrent partner-complete
+  const adminCancelPrecondition = status === "CANCELLED" ? { status: { $ne: "CANCELLED" } } : {};
+  const adminCompletePrecondition = status === "COMPLETED" ? { status: { $ne: "COMPLETED" } } : {};
+  const adminFilter: any = { _id: id, ...adminCancelPrecondition, ...adminCompletePrecondition };
+
   const booking = await serviceRequestModel
-    .findByIdAndUpdate(id, updatePayload, { new: true })
+    .findOneAndUpdate(adminFilter, updatePayload, { new: true })
     .populate("childServiceId")
     .populate("userId")
     .populate("addressId");
-  if (!booking) throw new ApiError(404, "Service booking not found");
+  if (!booking) {
+    if (status === "CANCELLED") throw new ApiError(409, "Booking is already cancelled");
+    if (status === "COMPLETED") throw new ApiError(409, "Booking is already completed");
+    throw new ApiError(404, "Service booking not found");
+  }
+
+  // Side effects fire only after the atomic write confirmed
+  let didServiceRefund = false;
+  if (
+    status === "CANCELLED" &&
+    (existing as any).paymentStatus === "COMPLETED" &&
+    (existing.price ?? 0) > 0
+  ) {
+    await creditWalletAtomic(String(existing.userId), Number(existing.price || 0), `REFUND:SERVICE:${id}`);
+    didServiceRefund = true;
+  }
 
   console.info(`[BOOKING] [ADMIN_OVERRIDE] [${id}] Admin changed status to ${status}${isDirectAssign ? ` and assigned to Partner ${assignedProviderId}` : ''}`);
 
@@ -1945,6 +1954,12 @@ export const updateServiceBookingStatus = asyncHandler(async (req, res) => {
     console.error("[Push] admin status update notify error:", e);
   }
 
+  // Real-time update to booking room so partner/customer screens refresh without polling
+  try {
+    const { emitToRoom } = await import("../../socket.js");
+    emitToRoom(String(booking._id), "booking_status_updated", { bookingId: String(booking._id), status });
+  } catch (_e) {}
+
   res.status(200).json(new ApiResponse(200, "Service booking status updated", booking));
 });
 
@@ -1971,19 +1986,14 @@ export const getReturnedToAdminServiceBookings = asyncHandler(async (req, res) =
 
 export const rebroadcastServiceBooking = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const booking = await serviceRequestModel.findById(id);
-  if (!booking) throw new ApiError(404, "Booking not found");
 
-  if (["COMPLETED", "CANCELLED"].includes(booking.status)) {
-    throw new ApiError(400, `Cannot re-broadcast a ${booking.status} booking`);
-  }
-
-  await serviceRequestModel.findByIdAndUpdate(id, {
-    status: "PENDING",
-    assignedProviderId: null,
-    assignedRoleId: null,
-    broadcastedAt: null,
-  });
+  // Atomic: only transition from a re-broadcastable status — prevents assign+rebroadcast race
+  const updated = await serviceRequestModel.findOneAndUpdate(
+    { _id: id, status: { $nin: ["COMPLETED", "CANCELLED", "ACCEPTED", "IN_PROGRESS"] } },
+    { status: "PENDING", assignedProviderId: null, assignedRoleId: null, broadcastedAt: null },
+    { new: true }
+  );
+  if (!updated) throw new ApiError(409, "Booking cannot be re-broadcast from its current status — it may be accepted or already in progress");
 
   const { scheduleBroadcastToAll } = await import("../../queues/bookingQueue.js");
   await scheduleBroadcastToAll(id as string);
