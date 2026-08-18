@@ -67,6 +67,8 @@ jobs:
             # --- RAM SAVING OPS BEFORE BUILD ---
             echo "Stopping container to free RAM for build..."
             docker stop a1care-api || true
+            docker stop a1care-nginx || true
+            docker rm a1care-nginx || true
 
             # Build and restart containers using Docker Compose
             docker compose up -d --build
