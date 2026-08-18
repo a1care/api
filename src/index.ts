@@ -82,19 +82,22 @@ io.on('connection', (socket) => {
             const bookingId = data.bookingId || data.roomId;
             if (!bookingId) return;
 
-            const { assertBookingParticipant } = await import('./modules/Chat/chat.controller.js');
-            await assertBookingParticipant(bookingId, (socket as any).userId);
-
-            let saved = data;
-            if (!data._id) {
-                const verified = {
-                    ...data,
-                    bookingId,
-                    senderId: (socket as any).userId,
-                    senderType: (socket as any).userRole === 'Patient' ? 'Patient' : 'Partner',
-                };
-                saved = await saveChatMessage(verified);
+            if (data._id) {
+                socket.to(data.roomId).emit('receive_message', data);
+                return;
             }
+
+            const { assertBookingParticipant } = await import('./modules/Chat/chat.controller.js');
+            const senderId = data.senderId || (socket as any).userId;
+            await assertBookingParticipant(bookingId, senderId);
+
+            const verified = {
+                ...data,
+                bookingId,
+                senderId,
+                senderType: data.senderType || ((socket as any).userRole === 'Patient' ? 'Patient' : 'Partner'),
+            };
+            const saved = await saveChatMessage(verified);
             if (saved) {
                 socket.to(data.roomId).emit('receive_message', saved);
             }

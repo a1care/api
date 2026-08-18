@@ -46,6 +46,8 @@ export function initSocket(server: any): Server {
             }
         });
 
+
+
         socket.on('disconnect', (reason) => {
             console.log(`[Socket] Client disconnected: ${socket.id} - ${reason}`);
             // Notify any booking rooms this partner was streaming to
