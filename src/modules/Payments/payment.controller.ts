@@ -531,7 +531,7 @@ export const handleGatewayResponse = asyncHandler(async (req, res) => {
                     body: `Your payment of ₹${order.amount} could not be processed. Please try again.`,
                     data: { screen: "/wallet", type: "PAYMENT_FAILED", orderId: String(order._id) },
                     refType: "Wallet",
-                    refId: order._id,
+                    refId: String(order._id),
                 });
             }
         } catch (e) {
