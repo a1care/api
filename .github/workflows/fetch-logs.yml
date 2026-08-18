@@ -1,0 +1,22 @@
+name: Fetch Server Logs
+on:
+  push:
+    paths:
+      - '.github/workflows/fetch-logs.yml'
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch logs via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "=== DOCKER PS ==="
+            docker ps -a
+            echo "=== API LOGS ==="
+            docker logs --tail 50 a1care-api
+            echo "=== NGINX LOGS ==="
+            docker logs --tail 50 a1care-nginx
