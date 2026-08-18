@@ -1035,12 +1035,19 @@ export const uploadAppManagementAsset = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No file uploaded");
   }
 
-  const normalizedPath = req.file.path.replace(/\\/g, "/");
-  const publicPath = normalizedPath.includes("uploads/")
-    ? normalizedPath.slice(normalizedPath.indexOf("uploads/"))
-    : normalizedPath;
-  // Store as relative path so each client (browser/app) prefixes its own API origin
-  const url = `/${publicPath}`;
+  // S3 upload: multer-s3 sets file.location to the full public S3 URL
+  const s3File = req.file as any;
+  let url: string;
+  if (s3File.location) {
+    url = s3File.location;
+  } else {
+    // Local disk fallback: store as relative path so the client prefixes its own API origin
+    const normalizedPath = s3File.path.replace(/\\/g, "/");
+    const publicPath = normalizedPath.includes("uploads/")
+      ? normalizedPath.slice(normalizedPath.indexOf("uploads/"))
+      : normalizedPath;
+    url = `/${publicPath}`;
+  }
 
   return res.status(200).json(new ApiResponse(200, "Asset uploaded", { url }));
 });

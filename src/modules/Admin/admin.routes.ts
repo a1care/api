@@ -1,7 +1,5 @@
 import { Router } from "express";
-import multer from "multer";
-import fs from "fs";
-import path from "path";
+import { createS3Upload } from "../../middlewares/upload.js";
 import {
   createAdmin,
   getAppManagementConfig,
@@ -64,26 +62,11 @@ import { getReferralStats } from "../Referral/referral.controller.js";
 import { createCoupon, listCoupons, updateCoupon, deleteCoupon } from "../Coupons/coupon.controller.js";
 
 const adminRoutes = Router();
-const appAssetUploadDir = path.join(process.cwd(), "uploads", "app-management");
-fs.mkdirSync(appAssetUploadDir, { recursive: true });
 
-const appAssetUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, appAssetUploadDir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname || "") || ".bin";
-      const safeExt = ext.slice(0, 10);
-      cb(null, `asset-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-    }
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-      return;
-    }
-    cb(new Error("Only image uploads are allowed"));
-  }
+const appAssetUpload = createS3Upload({
+  folder: "app-management",
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+  maxSizeMB: 5,
 });
 
 adminRoutes.post("/auth/login", loginAdmin);
