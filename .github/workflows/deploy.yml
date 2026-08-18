@@ -85,4 +85,8 @@ jobs:
             docker builder prune -f
             
             echo "Deployment complete and cleanup finished."
+            echo "=== API LOGS ==="
+            docker logs --tail 100 a1care-api
+            echo "=== NGINX LOGS ==="
+            docker logs --tail 100 a1care-nginx
 
