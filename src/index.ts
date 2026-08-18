@@ -89,6 +89,7 @@ io.on('connection', (socket) => {
             if (!data._id) {
                 const verified = {
                     ...data,
+                    bookingId,
                     senderId: (socket as any).userId,
                     senderType: (socket as any).userRole === 'Patient' ? 'Patient' : 'Partner',
                 };
@@ -142,3 +143,4 @@ const startServer = async () => {
 
 startServer();
 // Trigger restart for admin controller fix
+// Trigger restart for socket payload fix
