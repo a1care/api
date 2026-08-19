@@ -31,9 +31,11 @@ export const getChatHistory = asyncHandler(async (req, res) => {
     // Ownership: only a participant of this booking may read its private chat.
     await assertBookingParticipant(bookingId, req.user?.id);
 
-    const history = await ChatMessage.find({ bookingId })
-        .sort({ createdAt: 1 })
+    const historyDesc = await ChatMessage.find({ bookingId })
+        .sort({ createdAt: -1 })
         .limit(100);
+
+    const history = historyDesc.reverse();
 
     return res.status(200).json(new ApiResponse(200, "Chat history fetched", history));
 });
