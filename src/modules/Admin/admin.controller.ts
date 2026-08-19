@@ -1414,12 +1414,12 @@ export const getServiceBookings = asyncHandler(async (req, res) => {
 
   const query: any = {};
   if (req.query.opType === 'token') {
-    query.childServiceId = "69ff86c8a217e06e924eb4d4";
+    query.childServiceId = new mongoose.Types.ObjectId("69ff86c8a217e06e924eb4d4");
   } else if (req.query.opType === 'doctor') {
-    query.childServiceId = "69ff86c8a217e06e924eb4d0";
+    query.childServiceId = new mongoose.Types.ObjectId("69ff86c8a217e06e924eb4d0");
   } else {
     // Exclude OP bookings (Hospital tokens & Doctor home consults) from Service Bookings
-    query.childServiceId = { $nin: ["69ff86c8a217e06e924eb4d4", "69ff86c8a217e06e924eb4d0"] };
+    query.childServiceId = { $nin: [new mongoose.Types.ObjectId("69ff86c8a217e06e924eb4d4"), new mongoose.Types.ObjectId("69ff86c8a217e06e924eb4d0")] };
   }
   
   if (overdue === "true") {
