@@ -36,7 +36,8 @@ export const createService = asyncHandler(async (req, res) => {
 
 //get all service
 export const getServices = asyncHandler(async (req, res) => {
-  const services = await Service.find().sort({ priority: 'asc', createdAt: 'asc' }).exec()
+  const filter = req.query.admin === 'true' ? {} : { isActive: { $ne: false } };
+  const services = await Service.find(filter).sort({ priority: 'asc', createdAt: 'asc' }).exec()
   res.status(200).json(new ApiResponse(200, "Services fetched", services))
 })
 
@@ -55,6 +56,7 @@ export const updateService = asyncHandler(async (req, res) => {
   if (req.body.imageUrl) updateData.imageUrl = req.body.imageUrl;
   if (req.body.bannerUrl) updateData.bannerUrl = req.body.bannerUrl;
   if (req.body.priority !== undefined) updateData.priority = Number(req.body.priority);
+  if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive === 'true' || req.body.isActive === true;
 
   const updated = await Service.findByIdAndUpdate(id, updateData, { new: true });
 

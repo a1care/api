@@ -35,8 +35,13 @@ export const createSubService = asyncHandler(async (req, res) => {
 export const getServicesByServiceId = asyncHandler(async (req, res) => {
     const { serviceId } = req.params
 
+    const filter: any = { serviceId: new mongoose.Types.ObjectId(serviceId) };
+    if (req.query.admin !== 'true') {
+        filter.isActive = { $ne: false };
+    }
+
     const subservices = await SubService.aggregate([
-        { $match: { serviceId: new mongoose.Types.ObjectId(serviceId) } },
+        { $match: filter },
         {
             $lookup: {
                 from: 'childservices',

@@ -70,7 +70,12 @@ export const getChildServiceBySubserviceId = asyncHandler(async (req, res) => {
     const { subServiceId } = req.params
     if (!subServiceId) throw new ApiError(404, "Subservice id is missing")
 
-    const childServiceDetails = await ChildServiceModel.find({ subServiceId: subServiceId as any })
+    const filter: any = { subServiceId: subServiceId as any };
+    if (req.query.admin !== 'true') {
+        filter.isActive = { $ne: false };
+    }
+
+    const childServiceDetails = await ChildServiceModel.find(filter)
     return res.json(new ApiResponse(200, "child service is created", childServiceDetails))
 })
 
