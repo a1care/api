@@ -6,8 +6,9 @@ export interface ChildServiceDocument extends Document {
   serviceId: Schema.Types.ObjectId;
   subServiceId: Schema.Types.ObjectId;
   price: number;
+  onlinePrice?: number;
   selectionType: "SELECT" | "ASSIGN";
-  fulfillmentMode: "HOME_VISIT" | "HOSPITAL_VISIT" | "VIRTUAL";
+  fulfillmentMode: "HOME_VISIT" | "HOSPITAL_VISIT" | "VIRTUAL" | "BOTH";
   isActive: boolean;
   isFeatured: boolean;
   allowedRoleIds: string[];
@@ -49,6 +50,10 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
       required: true,
       min: 0,
     },
+    onlinePrice: {
+      type: Number,
+      min: 0,
+    },
 
     selectionType: {
       type: String,
@@ -58,7 +63,7 @@ const childServiceSchema = new Schema<ChildServiceDocument>(
 
     fulfillmentMode: {
       type: String,
-      enum: ["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL"],
+      enum: ["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL", "BOTH"],
       default: "HOME_VISIT",
       required: true,
     },

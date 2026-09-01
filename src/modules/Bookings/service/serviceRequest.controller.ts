@@ -39,6 +39,40 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const basePrice = childSvc?.price ?? healthPkg?.price ?? 0;
     const bookingName = childSvc?.name ?? healthPkg?.name ?? "Service";
 
+    // Validate ambulance radius
+    if (bookingName.toLowerCase().includes('ambulance')) {
+        let userLat = req.body.location?.lat;
+        let userLng = req.body.location?.lng;
+        
+        if ((!userLat || !userLng) && req.body.addressId) {
+            const { UserAddressModel } = await import("../../Address/address.model.js");
+            const address = await UserAddressModel.findById(req.body.addressId);
+            if (address && address.location) {
+                userLat = address.location.lat;
+                userLng = address.location.lng;
+            }
+        }
+
+        if (userLat && userLng) {
+            const { HospitalBranch } = await import("../../Admin/hospitalBranch.model.js");
+            const branches = await HospitalBranch.find({ isActive: true });
+            if (branches.length > 0) {
+                const { calculateDistance } = await import("../../../utils/geo.js");
+                let withinRadius = false;
+                for (const branch of branches) {
+                    const distance = calculateDistance(userLat, userLng, branch.location.lat, branch.location.lng);
+                    if (distance <= branch.ambulanceRadiusKm) {
+                        withinRadius = true;
+                        break;
+                    }
+                }
+                if (!withinRadius) {
+                    throw new ApiError(400, `Sorry, our ambulance service is currently only available within ${branches[0]?.ambulanceRadiusKm || 5}km of our hospital location.`);
+                }
+            }
+        }
+    }
+
     // ── Optional coupon: VALIDATE ONLY here (consume after the booking is saved &
     //    payment confirmed, so a failed payment never burns the customer's coupon) ──
     let discountAmount = 0;

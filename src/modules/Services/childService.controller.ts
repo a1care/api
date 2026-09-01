@@ -14,6 +14,7 @@ export const createChildService = asyncHandler(async (req, res) => {
         subServiceId,
         imageUrl: req.fileUrl,
         price: Number(req.body.price),
+        onlinePrice: req.body.onlinePrice !== undefined ? Number(req.body.onlinePrice) : undefined,
         selectionType: req.body.selectionType || req.body.bookingType || "SELECT",
         fulfillmentMode: req.body.fulfillmentMode || "HOME_VISIT"
     }
@@ -44,13 +45,18 @@ export const updateChildService = asyncHandler(async (req, res) => {
         if (!Number.isFinite(price) || price < 0) throw new ApiError(400, "Invalid price");
         updateData.price = price;
     }
+    if (req.body.onlinePrice !== undefined) {
+        const onlinePrice = Number(req.body.onlinePrice);
+        if (!Number.isFinite(onlinePrice) || onlinePrice < 0) throw new ApiError(400, "Invalid online price");
+        updateData.onlinePrice = onlinePrice;
+    }
     if (req.body.selectionType || req.body.bookingType) {
         const selectionType = req.body.selectionType || req.body.bookingType;
         if (!["SELECT", "ASSIGN"].includes(selectionType)) throw new ApiError(400, "Invalid selection type");
         updateData.selectionType = selectionType;
     }
     if (req.body.fulfillmentMode) {
-        if (!["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL"].includes(req.body.fulfillmentMode)) {
+        if (!["HOME_VISIT", "HOSPITAL_VISIT", "VIRTUAL", "BOTH"].includes(req.body.fulfillmentMode)) {
             throw new ApiError(400, "Invalid fulfillment mode");
         }
         updateData.fulfillmentMode = req.body.fulfillmentMode;

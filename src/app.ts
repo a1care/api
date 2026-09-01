@@ -14,6 +14,7 @@ import doctorAppointmentRoutes from './modules/Bookings/doctorAppointment.routes
 import serviceBookingRoutes from './modules/Bookings/service/serviceBooking.routes.js'
 import addressRoutes from './modules/Address/address.routes.js'
 import adminRoutes from './modules/Admin/admin.routes.js'
+import hospitalBranchRoutes from './modules/Admin/hospitalBranch.routes.js'
 import ticketRoutes from './modules/Tickets/ticket.routes.js'
 import reviewRoutes from './modules/Reviews/review.routes.js'
 import walletRoutes from './modules/Wallet/wallet.routes.js'
@@ -161,6 +162,7 @@ app.use('/api/service/booking', serviceBookingRoutes)
 
 //admin
 app.use('/api/admin', adminRoutes)
+app.use('/api/hospital-branch', hospitalBranchRoutes)
 
 //tickets
 app.use('/api/tickets', ticketRoutes)

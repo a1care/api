@@ -55,7 +55,17 @@ export const getServicesByServiceId = asyncHandler(async (req, res) => {
                 startingPrice: {
                     $cond: {
                         if: { $gt: [{ $size: '$children' }, 0] },
-                        then: { $min: '$children.price' },
+                        then: {
+                            $min: {
+                                $map: {
+                                    input: '$children',
+                                    as: 'child',
+                                    in: {
+                                        $min: ['$$child.price', { $ifNull: ['$$child.onlinePrice', '$$child.price'] }]
+                                    }
+                                }
+                            }
+                        },
                         else: null
                     }
                 }
