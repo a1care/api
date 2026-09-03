@@ -39,8 +39,18 @@ export const createServiceRequest = asyncHandler(async (req, res) => {
     const basePrice = childSvc?.price ?? healthPkg?.price ?? 0;
     const bookingName = childSvc?.name ?? healthPkg?.name ?? "Service";
 
+    // Check if the service belongs to the Ambulance category
+    let isAmbulanceCategory = bookingName.toLowerCase().includes('ambulance');
+    if (childSvc && childSvc.serviceId && !isAmbulanceCategory) {
+        const { Service } = await import("../../Services/service.model.js");
+        const parentService = await Service.findById(childSvc.serviceId);
+        if (parentService && parentService.name.toLowerCase().includes('ambulance')) {
+            isAmbulanceCategory = true;
+        }
+    }
+
     // Validate ambulance radius
-    if (bookingName.toLowerCase().includes('ambulance')) {
+    if (isAmbulanceCategory) {
         let userLat = req.body.location?.lat;
         let userLng = req.body.location?.lng;
         
