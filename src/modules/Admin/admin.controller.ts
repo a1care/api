@@ -241,6 +241,12 @@ type ManagedAppConfig = {
     promotionalBanners: FestivalBanner[];
   };
   knowledgeBase: any[];
+  appVersion?: {
+    minVersion: number;
+    latestVersion: number;
+    storeUrl: string;
+    updateMessage: string;
+  };
   updatedAt: string;
 };
 
@@ -310,6 +316,12 @@ const createDefaultConfigFor = (appKey: AppKey): ManagedAppConfig => {
       promotionalBanners: []
     },
     knowledgeBase: [],
+    appVersion: {
+      minVersion: 1,
+      latestVersion: 1,
+      storeUrl: "https://play.google.com/store/apps/details?id=com.a1care.customer",
+      updateMessage: "A new version of the app is available. Please update to continue."
+    },
     updatedAt: new Date().toISOString()
   };
 };
@@ -449,6 +461,14 @@ const mergeAppConfig = (current: ManagedAppConfig, payload: any): ManagedAppConf
       promotionalBanners
     },
     knowledgeBase: Array.isArray(payload?.knowledgeBase) ? payload.knowledgeBase : current.knowledgeBase,
+    appVersion: payload?.appVersion
+      ? {
+          minVersion: Number(payload.appVersion.minVersion ?? current.appVersion?.minVersion ?? 1),
+          latestVersion: Number(payload.appVersion.latestVersion ?? current.appVersion?.latestVersion ?? 1),
+          storeUrl: payload.appVersion.storeUrl ?? current.appVersion?.storeUrl ?? '',
+          updateMessage: payload.appVersion.updateMessage ?? current.appVersion?.updateMessage ?? 'A new version is available.',
+        }
+      : current.appVersion,
     updatedAt: new Date().toISOString()
   };
 };
@@ -2227,6 +2247,12 @@ export const getPublicAppConfig = asyncHandler(async (req, res) => {
     googleMapsApiKey: system.googleMapsApiKey,
     maintenanceMode: system.maintenanceMode || false,
     knowledgeBase: appConfig.knowledgeBase || [],
+    appVersion: appConfig.appVersion ?? {
+      minVersion: 1,
+      latestVersion: 1,
+      storeUrl: "https://play.google.com/store/apps/details?id=com.a1care.customer",
+      updateMessage: "A new version of the app is available. Please update to continue."
+    },
     updatedAt: appConfig.updatedAt
   };
 
