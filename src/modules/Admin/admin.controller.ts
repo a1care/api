@@ -246,7 +246,7 @@ type ManagedAppConfig = {
     latestVersion: number;
     storeUrl: string;
     updateMessage: string;
-  };
+  } | undefined;
   updatedAt: string;
 };
 
